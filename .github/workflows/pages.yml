@@ -1,0 +1,41 @@
+# Publishes site/ to GitHub Pages. There is nothing to build: the site is four
+# static files plus the JSON publish.py wrote, so this uploads the directory
+# as it stands in the repository.
+#
+# Results are committed, not produced here — a run needs Docker, model
+# credentials and half an hour. `./publish.py <job-dir>` writes site/data on the
+# machine that ran the benchmark, and pushing it is what deploys.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; a queued push waits rather than racing.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4
