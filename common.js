@@ -9,8 +9,14 @@ function escapeHtml(value) {
     })[ch]);
 }
 
+// Pages serves everything with `max-age=600` and no way to override it, so a
+// reader who saw an earlier publish gets that copy back from disk without the
+// browser asking us anything — the reason synthetic numbers outlived the run
+// that replaced them. `no-cache` forces a revalidation on every load. Chrome
+// then refetches the body outright rather than settling for a 304, so this
+// costs a round trip and a couple of gzipped kilobytes per page view.
 function fetchJson(path) {
-    return fetch(path).then((response) => {
+    return fetch(path, { cache: "no-cache" }).then((response) => {
         if (!response.ok) {
             throw new Error(`${path}: ${response.status}`);
         }
