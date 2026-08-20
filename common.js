@@ -35,6 +35,12 @@ function shortTask(task) {
     return String(task ?? "").split("/").pop();
 }
 
+// Surefire names a suite by its fully qualified class, and the package is the
+// same for every suite VaadinBench grades. The full name stays in a tooltip.
+function shortSuite(name) {
+    return String(name ?? "").split(".").pop();
+}
+
 function duration(seconds) {
     if (seconds === null || seconds === undefined) return "—";
     if (seconds < 60) return `${Math.round(seconds)}s`;

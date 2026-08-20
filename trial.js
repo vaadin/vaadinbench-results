@@ -115,20 +115,51 @@ function renderChanges() {
         ${changes.patch_truncated ? `<p class="truncated">Patch truncated.</p>` : ""}`;
 }
 
+// Unit suites finish in well under a second, and `duration` rounds those to
+// `0s`. Surefire reports the decimal, so keep it until the shared format has
+// something to say.
+function suiteTime(seconds) {
+    if (seconds === null || seconds === undefined) return "—";
+    return seconds < 10 ? `${seconds.toFixed(1)}s` : duration(seconds);
+}
+
+// What the reward was measured against. A passing trial has no failures to list,
+// and `reward 1` on its own does not say whether that was three suites or none,
+// so the counts are the only thing standing between a pass and an empty tab.
+function renderSuites(suites) {
+    if (!suites?.length) return "";
+    const rows = suites.map((suite) => `<tr>
+        <td title="${escapeHtml(suite.name)}">${escapeHtml(shortSuite(suite.name))}</td>
+        <td class="num">${suite.tests}</td>
+        <td class="num">${suite.failures}</td>
+        <td class="num">${suite.skipped}</td>
+        <td class="num">${suiteTime(suite.time_s)}</td>
+    </tr>`).join("");
+
+    return `<h2>Graded suites</h2><div class="wrap"><table>
+        <thead><tr>
+            <th>Suite</th><th class="num">Tests</th><th class="num">Failed</th>
+            <th class="num">Skipped</th><th class="num">Time</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+    </table></div>`;
+}
+
 function renderVerifier() {
     const verifier = trial.verifier ?? {};
     const failures = verifier.failures?.length
         ? `<h2>Failed tests</h2><ul>${verifier.failures
             .map((name) => `<li>${escapeHtml(name)}</li>`).join("")}</ul>`
         : "";
+    const suites = renderSuites(verifier.suites);
     const structure = verifier.structure
         ? `<h2>Generated project</h2><pre class="wrapped">${escapeHtml(verifier.structure)}</pre>`
         : "";
-    if (!failures && !structure) {
+    if (!failures && !suites && !structure) {
         return `<p class="empty">Reward ${escapeHtml(verifier.reward_text ?? "—")},
             with no further output recorded.</p>`;
     }
-    return failures + structure;
+    return failures + suites + structure;
 }
 
 function renderInstruction() {

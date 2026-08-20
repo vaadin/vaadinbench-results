@@ -33,6 +33,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 # The repository root is the site root: GitHub Pages serves this branch from `/`,
 # so the pages and their data sit beside the tooling that writes them.
@@ -66,6 +67,18 @@ def read_text(path: Path, limit: int | None = None) -> str | None:
     if limit is not None and len(text) > limit:
         return text[:limit] + "\n… truncated …\n"
     return text
+
+
+def artifact(trial_dir: Path, name: str) -> Path:
+    """A file the task wrote to `/logs/artifacts`, where Harbor leaves it.
+
+    Harbor collects the container's whole `/logs` verbatim into `artifacts/logs`,
+    so `/logs/artifacts/agent.patch` lands at `artifacts/logs/artifacts/` — two
+    levels below where the name suggests. Reading `artifacts/` directly finds
+    nothing, which is how every real patch came out empty while the fixture,
+    written with the shallow path, kept looking fine.
+    """
+    return trial_dir / "artifacts" / "logs" / "artifacts" / name
 
 
 def clip(text: str | None, limit: int) -> tuple[str | None, bool]:
@@ -245,30 +258,65 @@ def build_trajectory(trajectory: dict[str, Any]) -> tuple[list[dict[str, Any]], 
 # -------------------------------------------------------------------- verifier
 
 
-SUREFIRE_FAILURE = re.compile(
-    r'<testcase[^>]*\bname="([^"]+)"[^>]*>(?:(?!</testcase>).)*?<(failure|error)\b',
-    re.S,
-)
+def suite_elements(report: Path) -> list[Any]:
+    """The `<testsuite>` elements in one Surefire report, or none if unreadable.
+
+    Surefire writes a single `<testsuite>` root, but a merged report nests them
+    under `<testsuites>`; both shapes turn up depending on how Maven was invoked.
+    A report that will not parse is worth a word on stderr rather than silence:
+    it is the reward's own source, so the run that produced it is suspect.
+    """
+    try:
+        root = ElementTree.parse(report).getroot()
+    except (OSError, ElementTree.ParseError) as error:
+        print(f"  unreadable verifier report {report.name}: {error}", file=sys.stderr)
+        return []
+    return list(root.iter("testsuite")) if root.tag == "testsuites" else [root]
+
+
+def count(suite: Any, attribute: str) -> int:
+    """One Surefire count, and 0 for anything it did not write or wrote badly."""
+    try:
+        return int(suite.get(attribute) or 0)
+    except ValueError:
+        return 0
 
 
 def verifier_summary(trial_dir: Path) -> dict[str, Any]:
-    """Reward, plus the two things worth reading when it is 0.
+    """Reward, what the graded suites did, and the file-by-file gate.
 
-    `structure.txt` is specific to VaadinBench's from-scratch task, where the
-    first gate compares the generated project file by file. It is simply absent
-    for the other tasks, which is why nothing here requires it.
+    Counting the suites, and not only the failures, is what makes a passing
+    trial legible: the reward alone says a run was graded, while `3 suites, 34
+    tests` says it was graded against something. `structure.txt` is specific to
+    VaadinBench's from-scratch task, where the first gate compares the generated
+    project file by file. It is simply absent for the other tasks, which is why
+    nothing here requires it.
     """
     verifier = trial_dir / "verifier"
     reward_text = read_text(verifier / "reward.txt")
-    failures: list[str] = []
-    for report in sorted(verifier.glob("TEST-*.xml")):
-        xml = read_text(report) or ""
-        failures.extend(name for name, _ in SUREFIRE_FAILURE.findall(xml))
+    reports = sorted(verifier.glob("TEST-*.xml"))
+    if not reports:
+        print(f"  no verifier reports in {verifier}", file=sys.stderr)
+
+    suites, failures = [], []
+    for report in reports:
+        for suite in suite_elements(report):
+            suites.append({
+                "name": suite.get("name") or report.stem.removeprefix("TEST-"),
+                "tests": count(suite, "tests"),
+                "failures": count(suite, "failures") + count(suite, "errors"),
+                "skipped": count(suite, "skipped"),
+                "time_s": float(suite.get("time") or 0) or None,
+            })
+            for case in suite.iter("testcase"):
+                if case.find("failure") is not None or case.find("error") is not None:
+                    failures.append(case.get("name") or "unnamed test")
 
     return {
         "reward_text": (reward_text or "").strip() or None,
+        "suites": suites,
         "failures": failures,
-        "structure": read_text(trial_dir / "artifacts" / "structure.txt", 20_000),
+        "structure": read_text(artifact(trial_dir, "structure.txt"), 20_000),
     }
 
 
@@ -359,14 +407,19 @@ def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] 
     }
 
     patch, patch_truncated = clip(
-        read_text(trial_dir / "artifacts" / "agent.patch"), MAX_PATCH
+        read_text(artifact(trial_dir, "agent.patch")), MAX_PATCH
     )
+    # A trial with no patch is either an agent that changed nothing or a path
+    # that moved. The first is rare and the second is invisible on the page, so
+    # say which trial it was rather than publishing a blank Changes tab.
+    if patch is None:
+        print(f"  no patch captured for {trial_dir.name}", file=sys.stderr)
     detail = {
         **row,
         "instruction": instruction,
         "trajectory": events,
         "changes": {
-            "diffstat": read_text(trial_dir / "artifacts" / "agent-diff-stat.txt", 20_000),
+            "diffstat": read_text(artifact(trial_dir, "agent-diff-stat.txt"), 20_000),
             "patch": patch,
             "patch_truncated": patch_truncated,
         },

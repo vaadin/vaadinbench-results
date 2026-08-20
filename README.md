@@ -34,8 +34,13 @@ goes out today, per trial:
 | Task, agent, model, attempt, reward, duration, tokens, cost | `result.json` |
 | The prompt the agent was given | first user step of the trajectory |
 | Every step: message, reasoning, tool calls and their output | `agent/trajectory.json` |
-| Diffstat and patch | `artifacts/agent-diff-stat.txt`, `agent.patch` |
-| Reward, failed test names, generated-project report | `verifier/`, `artifacts/structure.txt` |
+| Diffstat and patch | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
+| Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
+| Generated-project report | `artifacts/logs/artifacts/structure.txt` |
+
+Harbor collects the container's `/logs` into `artifacts/logs`, so everything a
+task writes to `/logs/artifacts` sits at `artifacts/logs/artifacts/` — the paths
+above are the real ones, and reading the shallower `artifacts/` finds nothing.
 
 Two things worth being deliberate about. Publishing a trajectory publishes the
 task's `instruction.md` verbatim, canary line and all — that is the trade for a

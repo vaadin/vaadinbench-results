@@ -163,13 +163,44 @@ def trajectory_for(model: str, steps: list[Step], cost: float) -> Trajectory:
     )
 
 
+# Surefire's own shape, down to the fully qualified suite name: `publish.py`
+# counts these attributes and the site shows the totals, so a fixture that
+# abbreviates them tests nothing.
+SUITE = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    '<testsuite name="com.vaadinbench.verifier.ItemsViewVerifierTest"'
+    ' tests="9" failures="{failures}" errors="0" skipped="0" time="8.431">\n'
+    "{cases}"
+    "</testsuite>\n"
+)
+
+PASSING_CASES = (
+    '  <testcase name="shellShowsTheApplicationName"'
+    ' classname="com.vaadinbench.verifier.ItemsViewVerifierTest" time="0.412"/>\n'
+    '  <testcase name="listViewShowsEveryItem"'
+    ' classname="com.vaadinbench.verifier.ItemsViewVerifierTest" time="1.284"/>\n'
+)
+
+FAILING_CASES = (
+    '  <testcase name="shellShowsTheApplicationName"'
+    ' classname="com.vaadinbench.verifier.ItemsViewVerifierTest" time="0.393">\n'
+    '    <failure message="The view must be shown inside an AppLayout"/>\n'
+    "  </testcase>\n"
+    '  <testcase name="listViewShowsEveryItem"'
+    ' classname="com.vaadinbench.verifier.ItemsViewVerifierTest" time="1.201"/>\n'
+)
+
+
 def write_trial(
     name: str, model: str, reward: int, steps: list[Step], cost: float, minutes: float
 ) -> None:
     trial_dir = JOB / name
     (trial_dir / "agent").mkdir(parents=True, exist_ok=True)
     (trial_dir / "verifier").mkdir(parents=True, exist_ok=True)
-    (trial_dir / "artifacts").mkdir(parents=True, exist_ok=True)
+    # The same nesting Harbor produces: everything a task writes to
+    # `/logs/artifacts` is collected under `artifacts/logs/`. A fixture that
+    # flattens it lets publish.py read a path that exists nowhere in a real job.
+    (trial_dir / "artifacts" / "logs" / "artifacts").mkdir(parents=True, exist_ok=True)
 
     finished = START + timedelta(minutes=minutes)
     result = {
@@ -212,7 +243,7 @@ def write_trial(
     (trial_dir / "verifier" / "reward.txt").write_text(f"{reward}\n", encoding="utf-8")
     if reward:
         structure = "generated files matched: 12/12\n"
-        failures = ""
+        report = SUITE.format(failures=0, cases=PASSING_CASES)
     else:
         structure = (
             "generated files matched: 4/12\n"
@@ -225,25 +256,22 @@ def write_trial(
             "  MISSING  Dockerfile\n"
             "  MODIFIED pom.xml\n"
         )
-        failures = (
-            '<testsuite name="flow-new-project" tests="9" failures="1">'
-            '<testcase name="shellShowsTheApplicationName">'
-            '<failure message="The view must be shown inside an AppLayout"/>'
-            "</testcase></testsuite>"
-        )
-    (trial_dir / "artifacts" / "structure.txt").write_text(structure, encoding="utf-8")
-    if failures:
-        (trial_dir / "verifier" / "TEST-com.vaadinbench.verifier.ItemsViewVerifierTest.xml").write_text(
-            failures, encoding="utf-8"
-        )
+        report = SUITE.format(failures=1, cases=FAILING_CASES)
+    (trial_dir / "artifacts" / "logs" / "artifacts" / "structure.txt").write_text(structure, encoding="utf-8")
+    # A report is written either way. Harbor writes one per graded suite whatever
+    # the outcome, and the reward is read from it — a fixture that emits one only
+    # on failure leaves the passing trials looking ungraded.
+    (trial_dir / "verifier" / "TEST-com.vaadinbench.verifier.ItemsViewVerifierTest.xml").write_text(
+        report, encoding="utf-8"
+    )
 
-    (trial_dir / "artifacts" / "agent-diff-stat.txt").write_text(
+    (trial_dir / "artifacts" / "logs" / "artifacts" / "agent-diff-stat.txt").write_text(
         " src/main/java/com/example/ui/ItemsView.java  | 58 ++++++++++\n"
         " src/main/java/com/example/ui/MainLayout.java | 14 +++\n"
         " 2 files changed, 72 insertions(+)\n",
         encoding="utf-8",
     )
-    (trial_dir / "artifacts" / "agent.patch").write_text(
+    (trial_dir / "artifacts" / "logs" / "artifacts" / "agent.patch").write_text(
         "diff --git a/src/main/java/com/example/ui/MainLayout.java "
         "b/src/main/java/com/example/ui/MainLayout.java\n"
         "new file mode 100644\n"
