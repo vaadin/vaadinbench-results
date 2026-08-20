@@ -47,6 +47,10 @@ MAX_TOOL_OUTPUT = 4_000
 MAX_ARG_PREVIEW = 600
 MAX_TEXT = 20_000
 MAX_PATCH = 400_000
+# The verifier log is Maven's output, which runs to hundreds of kilobytes on a
+# Vaadin build. The end is the part that says what happened, so this bounds a
+# tail rather than a head.
+MAX_VERIFIER_LOG = 40_000
 
 
 # --------------------------------------------------------------------------- io
@@ -79,6 +83,21 @@ def artifact(trial_dir: Path, name: str) -> Path:
     written with the shallow path, kept looking fine.
     """
     return trial_dir / "artifacts" / "logs" / "artifacts" / name
+
+
+def tail_text(path: Path, limit: int) -> tuple[str | None, bool]:
+    """The end of a file, which is where a verifier says what happened.
+
+    `read_text` keeps the head, and the head of a verifier log is setup noise:
+    the verdict, the Maven summary and the compiler errors that produced it are
+    all at the end. Truncation is returned so the page can say it truncated.
+    """
+    text = read_text(path)
+    if text is None:
+        return None, False
+    if len(text) <= limit:
+        return text, False
+    return text[-limit:], True
 
 
 def clip(text: str | None, limit: int) -> tuple[str | None, bool]:
@@ -298,6 +317,12 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
     if not reports:
         print(f"  no verifier reports in {verifier}", file=sys.stderr)
 
+    # Harbor redirects the verifier script's stdout *and* stderr here, so this is
+    # the one place that says why a run ended the way it did: the `VERIFIER
+    # FAILED: <reason>` line, Maven's exit code, and the compiler errors when the
+    # graded suites never got as far as running.
+    log, log_truncated = tail_text(verifier / "test-stdout.txt", MAX_VERIFIER_LOG)
+
     suites, failures = [], []
     for report in reports:
         for suite in suite_elements(report):
@@ -316,6 +341,8 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
         "reward_text": (reward_text or "").strip() or None,
         "suites": suites,
         "failures": failures,
+        "log": log,
+        "log_truncated": log_truncated,
         "structure": read_text(artifact(trial_dir, "structure.txt"), 20_000),
     }
 

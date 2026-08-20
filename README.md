@@ -36,11 +36,19 @@ goes out today, per trial:
 | Every step: message, reasoning, tool calls and their output | `agent/trajectory.json` |
 | Diffstat and patch | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
+| The verifier's console output, last 40 KB | `verifier/test-stdout.txt` |
 | Generated-project report | `artifacts/logs/artifacts/structure.txt` |
 
 Harbor collects the container's `/logs` into `artifacts/logs`, so everything a
 task writes to `/logs/artifacts` sits at `artifacts/logs/artifacts/` — the paths
 above are the real ones, and reading the shallower `artifacts/` finds nothing.
+
+`test-stdout.txt` is the verifier script's own stdout and stderr, and it is the
+only place that says *why* a trial scored what it did: a reward of 0 with no
+graded suite means the verifier never compiled against the project, which reads
+as a broken page unless the log is there to explain it. The tail is published
+rather than the head, because Maven's output is long and the verdict is at the
+end.
 
 Two things worth being deliberate about. Publishing a trajectory publishes the
 task's `instruction.md` verbatim, canary line and all — that is the trade for a
