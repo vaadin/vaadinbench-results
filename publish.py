@@ -6,8 +6,8 @@
 
 Reads only what Harbor already writes, and writes only JSON:
 
-    site/data/index.json          one row per trial, for the leaderboard
-    site/data/trials/<id>.json    one file per trial, for the drill-down
+    data/index.json          one row per trial, for the leaderboard
+    data/trials/<id>.json    one file per trial, for the drill-down
 
 Nothing here talks to a network or a database. The site is those files plus
 four static assets, which is why GitHub Pages can serve the whole thing.
@@ -34,7 +34,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-SITE = Path(__file__).resolve().parent / "site"
+# The repository root is the site root: GitHub Pages serves this branch from `/`,
+# so the pages and their data sit beside the tooling that writes them.
+SITE = Path(__file__).resolve().parent
 DATA = SITE / "data"
 
 # Caps. A trajectory can carry a whole file's contents in one tool result, and a
@@ -453,7 +455,7 @@ def main() -> int:
         "runs": sorted(runs.values(), key=lambda run: run["job"]),
     }
     index_path.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
-    print(f"\nwrote {index_path.relative_to(Path.cwd())} "
+    print(f"\nwrote {index_path.name} "
           f"and {len(list((DATA / 'trials').glob('*.json')))} trial files")
     return 0
 

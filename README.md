@@ -1,5 +1,7 @@
 # VaadinBench results
 
+**[vesanieminen.github.io/vaadinbench-results](https://vesanieminen.github.io/vaadinbench-results/)**
+
 The published results for [VaadinBench](https://github.com/vesanieminen/vaadinbench):
 a leaderboard, and behind every trial the trajectory the agent actually produced.
 
@@ -13,12 +15,12 @@ turns its output into the site:
 
 ```bash
 ./publish.py ../vaadin-bench/jobs/new-project-3models
-git add site/data && git commit -m "Publish new-project-3models" && git push
+git add data && git commit -m "Publish new-project-3models" && git push
 ```
 
-Pushing `site/` deploys it — the workflow uploads the directory as it stands.
-Pass several job directories at once, or `--keep` to add a run without
-republishing the ones already there.
+The push *is* the deploy: GitHub Pages serves `main` from the repository root,
+so there is no workflow and nothing to build. Pass several job directories at
+once, or `--keep` to add a run without republishing the ones already there.
 
 ## What gets published
 
@@ -43,17 +45,19 @@ something rather than quietly showing less than there was.
 
 ## How it works
 
-There is no build step and no framework. The site is four static files —
+There is no build step and no framework. The site is a handful of static files —
 `index.html`, `trial.html`, and the CSS and JS beside them — reading JSON that
 `publish.py` wrote:
 
 ```text
-site/
-├── index.html      leaderboard: a summary per model, then every trial
-├── trial.html      one trial: trajectory, changes, verifier, instruction
-├── data/index.json         one row per trial
-└── data/trials/<id>.json   one file per trial
+index.html          leaderboard: a summary per model, then every trial
+trial.html          one trial: trajectory, changes, verifier, instruction
+data/index.json         one row per trial
+data/trials/<id>.json   one file per trial
 ```
+
+They live at the repository root because that is where Pages serves this branch
+from; `.nojekyll` turns off the Jekyll pass, since there is nothing to render.
 
 A trial's id is `base64(task|model|attempt)`, so a link to a trial survives a
 republish. `trial.html?id=…&tab=verifier` opens straight to a tab.
@@ -68,7 +72,7 @@ being forced into a bucket it does not belong in.
 ## Working on the site
 
 ```bash
-python3 -m http.server 8000 --directory site
+python3 -m http.server 8000
 ```
 
 To develop without a benchmark run, write a synthetic job first. It is built by
