@@ -135,7 +135,7 @@ a:hover { text-decoration: underline; }
 
 /* ------------------------------------------------------------------ brand */
 
-.brand { display: flex; align-items: center; gap: .6rem; margin: 0 0 1.5rem; }
+.brand { display: flex; align-items: center; gap: .6rem; margin: 0 0 1.75rem; }
 .brand h1 {
     font-size: 1.15rem; font-weight: 600; letter-spacing: -.01em;
     margin: 0; color: var(--ink);
@@ -179,12 +179,12 @@ h2 {
     text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
 }
 h2.title {
-    font-size: 1.05rem; font-weight: 600; color: var(--ink);
-    text-transform: none; letter-spacing: -.01em;
-    margin: 0 0 .15rem;
+    font-size: 1.25rem; font-weight: 600; color: var(--ink);
+    text-transform: none; letter-spacing: -.015em;
+    margin: 0 0 .35rem;
 }
-p.lede { margin: 0 0 1.3rem; color: var(--faint); font-size: .84rem; }
-.crumb { margin: 0 0 1rem; font-size: .82rem; color: var(--faint); }
+p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height: 1.5; }
+.crumb { margin: 0 0 1.5rem; font-size: .82rem; color: var(--faint); }
 
 .banner {
     margin: 0 0 1.25rem;
@@ -325,7 +325,91 @@ table.summary td {
 
 /* ------------------------------------------------------------- trajectory */
 
-.facets { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1.1rem; }
+.split { display: grid; grid-template-columns: 246px minmax(0, 1fr); gap: 1.5rem; }
+@media (max-width: 760px) {
+    .split { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
+}
+.split > .steps { min-width: 0; }
+
+.panel-title {
+    margin: 0 0 .6rem; font-size: .84rem; font-weight: 600; color: var(--ink);
+}
+.panel-note { margin: -.35rem 0 .7rem; font-size: .76rem; color: var(--faint); }
+
+/* The event-type outline. A row is label, a dotted leader, and a count -- the
+   leader is what ties a short label to a number on the far side of the panel. */
+.events { position: sticky; top: 1rem; align-self: start; }
+.etypes, .filelist { list-style: none; margin: 0; padding: 0; }
+.etype-row { padding-left: calc(var(--depth, 0) * .95rem); }
+.etype-row + .etype-row { margin-top: .1rem; }
+.etype {
+    display: flex; align-items: center; gap: .45rem; width: 100%;
+    appearance: none; border: 0; background: none; cursor: pointer;
+    padding: .18rem 0; font: inherit; font-size: .82rem; color: var(--faint);
+    text-align: left;
+}
+.etype:hover { color: var(--ink); }
+.etype .box {
+    flex: none; width: 12px; height: 12px; border-radius: 3px;
+    border: 1px solid var(--rule); background: var(--surface);
+    display: grid; place-items: center;
+}
+.etype .box::after { content: ""; width: 6px; height: 6px; border-radius: 1px; }
+.etype[data-state="on"] { color: var(--ink); }
+.etype[data-state="on"] .box { border-color: var(--accent); }
+.etype[data-state="on"] .box::after { background: var(--accent); }
+.etype[data-state="some"] { color: var(--ink); }
+.etype[data-state="some"] .box { border-color: var(--accent); }
+.etype[data-state="some"] .box::after {
+    background: var(--accent); height: 2px; width: 7px; border-radius: 2px;
+}
+.etype .lbl { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.etype .lead {
+    flex: 1 1 auto; min-width: .6rem;
+    border-bottom: 1px dotted var(--rule); translate: 0 -.15em;
+}
+.etype .cnt { flex: none; font-variant-numeric: tabular-nums; }
+
+/* The file list, and the pane the selected file's diff appears in. */
+.files { align-self: start; }
+@media (min-width: 761px) { .files { position: sticky; top: 1rem; max-height: calc(100vh - 3rem); overflow-y: auto; } }
+.filelist li + li { margin-top: .1rem; }
+.file-pick {
+    display: flex; align-items: flex-start; gap: .5rem; width: 100%;
+    appearance: none; border: 0; cursor: pointer; text-align: left;
+    padding: .35rem .45rem; border-radius: var(--radius-s);
+    background: none; font: inherit; font-size: .8rem; color: var(--meta);
+}
+.file-pick:hover { background: var(--container); color: var(--ink); }
+.file-pick[aria-current="true"] {
+    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+    color: var(--ink); font-weight: 500;
+}
+.file-pick .fpath { flex: 1 1 auto; min-width: 0; }
+.file-pick .fname,
+.file-pick .fdir {
+    display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fdir { color: var(--faint); font-size: .73rem; margin-top: .05rem; }
+.fstat { flex: none; font-size: .75rem; font-variant-numeric: tabular-nums; }
+.file-pick .fstat { padding-top: .1rem; }
+.stat-add { color: var(--add); }
+.stat-del { color: var(--del); margin-left: .3rem; }
+
+.diff-pane { min-width: 0; }
+.diff-head {
+    display: flex; align-items: baseline; gap: .6rem;
+    padding: .5rem .8rem;
+    border: 1px solid var(--card-border); border-bottom: 0;
+    border-radius: var(--radius-l) var(--radius-l) 0 0;
+    background: var(--container-strong);
+}
+.diff-head .fpath { flex: 1 1 auto; min-width: 0; overflow-x: auto; }
+.diff-head code { font-family: var(--mono); font-size: .8rem; color: var(--ink); }
+.diff-pane .diff {
+    margin-top: 0;
+    border-radius: 0 0 var(--radius-l) var(--radius-l);
+}
 
 /* A prompt, a thought and a command are three different things to read, so
    they are set three different ways: the instruction as a card, thinking as

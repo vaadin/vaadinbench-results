@@ -6,8 +6,33 @@ const KIND_LABELS = {
     plan: "Plans", message: "Messages", mixed: "Mixed", other: "Other",
 };
 
+// The filter reads as an outline rather than a row of chips: what the user said,
+// what the model thought, and -- indented under one parent that toggles the lot
+// -- what it actually ran. `publish.py` sorts tool calls into these buckets, so
+// the tree mirrors the data instead of inventing a taxonomy over it.
+const EVENT_TREE = [
+    { label: "User messages", kinds: ["prompt"] },
+    { label: "Agent messages", kinds: ["message"] },
+    { label: "Thinking", kinds: ["thinking"] },
+    {
+        label: "Tool calls",
+        children: [
+            { label: "Reads", kinds: ["read"] },
+            { label: "Searches", kinds: ["search"] },
+            { label: "Edits", kinds: ["edit"] },
+            { label: "Bash", kinds: ["bash"] },
+            { label: "Tests", kinds: ["test"] },
+            { label: "Subagents", kinds: ["agent"] },
+            { label: "Plans", kinds: ["plan"] },
+            { label: "Mixed", kinds: ["mixed"] },
+            { label: "Other", kinds: ["other"] },
+        ],
+    },
+];
+
 let trial = null;
 let activeTab = new URLSearchParams(location.search).get("tab") ?? "trajectory";
+let activeFile = 0;
 const hiddenKinds = new Set();
 
 // The page title lives in the shell, so the trial names itself one level down
@@ -51,16 +76,67 @@ function renderTabs() {
     ).join("")}</div>`;
 }
 
-function renderFacets() {
+// `mixed` counts once per event, not once per tool in it, so the numbers here add
+// up to the trajectory length -- which is what the tab's own count says.
+function kindCounts() {
     const counts = new Map();
     for (const event of trial.trajectory) {
         counts.set(event.kind, (counts.get(event.kind) ?? 0) + 1);
     }
-    const chips = [...counts.entries()].map(([kind, count]) =>
-        `<button class="chip" data-kind="${kind}" aria-pressed="${!hiddenKinds.has(kind)}">
-            ${escapeHtml(KIND_LABELS[kind] ?? kind)} ${count}
-        </button>`).join("");
-    return `<div class="facets">${chips}</div>`;
+    return counts;
+}
+
+// Three states, because a parent whose children disagree must not claim to be
+// either: "on" toggles everything off, "off" and "some" toggle everything on.
+function groupState(kinds) {
+    const shown = kinds.filter((kind) => !hiddenKinds.has(kind)).length;
+    if (!shown) return "off";
+    return shown === kinds.length ? "on" : "some";
+}
+
+function renderRow(label, kinds, count, depth) {
+    const state = groupState(kinds);
+    return `<li class="etype-row" style="--depth:${depth}">
+        <button class="etype" data-kinds="${escapeHtml(kinds.join(","))}"
+            data-state="${state}" aria-pressed="${state !== "off"}">
+            <span class="box" aria-hidden="true"></span>
+            <span class="lbl">${escapeHtml(label)}</span>
+            <span class="lead" aria-hidden="true"></span>
+            <span class="cnt">${count}</span>
+        </button>
+    </li>`;
+}
+
+function renderFacets() {
+    const counts = kindCounts();
+    const total = (kinds) => kinds.reduce((sum, kind) => sum + (counts.get(kind) ?? 0), 0);
+    const rows = EVENT_TREE.flatMap((node) => {
+        if (!node.children) {
+            const count = total(node.kinds);
+            return count ? [renderRow(node.label, node.kinds, count, 0)] : [];
+        }
+        const present = node.children.filter((child) => total(child.kinds));
+        if (!present.length) return [];
+        const all = present.flatMap((child) => child.kinds);
+        return [
+            renderRow(node.label, all, total(all), 0),
+            ...present.map((child) =>
+                renderRow(child.label, child.kinds, total(child.kinds), 1)),
+        ];
+    }).join("");
+
+    // Any kind the tree does not know about still has to be reachable, or a new
+    // bucket in publish.py would silently become unfilterable.
+    const known = new Set(EVENT_TREE.flatMap((node) =>
+        node.children ? node.children.flatMap((c) => c.kinds) : node.kinds));
+    const extra = [...counts.keys()].filter((kind) => !known.has(kind))
+        .map((kind) => renderRow(KIND_LABELS[kind] ?? kind, [kind], counts.get(kind), 0))
+        .join("");
+
+    return `<aside class="events">
+        <h3 class="panel-title">Event types</h3>
+        <ul class="etypes">${rows}${extra}</ul>
+    </aside>`;
 }
 
 function renderCall(call) {
@@ -120,11 +196,10 @@ function renderEvent(event, index) {
 
 function renderTrajectory() {
     const visible = trial.trajectory.filter((event) => !hiddenKinds.has(event.kind));
-    if (!visible.length) {
-        return renderFacets() + `<p class="empty">Every event type is hidden.</p>`;
-    }
-    return renderFacets()
-        + visible.map((event, index) => renderEvent(event, index)).join("");
+    const body = visible.length
+        ? visible.map((event, index) => renderEvent(event, index)).join("")
+        : `<p class="empty">Every event type is hidden.</p>`;
+    return `<div class="split">${renderFacets()}<div class="steps">${body}</div></div>`;
 }
 
 // A line's kind is a property of the whole line, so each one is its own block
@@ -146,6 +221,8 @@ function lineKind(line) {
 function renderPatch(patch) {
     const rows = patch.split("\n").map((line) => {
         // `diff --git a/x b/x` names the file twice; once is enough for a header.
+        // Only the whole-patch fallback still reaches this, since the per-file
+        // panes have the path in their own header.
         const text = line.startsWith("diff --git")
             ? line.replace(/^diff --git a\/(.*) b\/.*$/, "$1")
             : line;
@@ -154,14 +231,95 @@ function renderPatch(patch) {
     return `<div class="diff"><div class="rows">${rows}</div></div>`;
 }
 
+// A combined patch is a concatenation of per-file patches, so splitting it on
+// its own file headers gives the list and the sections in one pass. Anything
+// before the first header is preamble and belongs to no file.
+function splitPatch(patch) {
+    const files = [];
+    let current = null;
+    for (const line of patch.split("\n")) {
+        if (line.startsWith("diff --git")) {
+            current = {
+                path: line.replace(/^diff --git a\/(.*?) b\/.*$/, "$1"),
+                lines: [], added: 0, removed: 0,
+            };
+            files.push(current);
+            continue;
+        }
+        if (!current) continue;
+        current.lines.push(line);
+        if (line.startsWith("+") && !line.startsWith("+++")) current.added += 1;
+        else if (line.startsWith("-") && !line.startsWith("---")) current.removed += 1;
+    }
+    return files;
+}
+
+// The directory is context and the filename is the thing being named, so they
+// get separate lines rather than being run together into one path that has to be
+// truncated mid-word. The directory keeps its last two segments: for
+// `src/main/java/com/example/customers/domain/` the tail is what locates the
+// file, and CSS ellipsis would have eaten exactly that.
+function splitPath(path) {
+    const cut = path.lastIndexOf("/");
+    if (cut < 0) return { dir: "", name: path };
+    const segments = path.slice(0, cut).split("/");
+    const dir = segments.length > 2
+        ? `…/${segments.slice(-2).join("/")}/`
+        : `${segments.join("/")}/`;
+    return { dir, name: path.slice(cut + 1) };
+}
+
+function fileStat(file) {
+    return `${file.added ? `<span class="stat-add">+${file.added}</span>` : ""}
+        ${file.removed ? `<span class="stat-del">−${file.removed}</span>` : ""}`;
+}
+
 function renderChanges() {
     const changes = trial.changes ?? {};
     if (!changes.patch && !changes.diffstat) {
         return `<p class="empty">The agent changed nothing, or no patch was captured.</p>`;
     }
-    return `${changes.diffstat ? `<pre>${escapeHtml(changes.diffstat)}</pre>` : ""}
-        ${changes.patch ? renderPatch(changes.patch) : ""}
-        ${changes.patch_truncated ? `<p class="truncated">Patch truncated.</p>` : ""}`;
+    const truncated = changes.patch_truncated
+        ? `<p class="truncated">Patch truncated.</p>` : "";
+    const files = changes.patch ? splitPatch(changes.patch) : [];
+    if (!files.length) {
+        // No recognisable file headers: show what there is rather than nothing.
+        return `${changes.diffstat ? `<pre>${escapeHtml(changes.diffstat)}</pre>` : ""}
+            ${changes.patch ? renderPatch(changes.patch) : ""}${truncated}`;
+    }
+
+    const picked = files[Math.min(activeFile, files.length - 1)];
+    // The diffstat's own summary line survives truncation of the patch body,
+    // which a count of the parsed sections would not.
+    const summary = (changes.diffstat ?? "").trim().split("\n").pop() ?? "";
+
+    const list = files.map((file, index) => {
+        const { dir, name } = splitPath(file.path);
+        return `<li><button class="file-pick" data-file="${index}"
+            aria-current="${file === picked}" title="${escapeHtml(file.path)}">
+            <span class="fpath">
+                <span class="fname">${escapeHtml(name)}</span>
+                ${dir ? `<span class="fdir">${escapeHtml(dir)}</span>` : ""}
+            </span>
+            <span class="fstat">${fileStat(file)}</span>
+        </button></li>`;
+    }).join("");
+
+    return `<div class="split changes">
+        <aside class="files">
+            <h3 class="panel-title">Files</h3>
+            ${summary ? `<p class="panel-note">${escapeHtml(summary)}</p>` : ""}
+            <ul class="filelist">${list}</ul>
+        </aside>
+        <section class="diff-pane">
+            <header class="diff-head">
+                <span class="fpath"><code>${escapeHtml(picked.path)}</code></span>
+                <span class="fstat">${fileStat(picked)}</span>
+            </header>
+            ${renderPatch(picked.lines.join("\n"))}
+            ${truncated}
+        </section>
+    </div>`;
 }
 
 // Unit suites finish in well under a second, and `duration` rounds those to
@@ -265,10 +423,20 @@ document.getElementById("content").addEventListener("click", (event) => {
         render();
         return;
     }
-    const facet = event.target.closest("[data-kind]");
+    const facet = event.target.closest("[data-kinds]");
     if (facet) {
-        const kind = facet.dataset.kind;
-        hiddenKinds.has(kind) ? hiddenKinds.delete(kind) : hiddenKinds.add(kind);
+        const kinds = facet.dataset.kinds.split(",");
+        // "some" resolves upwards: a half-checked parent turns everything on.
+        const turnOff = facet.dataset.state === "on";
+        for (const kind of kinds) {
+            turnOff ? hiddenKinds.add(kind) : hiddenKinds.delete(kind);
+        }
+        render();
+        return;
+    }
+    const file = event.target.closest("[data-file]");
+    if (file) {
+        activeFile = Number(file.dataset.file);
         render();
     }
 });
