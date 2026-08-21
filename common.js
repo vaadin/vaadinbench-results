@@ -1,7 +1,20 @@
-// Shared helpers. No framework and no build step: the site is four static files
-// plus the JSON publish.py writes, which is the whole reason Pages can serve it.
+// Shared helpers. No framework and no build step: the site is a handful of
+// static files plus the JSON publish.py writes, which is the whole reason Pages
+// can serve it.
 
 const NBSP = " ";
+
+// The Vaadin reindeer, from Font Awesome's brand set (CC BY 4.0). Two subpaths:
+// the antlers and the muzzle. It lives here rather than in each page's markup
+// so there is one copy of it, and app.css does the drawing.
+const REINDEER = "M224.5 140.7c1.5-17.6 4.9-52.7 49.8-52.7h98.6c20.7 0 32.1-7.8 32.1-21.6V54.1c0-12.2 9.3-22.1 21.5-22.1S448 41.9 448 54.1v36.5c0 42.9-21.5 62-66.8 62H280.7c-30.1 0-33 14.7-33 27.1 0 1.3-.1 2.5-.2 3.7-.7 12.3-10.9 22.2-23.4 22.2s-22.7-9.8-23.4-22.2c-.1-1.2-.2-2.4-.2-3.7 0-12.3-3-27.1-33-27.1H66.8c-45.3 0-66.8-19.1-66.8-62V54.1C0 41.9 9.4 32 21.6 32s21.5 9.9 21.5 22.1v12.3C43.1 80.2 54.5 88 75.2 88h98.6c44.8 0 48.3 35.1 49.8 52.7h.9zM224 456c11.5 0 21.4-7 25.7-16.3 1.1-1.8 97.1-169.6 98.2-171.4 11.9-19.6-3.2-44.3-27.2-44.3-13.9 0-23.3 6.4-29.8 20.3L224 362l-66.9-117.7c-6.4-13.9-15.9-20.3-29.8-20.3-24 0-39.1 24.6-27.2 44.3 1.1 1.9 97.1 169.6 98.2 171.4 4.3 9.3 14.2 16.3 25.7 16.3z";
+
+function renderMark() {
+    const slot = document.getElementById("mark");
+    if (!slot) return;
+    slot.innerHTML = `<svg class="mark" viewBox="0 0 448 512" role="img"
+        aria-label="Vaadin"><path pathLength="1" d="${REINDEER}"/></svg>`;
+}
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
@@ -11,10 +24,8 @@ function escapeHtml(value) {
 
 // Pages serves everything with `max-age=600` and no way to override it, so a
 // reader who saw an earlier publish gets that copy back from disk without the
-// browser asking us anything — the reason synthetic numbers outlived the run
-// that replaced them. `no-cache` forces a revalidation on every load. Chrome
-// then refetches the body outright rather than settling for a 304, so this
-// costs a round trip and a couple of gzipped kilobytes per page view.
+// browser asking us anything -- the reason synthetic numbers outlived the run
+// that replaced them. `no-cache` forces a revalidation on every load.
 function fetchJson(path) {
     return fetch(path, { cache: "no-cache" }).then((response) => {
         if (!response.ok) {
@@ -31,6 +42,19 @@ function shortModel(model) {
     return name.replace(/-\d{8}$/, "");
 }
 
+// `claude-opus-5` and `claude-sonnet-5` share a prefix that says nothing about
+// which is which. On a chart where each label competes for room, the shared part
+// is dropped -- but only at a `-` boundary, and only if every model has it.
+function trimCommonPrefix(names) {
+    const parts = names.map((name) => shortModel(name).split("-"));
+    let shared = 0;
+    while (parts[0] && shared < parts[0].length - 1
+        && parts.every((p) => p.length > shared + 1 && p[shared] === parts[0][shared])) {
+        shared += 1;
+    }
+    return new Map(names.map((name, i) => [name, parts[i].slice(shared).join("-")]));
+}
+
 function shortTask(task) {
     return String(task ?? "").split("/").pop();
 }
@@ -39,6 +63,14 @@ function shortTask(task) {
 // same for every suite VaadinBench grades. The full name stays in a tooltip.
 function shortSuite(name) {
     return String(name ?? "").split(".").pop();
+}
+
+// A job directory is named `<configuration>-<date>-<time>`. The timestamp makes
+// each run unique; the prefix is the thing being compared -- which skills and
+// tools the agent was given. The leaderboard groups by that prefix, so two runs
+// of one configuration on different days land in the same row.
+function configOf(job) {
+    return String(job ?? "").replace(/-\d{8}-\d{6}$/, "") || "unknown";
 }
 
 function duration(seconds) {
@@ -56,6 +88,10 @@ function tokens(count) {
 
 function money(amount) {
     return amount === null || amount === undefined ? "—" : `$${amount.toFixed(2)}`;
+}
+
+function percent(rate) {
+    return rate === null || rate === undefined ? "—" : `${Math.round(rate * 100)}%`;
 }
 
 // The verifier decides the result. An error in the agent loop is worth flagging
@@ -77,8 +113,331 @@ function outcome(trial) {
     return `${badge} <span class="note" title="${escapeHtml(trial.error)}">error</span>`;
 }
 
-function trialUrl(id) {
-    return `trial.html?id=${encodeURIComponent(id)}`;
+// The job rides along so the trial page can check that the file it loaded is
+// the run that was clicked. Ids used to omit the job, which let three trials
+// share one, and the page had no way to notice it was showing another run.
+function trialUrl(id, job) {
+    const query = new URLSearchParams({ id });
+    if (job) query.set("job", job);
+    return `trial.html?${query}`;
+}
+
+function runUrl(model, config) {
+    return `run.html?model=${encodeURIComponent(model)}&config=${encodeURIComponent(config)}`;
+}
+
+// One hue per model, from Aura's palette, so a row's bar and its dot in the
+// chart are the same colour. Assigned by position in the sorted model list
+// rather than by name, so a new model picks up the next hue on its own.
+const HUES = ["blue", "purple", "orange", "green", "red", "yellow"];
+
+function hueMap(models) {
+    const sorted = [...new Set(models)].sort();
+    return new Map(sorted.map((model, i) => [model, HUES[i % HUES.length]]));
+}
+
+// The saturated palette colour for anything filled, its `-text` variant for
+// anything set as type: Aura computes the second precisely because the first
+// does not have the contrast for small text.
+function hueFill(hue) {
+    return `var(--aura-${hue})`;
+}
+
+function hueText(hue) {
+    return `var(--aura-${hue}-text)`;
+}
+
+// Configurations are the other axis of comparison, and colour is already spent
+// on models, so they get a shape. Nine points labelled in text collide with each
+// other and with the dots; two legends and a tooltip do not.
+const SHAPES = ["circle", "square", "triangle", "diamond"];
+
+function shapeMap(configs) {
+    const sorted = [...new Set(configs)].sort();
+    return new Map(sorted.map((config, i) => [config, SHAPES[i % SHAPES.length]]));
+}
+
+const SHAPE_TAGS = { circle: "circle", square: "rect", triangle: "polygon", diamond: "polygon" };
+
+function marker(shape, x, y, style, klass = "dot", r = 6) {
+    const kind = SHAPE_TAGS[shape] ? shape : "circle";
+    const body = {
+        circle: `<circle cx="${x}" cy="${y}" r="${r}"`,
+        square: `<rect x="${x - r * 0.9}" y="${y - r * 0.9}" width="${r * 1.8}"
+            height="${r * 1.8}" rx="1"`,
+        triangle: `<polygon points="${x},${y - r * 1.15} ${x + r},${y + r * 0.8}
+            ${x - r},${y + r * 0.8}"`,
+        diamond: `<polygon points="${x},${y - r * 1.25} ${x + r * 1.05},${y}
+            ${x},${y + r * 1.25} ${x - r * 1.05},${y}"`,
+    }[kind];
+    return `${body} class="${klass}" style="${style}"/>`;
+}
+
+// Candidate positions for a label, in preference order: beside the point first,
+// then above and below, then progressively further out. Both horizontal anchors
+// are offered at every vertical step, because a point near an edge may only have
+// one side available -- and a long label beside a crowded point needs to be able
+// to move vertically while staying on the side that fits.
+const LABEL_SLOTS = (() => {
+    const slots = [[11, 4, "start"], [-11, 4, "end"], [0, -11, "middle"], [0, 16, "middle"]];
+    for (const dy of [-13, 19, -25, 31, -37, 43, -49, 55]) {
+        slots.push([11, dy, "start"], [-11, dy, "end"], [0, dy, "middle"]);
+    }
+    return slots;
+})();
+
+function layoutChartLabels(svg) {
+    if (!svg) return;
+    const labels = [...svg.querySelectorAll(".dot-label")];
+    if (!labels.length) return;
+    const width = svg.viewBox.baseVal.width;
+    const pad = 2;
+    const grow = (box) => ({
+        x: box.x - pad, y: box.y - pad,
+        w: box.width + pad * 2, h: box.height + pad * 2,
+    });
+    // Markers and the axis text are obstacles from the start; each label becomes
+    // one as it lands. Including the ticks is what keeps a label from settling on
+    // top of "100%" or "$2.00".
+    const taken = [...svg.querySelectorAll(".dot, .tick, .axis-title")]
+        .map((node) => grow(node.getBBox()));
+
+    // Overlap by area, not yes/no: when a point is boxed in on every side, the
+    // least bad slot is a real answer and "keep the default" is not.
+    const overlap = (a, b) =>
+        Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x))
+        * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+
+    for (const label of labels) {
+        const cx = Number(label.dataset.cx), cy = Number(label.dataset.cy);
+        const { width: w, height: h } = label.getBBox();
+        let best = null;
+        for (const [dx, dy, anchor] of LABEL_SLOTS) {
+            const x = cx + dx, y = cy + dy;
+            const left = anchor === "start" ? x : anchor === "end" ? x - w : x - w / 2;
+            const box = { x: left - pad, y: y - h * 0.8 - pad, w: w + pad * 2, h: h + pad * 2 };
+            if (box.x < 0 || box.x + box.w > width) continue;
+            const cost = taken.reduce((sum, other) => sum + overlap(box, other), 0);
+            if (!best || cost < best.cost) best = { x, y, anchor, box, cost };
+            if (cost === 0) break;
+        }
+        if (!best) continue;
+        label.setAttribute("x", best.x);
+        label.setAttribute("y", best.y);
+        label.setAttribute("text-anchor", best.anchor);
+        taken.push(best.box);
+    }
+}
+
+// A tooltip that follows the pointer rather than SVG's own <title>, which waits
+// about a second and then lets the window manager put it wherever it likes --
+// far from the point it describes, which reads as a bug.
+function bindTips(root) {
+    const tip = root.querySelector(".tip");
+    if (!tip) return;
+    const show = (target) => {
+        const box = target.getBoundingClientRect();
+        const frame = tip.parentElement.getBoundingClientRect();
+        tip.textContent = target.dataset.tip;
+        tip.hidden = false;
+        // Measured after the text is in, so the width is the real one, then
+        // clamped so a point near either edge keeps the whole label on screen.
+        const left = box.left - frame.left + box.width / 2 - tip.offsetWidth / 2;
+        tip.style.left = `${Math.max(0, Math.min(left, frame.width - tip.offsetWidth))}px`;
+        tip.style.top = `${box.top - frame.top - tip.offsetHeight - 8}px`;
+    };
+    root.addEventListener("pointerover", (event) => {
+        const target = event.target.closest("[data-tip]");
+        if (target) show(target);
+    });
+    root.addEventListener("pointerout", (event) => {
+        if (event.target.closest("[data-tip]")) tip.hidden = true;
+    });
+}
+
+// ------------------------------------------------------------------ markdown
+
+// Task prompts and agent messages are written in Markdown, and reading them as
+// raw text means reading the punctuation instead of the prose.
+//
+// This is a deliberate subset -- headings, paragraphs, lists, code, emphasis,
+// links, quotes, rules -- not a CommonMark implementation, because the input is
+// the narrow dialect these agents actually emit and a real parser is a
+// dependency this site does not have a way to carry.
+//
+// SECURITY: the text is agent output, so it is escaped *first* and every tag
+// below is one this function wrote. Nothing from the input is ever interpolated
+// as markup, and link targets are checked against a scheme allowlist, so a
+// `javascript:` href renders as plain text rather than a link.
+
+const MD_SAFE_URL = /^(https?:\/\/|mailto:|#|\/)[^\s]*$/i;
+
+function mdUrl(url) {
+    // Already HTML-escaped, so quotes cannot terminate the attribute.
+    return MD_SAFE_URL.test(url.trim()) ? url.trim() : "";
+}
+
+// Inline spans, on already-escaped text. Code first, so emphasis markers inside
+// a code span are left alone; the placeholder can never appear in the input,
+// because U+0000 does not survive escaping.
+function mdInline(text) {
+    const code = [];
+    let out = text.replace(/`([^`]+)`/g, (_, body) => {
+        code.push(body);
+        return `\u0000${code.length - 1}\u0000`;
+    });
+
+    out = out
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
+        .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label, href) => {
+            const url = mdUrl(href);
+            return url ? `<a href="${url}">${label}</a>` : label;
+        })
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+        .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+        .replace(/(^|[\s(])_([^_\n]+)_/g, "$1<em>$2</em>")
+        .replace(/~~([^~]+)~~/g, "<del>$1</del>");
+
+    return out.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${code[Number(i)]}</code>`);
+}
+
+// Lists nest by indent, so they are built depth-first: an item deeper than the
+// level being built starts a sublist inside the item before it.
+function mdList(items, start, indent) {
+    const tag = items[start].ordered ? "ol" : "ul";
+    let html = `<${tag}>`;
+    let i = start;
+    while (i < items.length && items[i].indent >= indent) {
+        if (items[i].indent > indent) {
+            const [sub, next] = mdList(items, i, items[i].indent);
+            html += sub;
+            i = next;
+            continue;
+        }
+        html += `<li>${mdInline(items[i].text)}`;
+        if (i + 1 < items.length && items[i + 1].indent > indent) {
+            const [sub, next] = mdList(items, i + 1, items[i + 1].indent);
+            html += sub;
+            i = next;
+        } else {
+            i += 1;
+        }
+        html += "</li>";
+    }
+    return [`${html}</${tag}>`, i];
+}
+
+const MD_ITEM = /^(\s*)(?:([-*+])|(\d+)[.)])\s+(.*)$/;
+
+function renderMarkdown(text) {
+    const lines = escapeHtml(text ?? "").split("\n");
+    const out = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // Fenced code. An unterminated fence runs to the end rather than
+        // swallowing the rest of the document into a paragraph.
+        const fence = line.match(/^\s*```+\s*([\w+-]*)\s*$/);
+        if (fence) {
+            const body = [];
+            i += 1;
+            while (i < lines.length && !/^\s*```+\s*$/.test(lines[i])) {
+                body.push(lines[i]);
+                i += 1;
+            }
+            i += 1;
+            out.push(`<pre><code>${body.join("\n")}</code></pre>`);
+            continue;
+        }
+
+        if (!line.trim()) { i += 1; continue; }
+
+        if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+            out.push("<hr>");
+            i += 1;
+            continue;
+        }
+
+        const heading = line.match(/^(#{1,6})\s+(.*)$/);
+        if (heading) {
+            const level = heading[1].length;
+            out.push(`<h${level}>${mdInline(heading[2].trim())}</h${level}>`);
+            i += 1;
+            continue;
+        }
+
+        if (/^\s*&gt;\s?/.test(line)) {
+            const body = [];
+            while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) {
+                body.push(lines[i].replace(/^\s*&gt;\s?/, ""));
+                i += 1;
+            }
+            out.push(`<blockquote>${renderMarkdown(unescapeHtml(body.join("\n")))}</blockquote>`);
+            continue;
+        }
+
+        if (MD_ITEM.test(line)) {
+            const items = [];
+            while (i < lines.length) {
+                const match = lines[i].match(MD_ITEM);
+                if (match) {
+                    items.push({
+                        indent: match[1].length,
+                        ordered: Boolean(match[3]),
+                        text: match[4],
+                    });
+                    i += 1;
+                } else if (lines[i].trim() && /^\s+/.test(lines[i]) && items.length) {
+                    // A wrapped continuation line belongs to the item above it.
+                    items[items.length - 1].text += ` ${lines[i].trim()}`;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+            out.push(mdList(items, 0, items[0].indent)[0]);
+            continue;
+        }
+
+        const paragraph = [];
+        while (i < lines.length && lines[i].trim()
+            && !MD_ITEM.test(lines[i])
+            && !/^(#{1,6})\s/.test(lines[i])
+            && !/^\s*```/.test(lines[i])
+            && !/^\s*&gt;\s?/.test(lines[i])) {
+            paragraph.push(lines[i]);
+            i += 1;
+        }
+        out.push(`<p>${mdInline(paragraph.join("\n"))}</p>`);
+    }
+
+    return out.join("");
+}
+
+// Blockquote bodies are re-parsed, and the parser escapes what it is given, so
+// one round has to be undone to avoid escaping the escapes.
+function unescapeHtml(value) {
+    return String(value)
+        .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
+}
+
+// Summary figures as a one-row table rather than a flat run of label/value
+// pairs: it puts them on a card like every other block of content, lines the
+// numbers up under their names, and needs no styling of its own.
+function metricsTable(pairs) {
+    const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
+    if (!cells.length) return "";
+    return `<div class="wrap"><table class="summary">
+        <thead><tr>${cells.map(([label]) =>
+            `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead>
+        <tbody><tr>${cells.map(([, value]) =>
+            `<td>${value}</td>`).join("")}</tr></tbody>
+    </table></div>`;
 }
 
 // Invented data must never be mistaken for a measurement, so it is called out on
@@ -107,3 +466,5 @@ function showError(error) {
     document.getElementById("content").innerHTML =
         `<p class="empty">Could not load the data: ${escapeHtml(error.message)}</p>`;
 }
+
+renderMark();

@@ -59,21 +59,41 @@ something rather than quietly showing less than there was.
 ## How it works
 
 There is no build step and no framework. The site is a handful of static files —
-`index.html`, `trial.html`, and the CSS and JS beside them — reading JSON that
-`publish.py` wrote:
+three pages and the CSS and JS beside them — reading JSON that `publish.py`
+wrote:
 
 ```text
-index.html          leaderboard: a summary per model, then every trial
+index.html          leaderboard: one row per model and configuration, plus a chart
+run.html            one configuration: its trials
 trial.html          one trial: trajectory, changes, verifier, instruction
 data/index.json         one row per trial
 data/trials/<id>.json   one file per trial
 ```
 
+A **configuration** is a job name with its timestamp stripped —
+`vaadin-skills-20260820-171844` is one run of the `vaadin-skills`
+configuration. It is what a run was testing, which skills and tools the agent
+had, so `(model, configuration)` is the pair the leaderboard ranks and repeated
+runs of one configuration collapse into a single row.
+
+The colours are Vaadin's Aura theme. Aura computes nearly everything at runtime
+from `--aura-background-color`, using relative-colour syntax that needs Aura's
+own stylesheet, so `app.css` carries its formulas evaluated at Aura's defaults
+and written out as literal `oklch()`. The header comment names the source files
+to diff against when Aura moves.
+
 They live at the repository root because that is where Pages serves this branch
 from; `.nojekyll` turns off the Jekyll pass, since there is nothing to render.
 
-A trial's id is `base64(task|model|attempt)`, so a link to a trial survives a
-republish. `trial.html?id=…&tab=verifier` opens straight to a tab.
+A trial's id is `base64(job|task|model|attempt)`, so a link to a trial survives a
+republish. The job is part of it because it has to be: without it, one task and
+model run in three configurations produced three trials sharing a single id, so
+`data/trials/<id>.json` was written three times and only the last job survived
+— the index still listed all three rows, and two of them opened another run's
+trajectory, reward and diff. `trial.html?id=…&tab=verifier` opens straight to a tab, and the
+leaderboard keeps its tab and both filters in the query string, so
+`index.html?tab=chart&models=anthropic/claude-opus-5` is a link rather than a
+set of clicks to describe.
 
 Harbor writes the trajectory as **ATIF** (Agent Trajectory Interchange Format), a
 versioned schema whose steps carry `source`, `message`, `reasoning_content` and
