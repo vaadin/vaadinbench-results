@@ -4,10 +4,17 @@
 let trials = [];
 let runs = [];
 const params = new URLSearchParams(location.search);
+const DEFAULT_CONFIGS = ["vaadin-skills", "vanilla"];
 const state = {
     tab: params.get("tab") === "chart" ? "chart" : "leaderboard",
     models: new Set((params.get("models") ?? "").split(",").filter(Boolean)),
-    configs: new Set((params.get("configs") ?? "").split(",").filter(Boolean)),
+    // vaadin-skills-tools is still a run short of the others, so comparing it
+    // against them would read as a result rather than as missing data. Until it
+    // catches up the page opens on the two complete configurations, and the
+    // chip is there for anyone who wants the third anyway.
+    configs: params.has("configs")
+        ? new Set(params.get("configs").split(",").filter(Boolean))
+        : new Set(DEFAULT_CONFIGS),
     x: params.get("x") === "tokens" ? "tokens" : "cost",
 };
 
@@ -259,7 +266,10 @@ function syncUrl() {
         value ? url.searchParams.set(key, value) : url.searchParams.delete(key);
     set("tab", state.tab === "chart" ? "chart" : "");
     set("models", [...state.models].join(","));
-    set("configs", [...state.configs].join(","));
+    // Always written, empty or not: an absent `configs` means "use the default
+    // selection", so a filter cleared down to nothing has to say so out loud
+    // rather than by omission.
+    url.searchParams.set("configs", [...state.configs].join(","));
     set("x", state.x === "tokens" ? "tokens" : "");
     history.replaceState(null, "", url);
 }
