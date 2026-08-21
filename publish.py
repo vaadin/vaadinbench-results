@@ -527,7 +527,11 @@ def main() -> int:
             continue
         rewarded = [t for t in run["trials"] if t["reward"] is not None]
         solved = sum(1 for t in rewarded if t["reward"] >= 1)
-        print(f"  {len(run['trials'])} trials, {solved}/{len(rewarded)} solved")
+        # Errors do not change the count -- the verifier decides that -- but a run
+        # full of them is worth seeing without opening the site.
+        errored = sum(1 for t in run["trials"] if t["error"])
+        note = f", {errored} errored" if errored else ""
+        print(f"  {len(run['trials'])} trials, {solved}/{len(rewarded)} solved{note}")
         runs[run["job"]] = run
 
     index = {
