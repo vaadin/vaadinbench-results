@@ -87,8 +87,7 @@ function icon(type) {
 
 // The page title lives in the shell, so the trial names itself one level down
 // and the breadcrumb carries the way back to the configuration it came from.
-function renderCrumb() {
-    const config = configOf(trial.job);
+function renderCrumb(config = configOf(trial.job)) {
     // The separator between levels has to differ from the one inside a level:
     // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
     // really one link and then a model-and-configuration pair.
@@ -99,23 +98,35 @@ function renderCrumb() {
             <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
 }
 
-// If the caller said which run it wanted and the file says otherwise, the data
-// on the page belongs to a different trial. That used to happen silently: ids
-// omitted the job, so `data/trials/<id>.json` was overwritten by whichever job
-// published last. Saying so is better than rendering another run's numbers
-// under this one's heading.
-function jobWarning() {
+// If the caller said which run it wanted and the file says otherwise, the file
+// is not this trial and none of it can be shown: not the reward, not the
+// trajectory, not the diff. Ids used to omit the job, so `data/trials/<id>.json`
+// was overwritten by whichever job published last, and two of every three rows
+// linked to a stranger's trajectory. A banner over that data was not enough --
+// the page still read as this run's -- so a mismatch now replaces the page.
+function wrongJob() {
     const wanted = new URLSearchParams(location.search).get("job");
-    if (!wanted || wanted === trial.job) return "";
-    return `<div class="banner"><strong>This is a different run.</strong>
-        The link asked for <code>${escapeHtml(wanted)}</code> but the stored
-        trial is from <code>${escapeHtml(trial.job)}</code>. Trial ids used to
-        omit the job, so runs of the same task and model overwrote each other.
-        Re-run <code>publish.py</code> to separate them.</div>`;
+    return wanted && wanted !== trial.job ? wanted : null;
+}
+
+function renderWrongJob(wanted) {
+    const config = configOf(wanted);
+    return `<div class="banner"><strong>Trajectory not published for this
+        run.</strong> This link asked for <code>${escapeHtml(wanted)}</code>, but
+        the stored trial is from <code>${escapeHtml(trial.job)}</code>: trial ids
+        once omitted the job, so runs of the same task and model overwrote each
+        other and only the last one kept its trajectory. The leaderboard's
+        numbers are unaffected &mdash; they are stored per run &mdash; and
+        re-publishing that job separates them again.</div>
+        <h2 class="title">${escapeHtml(shortTask(trial.task))} ·
+            ${escapeHtml(shortModel(trial.model))}</h2>
+        <p class="empty"><a href="${runUrl(trial.model, config)}">Back to
+            ${escapeHtml(shortModel(trial.model))} ·
+            ${escapeHtml(config)}</a></p>`;
 }
 
 function renderHeader() {
-    return `${syntheticBanner(trial.synthetic)}${jobWarning()}
+    return `${syntheticBanner(trial.synthetic)}
         <h2 class="title">${escapeHtml(shortTask(trial.task))} ·
             ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="lede">
@@ -448,6 +459,13 @@ function renderInstruction() {
 }
 
 function render() {
+    const wanted = wrongJob();
+    if (wanted) {
+        document.getElementById("content").innerHTML = renderWrongJob(wanted);
+        renderCrumb(configOf(wanted));
+        document.title = `Not published · VaadinBench`;
+        return;
+    }
     const views = {
         trajectory: renderTrajectory,
         changes: renderChanges,
