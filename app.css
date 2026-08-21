@@ -27,6 +27,14 @@
     --aura-blue-text: oklch(.45 .18 264);
     --aura-purple-text: oklch(.465 .198 290);
 
+    /* Two additions to Aura's six: a teal for when the palette runs out before
+       the axis does, and a neutral for a baseline -- a value that means "none of
+       the above" reads better in ink than in a colour of its own. */
+    --aura-teal: oklch(.62 .13 200);
+    --aura-teal-text: oklch(.4 .117 200);
+    --aura-neutral: oklch(.55 .01 248);
+    --aura-neutral-text: oklch(.42 .008 248);
+
     /* --aura-background-color-light, and the two stops Aura's gradient adds. */
     --bg: oklch(.95 .005 248);
     --bg-glow: oklch(.965 .005 248);
@@ -65,6 +73,8 @@
         --aura-green-text: oklch(.8 .18 155);
         --aura-blue-text: oklch(.8 .18 264);
         --aura-purple-text: oklch(.8 .198 290);
+        --aura-teal-text: oklch(.8 .117 200);
+        --aura-neutral-text: oklch(.78 .008 248);
         --bg: oklch(.2 .01 260);
         --bg-glow: oklch(.23 .012 260);
         --bg-alt: oklch(.185 .008 260);
@@ -135,7 +145,14 @@ a:hover { text-decoration: underline; }
 
 /* ------------------------------------------------------------------ brand */
 
-.brand { display: flex; align-items: center; gap: .6rem; margin: 0 0 1.75rem; }
+.brand { display: flex; align-items: center; margin: 0 0 1.75rem; }
+/* The wordmark is the way home, so it is a link -- but a link that looks like
+   the heading it already was, underlined only on hover. */
+.brand > a {
+    display: inline-flex; align-items: center; gap: .6rem;
+    color: inherit; text-decoration: none;
+}
+.brand > a:hover h1 { text-decoration: underline; text-underline-offset: 3px; }
 .brand h1 {
     font-size: 1.15rem; font-weight: 600; letter-spacing: -.01em;
     margin: 0; color: var(--ink);
@@ -223,20 +240,31 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
     width: 6rem; flex: none; color: var(--faint);
     font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
 }
+/* A chip is its own legend entry: --chip is the value's palette colour, set
+   inline, and everything here is expressed in terms of it. Unselected chips
+   keep the swatch but not the tint, so the row of chips reads as a key before
+   anything is filtered, and a selection is still unmistakable. */
 .chip {
     appearance: none; cursor: pointer; font: inherit; font-size: .8rem; font-weight: 500;
-    padding: .2rem .65rem; border-radius: 999px;
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .2rem .7rem .2rem .5rem; border-radius: 999px;
     border: 1px solid var(--rule); background: var(--surface);
-    color: var(--meta); box-shadow: var(--shadow-xs);
+    color: var(--chip-text, var(--meta)); box-shadow: var(--shadow-xs);
 }
-.chip:hover { color: var(--ink); border-color: var(--accent); }
+.chip .swatch {
+    width: 9px; height: 9px; flex: none; border-radius: 999px;
+    background: var(--chip, var(--faint));
+}
+.chip .glyph { width: 12px; height: 12px; flex: none; overflow: visible; }
+.chip:hover { border-color: color-mix(in oklab, var(--chip, var(--accent)) 55%, var(--card-border)); }
 .chip[aria-pressed="true"] {
-    color: var(--accent-text);
-    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
-    border-color: color-mix(in oklab, var(--accent) 45%, var(--card-border));
+    background: color-mix(in oklab, var(--chip, var(--accent)) 14%, var(--surface));
+    border-color: color-mix(in oklab, var(--chip, var(--accent)) 50%, var(--card-border));
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--chip, var(--accent)) 25%, transparent);
 }
-.chip[aria-pressed="false"] { color: var(--faint); }
-.chip[aria-pressed="false"]:hover { color: var(--ink); }
+.chip[aria-pressed="false"] .swatch, .chip[aria-pressed="false"] .glyph { opacity: .75; }
+.chip[aria-pressed="false"]:hover .swatch,
+.chip[aria-pressed="false"]:hover .glyph { opacity: 1; }
 
 /* ----------------------------------------------------------------- tables */
 
@@ -262,9 +290,25 @@ td { border-bottom: 1px solid var(--hairline); }
 tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
+/* A clickable row: the whole row is the target, so the hover tint has to be
+   visible enough to say so, and nothing inside it should look like the one
+   clickable part -- the task link keeps the row's own colour until hover. */
 tr.pick { cursor: pointer; }
-tr.pick:hover { background: var(--container); }
-td .sub { display: block; color: var(--faint); font-size: .76rem; margin-top: .1rem; }
+tr.pick:hover { background: var(--container-strong); }
+tr.pick td.name a { color: inherit; text-decoration: none; }
+tr.pick:hover td.name a { text-decoration: underline; text-underline-offset: 2px; }
+/* The row carries its model colour in --row and its config colour in --cfg, so
+   the name cell can label both without either being read off the bar alone. */
+td .sub {
+    display: flex; align-items: center; gap: .3rem;
+    color: var(--cfg, var(--faint)); font-size: .76rem; font-weight: 500; margin-top: .15rem;
+}
+td .sub .glyph { width: 11px; height: 11px; flex: none; overflow: visible; }
+td.name .who { display: flex; align-items: center; gap: .4rem; }
+td.name .swatch {
+    width: 9px; height: 9px; flex: none; border-radius: 999px;
+    background: var(--row, var(--faint));
+}
 td.rank { color: var(--faint); font-variant-numeric: tabular-nums; width: 1.5rem; }
 td.name { font-weight: 500; }
 
@@ -272,12 +316,39 @@ td.name { font-weight: 500; }
    pass rate, coloured by model so a row and its dot in the chart match. */
 td.bar { width: 38%; min-width: 130px; }
 .bar-track {
-    display: block; height: 6px; border-radius: 999px;
+    display: block; height: 9px; border-radius: 999px;
     background: var(--container-strong); overflow: hidden;
 }
-.bar-fill { display: block; height: 100%; border-radius: 999px; min-width: 3px; }
+.bar-fill {
+    display: block; height: 100%; border-radius: 999px; min-width: 3px;
+    box-shadow: inset 0 0 0 1px oklch(0 0 0 / .06);
+}
 
 /* ------------------------------------------------------------------ chart */
+
+.chart-head {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: .8rem; margin: 0 0 .9rem;
+}
+.chart-head .title { margin: 0; }
+
+/* One control, two states -- a pill with the chosen half raised out of it, so
+   which axis is showing is legible without reading the labels. */
+.seg {
+    display: inline-flex; flex: none; gap: .15rem; padding: .15rem;
+    background: var(--container); border: 1px solid var(--rule);
+    border-radius: 999px;
+}
+.seg button {
+    appearance: none; border: 0; cursor: pointer; font: inherit;
+    font-size: .78rem; font-weight: 500; color: var(--meta);
+    padding: .28rem .8rem; border-radius: 999px; background: none;
+}
+.seg button:hover { color: var(--ink); }
+.seg button[aria-pressed="true"] {
+    color: var(--accent-text); background: var(--surface);
+    box-shadow: var(--shadow-xs);
+}
 
 .chart-wrap {
     position: relative;
@@ -307,7 +378,7 @@ td.bar { width: 38%; min-width: 130px; }
 .legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .9rem; font-size: .8rem; color: var(--meta); }
 .legend span { display: inline-flex; align-items: center; gap: .35rem; }
 .legend i { width: 8px; height: 8px; border-radius: 999px; }
-.legend svg { width: 13px; height: 13px; overflow: visible; }
+.legend svg, .legend .glyph { width: 13px; height: 13px; overflow: visible; }
 .legend .shape { fill: var(--faint); }
 
 /* ----------------------------------------------------------------- badges */

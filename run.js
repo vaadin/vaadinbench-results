@@ -32,7 +32,7 @@ function renderTrials(rows) {
         .sort((a, b) => a.task.localeCompare(b.task)
             || a.job.localeCompare(b.job)
             || a.attempt - b.attempt)
-        .map((trial) => `<tr>
+        .map((trial) => `<tr class="pick" data-href="${trialUrl(trial.id, trial.job)}">
             <td class="name"><a href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
                 <span class="sub">${escapeHtml(trial.job)}</span></td>
             <td class="num">${trial.attempt}</td>
@@ -54,6 +54,15 @@ function renderTrials(rows) {
 }
 
 const content = document.getElementById("content");
+
+// The task link stays, so the row is still keyboard-reachable and openable in a
+// new tab; the row around it is the target for an ordinary click, since a trial
+// is what every cell in the row is about.
+content.addEventListener("click", (event) => {
+    if (event.target.closest("a")) return;
+    const row = event.target.closest("tr.pick");
+    if (row) location.href = row.dataset.href;
+});
 
 if (!wanted.model || !wanted.config) {
     content.innerHTML =
