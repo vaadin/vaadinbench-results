@@ -73,11 +73,15 @@ function configOf(job) {
     return String(job ?? "").replace(/-\d{8}-\d{6}$/, "") || "unknown";
 }
 
+// Round to whole seconds first, then split. Rounding the remainder instead let
+// 719.6s print as `11m 60s`: the minutes were floored off the unrounded value
+// and the seconds rounded up to a full minute on their own.
 function duration(seconds) {
     if (seconds === null || seconds === undefined) return "—";
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes}m${NBSP}${String(Math.round(seconds % 60)).padStart(2, "0")}s`;
+    const total = Math.round(seconds);
+    if (total < 60) return `${total}s`;
+    const minutes = Math.floor(total / 60);
+    return `${minutes}m${NBSP}${String(total % 60).padStart(2, "0")}s`;
 }
 
 function tokens(count) {
