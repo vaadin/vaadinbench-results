@@ -36,11 +36,10 @@ function summarize(rows) {
         const key = `${trial.model} ${config}`;
         const row = byPair.get(key) ?? {
             model: trial.model, config, attempts: 0, solved: 0, graded: 0,
-            errored: 0, cost: 0, out: 0, duration: 0, tasks: new Set(),
+            cost: 0, out: 0, duration: 0, tasks: new Set(),
         };
         row.attempts += 1;
         row.tasks.add(trial.task);
-        if (trial.error) row.errored += 1;
         if (trial.reward !== null && trial.reward !== undefined) {
             row.graded += 1;
             if (trial.reward >= 1) row.solved += 1;
@@ -106,9 +105,6 @@ function renderLeaderboard(rows, hues, configHues, shapes) {
             ? `<span class="bar-fill" style="width:${row.rate * 100}%;background:${
                 hueFill(hues.get(row.model))}"></span>`
             : "";
-        const errored = row.errored
-            ? ` <span class="note" title="${row.errored} of ${row.attempts} trials reported an error">${row.errored}${NBSP}err</span>`
-            : "";
         const configHue = configHues.get(row.config);
         return `<tr class="pick" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
@@ -120,7 +116,7 @@ function renderLeaderboard(rows, hues, configHues, shapes) {
                     escapeHtml(row.config)}</span></td>
             <td class="bar"><span class="bar-track">${fill}</span></td>
             <td class="num">${percent(row.rate)}</td>
-            <td class="num">${row.solved}/${row.graded}${errored}</td>
+            <td class="num">${row.solved}/${row.graded}</td>
             <td class="num">${row.tasks.size}</td>
             <td class="num">${money(row.cost / row.attempts)}</td>
             <td class="num">${duration(row.duration / row.attempts)}</td>
