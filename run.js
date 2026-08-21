@@ -4,11 +4,6 @@
 const query = new URLSearchParams(location.search);
 const wanted = { model: query.get("model"), config: query.get("config") };
 
-function metric(label, value) {
-    return `<div class="metric"><span class="label">${escapeHtml(label)}</span>
-        <span class="value">${value}</span></div>`;
-}
-
 function renderHeader(rows) {
     const graded = rows.filter((t) => t.reward !== null && t.reward !== undefined);
     const solved = graded.filter((t) => t.reward >= 1).length;
@@ -17,18 +12,19 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `<h2>${escapeHtml(shortModel(wanted.model))} ·
+    return `<h2 class="title">${escapeHtml(shortModel(wanted.model))} ·
             ${escapeHtml(wanted.config)}</h2>
-        <div class="metrics">
-            ${metric("Score", graded.length ? percent(solved / graded.length) : "—")}
-            ${metric("Solved", `${solved}/${graded.length}`)}
-            ${metric("Tasks", tasks.size)}
-            ${metric("Trials", rows.length)}
-            ${errored ? metric("Errored", errored) : ""}
-            ${metric("Cost / trial", money(cost / rows.length))}
-            ${metric("Time / trial", duration(time / rows.length))}
-            ${metric("Total cost", money(cost))}
-        </div>`;
+        ${metricsTable([
+            ["Score", graded.length ? percent(solved / graded.length) : "—"],
+            ["Solved", `${solved}/${graded.length}`],
+            ["Tasks", tasks.size],
+            ["Trials", rows.length],
+            ["Errored", errored || null],
+            ["Cost / trial", money(cost / rows.length)],
+            ["Time / trial", duration(time / rows.length)],
+            ["Total cost", money(cost)],
+        ])}
+        <h2>Trials</h2>`;
 }
 
 function renderTrials(rows) {

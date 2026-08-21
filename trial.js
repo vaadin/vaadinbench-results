@@ -10,11 +10,6 @@ let trial = null;
 let activeTab = new URLSearchParams(location.search).get("tab") ?? "trajectory";
 const hiddenKinds = new Set();
 
-function metric(label, value) {
-    return `<div class="metric"><span class="label">${escapeHtml(label)}</span>
-        <span class="value">${value}</span></div>`;
-}
-
 // The page title lives in the shell, so the trial names itself one level down
 // and the breadcrumb carries the way back to the configuration it came from.
 function renderCrumb() {
@@ -27,20 +22,21 @@ function renderCrumb() {
 
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
-        <h2>${escapeHtml(shortTask(trial.task))} · ${escapeHtml(shortModel(trial.model))}</h2>
+        <h2 class="title">${escapeHtml(shortTask(trial.task))} ·
+            ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="lede">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
         </p>
-        <div class="metrics">
-            ${metric("Outcome", outcome(trial))}
-            ${metric("Reward", trial.reward ?? "—")}
-            ${metric("Duration", duration(trial.duration_s))}
-            ${metric("Steps", trial.steps)}
-            ${metric("Out. tokens", tokens(trial.output_tokens))}
-            ${metric("Cost", money(trial.cost_usd))}
-            ${metric("Verify", duration(trial.verify_s))}
-        </div>`;
+        ${metricsTable([
+            ["Outcome", outcome(trial)],
+            ["Reward", trial.reward ?? "—"],
+            ["Duration", duration(trial.duration_s)],
+            ["Steps", trial.steps],
+            ["Out. tokens", tokens(trial.output_tokens)],
+            ["Cost", money(trial.cost_usd)],
+            ["Verify", duration(trial.verify_s)],
+        ])}`;
 }
 
 function renderTabs() {
@@ -61,7 +57,7 @@ function renderFacets() {
         counts.set(event.kind, (counts.get(event.kind) ?? 0) + 1);
     }
     const chips = [...counts.entries()].map(([kind, count]) =>
-        `<button data-kind="${kind}" aria-pressed="${!hiddenKinds.has(kind)}">
+        `<button class="chip" data-kind="${kind}" aria-pressed="${!hiddenKinds.has(kind)}">
             ${escapeHtml(KIND_LABELS[kind] ?? kind)} ${count}
         </button>`).join("");
     return `<div class="facets">${chips}</div>`;
@@ -79,11 +75,38 @@ function renderCall(call) {
     </details>`;
 }
 
-function renderEvent(event) {
-    const message = event.message
-        ? `<div class="message">${escapeHtml(event.message)}</div>` : "";
-    const reasoning = event.reasoning
-        ? `<div class="reasoning">${escapeHtml(event.reasoning)}</div>` : "";
+const LONG_MESSAGE = 700;
+const expanded = new Set();
+
+// A long message is clamped with a fade rather than a scrollbar: a scroll
+// container nested inside the page scroll is awkward to use and, on the task
+// prompt, produced a scrollbar on something nobody asked to scroll.
+function renderMessage(event, index) {
+    if (!event.message) return "";
+    const long = event.message.length > LONG_MESSAGE;
+    const open = expanded.has(`m${index}`);
+    const cls = long && !open ? "message clamped" : "message";
+    const toggle = long
+        ? `<button class="more" data-more="m${index}">${open ? "Show less" : "Show more"}</button>`
+        : "";
+    return `<div class="${cls}">${escapeHtml(event.message)}</div>${toggle}`;
+}
+
+function renderThought(event, index) {
+    if (!event.reasoning) return "";
+    const long = event.reasoning.length > LONG_MESSAGE;
+    const open = expanded.has(`t${index}`);
+    const cls = long && !open ? "thought-body clamped" : "thought-body";
+    const toggle = long
+        ? `<button class="more" data-more="t${index}">${open ? "Show less" : "Show more"}</button>`
+        : "";
+    return `<div class="thought"><span class="thought-label">Thinking</span>
+        <div class="${cls}">${escapeHtml(event.reasoning)}</div>${toggle}</div>`;
+}
+
+function renderEvent(event, index) {
+    const message = renderMessage(event, index);
+    const reasoning = renderThought(event, index);
     return `<article class="event" data-kind="${escapeHtml(event.kind)}">
         <header>
             <span class="badge tag">${escapeHtml(KIND_LABELS[event.kind] ?? event.kind)}</span>
@@ -100,7 +123,8 @@ function renderTrajectory() {
     if (!visible.length) {
         return renderFacets() + `<p class="empty">Every event type is hidden.</p>`;
     }
-    return renderFacets() + visible.map(renderEvent).join("");
+    return renderFacets()
+        + visible.map((event, index) => renderEvent(event, index)).join("");
 }
 
 // A line's kind is a property of the whole line, so each one is its own block
@@ -231,6 +255,13 @@ document.getElementById("content").addEventListener("click", (event) => {
         const url = new URL(location.href);
         url.searchParams.set("tab", activeTab);
         history.replaceState(null, "", url);
+        render();
+        return;
+    }
+    const more = event.target.closest("[data-more]");
+    if (more) {
+        const key = more.dataset.more;
+        expanded.has(key) ? expanded.delete(key) : expanded.add(key);
         render();
         return;
     }

@@ -20,6 +20,12 @@
     --aura-green: oklch(.6 .2 155);
     --aura-blue: oklch(.55 .2 264);
     --aura-purple: oklch(.58 .22 290);
+    --aura-red-text: oklch(.45 .18 25);
+    --aura-orange-text: oklch(.55 .315 87);
+    --aura-yellow-text: oklch(.525 .27 98);
+    --aura-green-text: oklch(.45 .18 155);
+    --aura-blue-text: oklch(.45 .18 264);
+    --aura-purple-text: oklch(.465 .198 290);
 
     /* --aura-background-color-light, and the two stops Aura's gradient adds. */
     --bg: oklch(.95 .005 248);
@@ -53,6 +59,12 @@
 
 @media (prefers-color-scheme: dark) {
     :root {
+        --aura-red-text: oklch(.8 .18 25);
+        --aura-orange-text: oklch(.8 .315 87);
+        --aura-yellow-text: oklch(.8 .27 98);
+        --aura-green-text: oklch(.8 .18 155);
+        --aura-blue-text: oklch(.8 .18 264);
+        --aura-purple-text: oklch(.8 .198 290);
         --bg: oklch(.2 .01 260);
         --bg-glow: oklch(.23 .012 260);
         --bg-alt: oklch(.185 .008 260);
@@ -166,7 +178,12 @@ h2 {
     font-size: .72rem; margin: 2rem 0 .5rem; color: var(--faint);
     text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
 }
-p.lede { margin: -.9rem 0 1.3rem; color: var(--faint); font-size: .88rem; }
+h2.title {
+    font-size: 1.05rem; font-weight: 600; color: var(--ink);
+    text-transform: none; letter-spacing: -.01em;
+    margin: 0 0 .15rem;
+}
+p.lede { margin: 0 0 1.3rem; color: var(--faint); font-size: .84rem; }
 .crumb { margin: 0 0 1rem; font-size: .82rem; color: var(--faint); }
 
 .banner {
@@ -209,13 +226,17 @@ p.lede { margin: -.9rem 0 1.3rem; color: var(--faint); font-size: .88rem; }
 }
 .chip:hover { color: var(--ink); border-color: var(--accent); }
 .chip[aria-pressed="true"] {
-    color: var(--accent-contrast); background: var(--accent);
-    border-color: var(--accent); box-shadow: var(--shadow-s);
+    color: var(--accent-text);
+    background: color-mix(in oklab, var(--accent) 12%, var(--surface));
+    border-color: color-mix(in oklab, var(--accent) 45%, var(--card-border));
 }
+.chip[aria-pressed="false"] { color: var(--faint); }
+.chip[aria-pressed="false"]:hover { color: var(--ink); }
 
 /* ----------------------------------------------------------------- tables */
 
 .wrap {
+    margin: 0 0 1.25rem;
     overflow-x: auto; overscroll-behavior-x: contain;
     background: var(--surface);
     border: 1px solid var(--card-border);
@@ -277,7 +298,7 @@ td.bar { width: 38%; min-width: 130px; }
 .chart .tick { fill: var(--faint); font: 11px var(--font); font-variant-numeric: tabular-nums; }
 .chart .axis-title { fill: var(--faint); font: 500 10px var(--font); text-transform: uppercase; letter-spacing: .07em; }
 .chart .dot { stroke: var(--surface); stroke-width: 1.5; fill-opacity: .9; }
-.chart .dot-label { fill: var(--meta); font: 11px var(--font); }
+.chart .dot-label { font: 500 11px var(--font); }
 .legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .9rem; font-size: .8rem; color: var(--meta); }
 .legend span { display: inline-flex; align-items: center; gap: .35rem; }
 .legend i { width: 8px; height: 8px; border-radius: 999px; }
@@ -295,12 +316,12 @@ td.bar { width: 38%; min-width: 130px; }
 .badge.tag { color: var(--meta); background: var(--container-strong); font-weight: 500; }
 .note { color: var(--faint); font-size: .76rem; white-space: nowrap; }
 
-.metrics { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0 0 1.6rem; }
-.metric .label {
-    display: block; color: var(--faint); font-size: .7rem;
-    text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
+/* One row of figures, so the values carry the emphasis the labels do not. */
+table.summary { min-width: 0; }
+table.summary td {
+    font-size: 1.05rem; font-variant-numeric: tabular-nums;
+    border-bottom: 0; padding-top: .45rem; padding-bottom: .7rem;
 }
-.metric .value { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 
 /* ------------------------------------------------------------- trajectory */
 
@@ -323,19 +344,45 @@ td.bar { width: 38%; min-width: 130px; }
     background: var(--surface);
     box-shadow: var(--shadow-xs);
 }
-.event[data-kind="prompt"] .message {
-    color: var(--meta);
-    max-height: 15em;
-    overflow-y: auto;
-    overscroll-behavior-y: contain;
-}
+.event[data-kind="prompt"] .message { color: var(--meta); }
 
 .event[data-kind="thinking"] { border-left-style: dotted; border-left-color: var(--rule); }
-.event[data-kind="thinking"] .message, .event .reasoning {
+.event[data-kind="thinking"] .message {
     font-style: italic; color: var(--faint);
     white-space: pre-wrap; overflow-wrap: anywhere;
 }
-.event .reasoning { margin-top: .35rem; }
+
+/* Reasoning is not the same thing as what the model said, so it is not set the
+   same way: its own labelled block, quieter, behind a dotted rule. */
+.thought {
+    margin: .5rem 0 .1rem;
+    padding: .1rem 0 .1rem .7rem;
+    border-left: 2px dotted var(--rule);
+}
+.thought-label {
+    display: block; margin-bottom: .15rem;
+    color: var(--faint); font-size: .66rem; font-weight: 500;
+    text-transform: uppercase; letter-spacing: .08em;
+}
+.thought-body {
+    color: var(--faint); font-style: italic; font-size: .95em;
+    white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
+/* Clamped with a fade, not a scrollbar: the fade says there is more without
+   putting a scroll container inside the page scroll. */
+.thought-body.clamped, .message.clamped {
+    max-height: 13em;
+    overflow: hidden;
+    mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);
+}
+.more {
+    appearance: none; cursor: pointer; font: inherit;
+    font-size: .78rem; font-weight: 500;
+    margin-top: .3rem; padding: 0;
+    border: 0; background: none; color: var(--accent-text);
+}
+.more:hover { text-decoration: underline; }
 
 details.call { margin-top: .35rem; }
 details.call > summary {

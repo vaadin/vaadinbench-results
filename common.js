@@ -42,6 +42,19 @@ function shortModel(model) {
     return name.replace(/-\d{8}$/, "");
 }
 
+// `claude-opus-5` and `claude-sonnet-5` share a prefix that says nothing about
+// which is which. On a chart where each label competes for room, the shared part
+// is dropped -- but only at a `-` boundary, and only if every model has it.
+function trimCommonPrefix(names) {
+    const parts = names.map((name) => shortModel(name).split("-"));
+    let shared = 0;
+    while (parts[0] && shared < parts[0].length - 1
+        && parts.every((p) => p.length > shared + 1 && p[shared] === parts[0][shared])) {
+        shared += 1;
+    }
+    return new Map(names.map((name, i) => [name, parts[i].slice(shared).join("-")]));
+}
+
 function shortTask(task) {
     return String(task ?? "").split("/").pop();
 }
@@ -115,8 +128,18 @@ const HUES = ["blue", "purple", "orange", "green", "red", "yellow"];
 
 function hueMap(models) {
     const sorted = [...new Set(models)].sort();
-    return new Map(sorted.map((model, i) =>
-        [model, `var(--aura-${HUES[i % HUES.length]})`]));
+    return new Map(sorted.map((model, i) => [model, HUES[i % HUES.length]]));
+}
+
+// The saturated palette colour for anything filled, its `-text` variant for
+// anything set as type: Aura computes the second precisely because the first
+// does not have the contrast for small text.
+function hueFill(hue) {
+    return `var(--aura-${hue})`;
+}
+
+function hueText(hue) {
+    return `var(--aura-${hue}-text)`;
 }
 
 // Configurations are the other axis of comparison, and colour is already spent
@@ -145,6 +168,62 @@ function marker(shape, x, y, style, klass = "dot", r = 6) {
     return `${body} class="${klass}" style="${style}"/>`;
 }
 
+// Candidate positions for a label, in preference order: beside the point first,
+// then above and below, then progressively further out. Both horizontal anchors
+// are offered at every vertical step, because a point near an edge may only have
+// one side available -- and a long label beside a crowded point needs to be able
+// to move vertically while staying on the side that fits.
+const LABEL_SLOTS = (() => {
+    const slots = [[11, 4, "start"], [-11, 4, "end"], [0, -11, "middle"], [0, 16, "middle"]];
+    for (const dy of [-13, 19, -25, 31, -37, 43, -49, 55]) {
+        slots.push([11, dy, "start"], [-11, dy, "end"], [0, dy, "middle"]);
+    }
+    return slots;
+})();
+
+function layoutChartLabels(svg) {
+    if (!svg) return;
+    const labels = [...svg.querySelectorAll(".dot-label")];
+    if (!labels.length) return;
+    const width = svg.viewBox.baseVal.width;
+    const pad = 2;
+    const grow = (box) => ({
+        x: box.x - pad, y: box.y - pad,
+        w: box.width + pad * 2, h: box.height + pad * 2,
+    });
+    // Markers and the axis text are obstacles from the start; each label becomes
+    // one as it lands. Including the ticks is what keeps a label from settling on
+    // top of "100%" or "$2.00".
+    const taken = [...svg.querySelectorAll(".dot, .tick, .axis-title")]
+        .map((node) => grow(node.getBBox()));
+
+    // Overlap by area, not yes/no: when a point is boxed in on every side, the
+    // least bad slot is a real answer and "keep the default" is not.
+    const overlap = (a, b) =>
+        Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x))
+        * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y));
+
+    for (const label of labels) {
+        const cx = Number(label.dataset.cx), cy = Number(label.dataset.cy);
+        const { width: w, height: h } = label.getBBox();
+        let best = null;
+        for (const [dx, dy, anchor] of LABEL_SLOTS) {
+            const x = cx + dx, y = cy + dy;
+            const left = anchor === "start" ? x : anchor === "end" ? x - w : x - w / 2;
+            const box = { x: left - pad, y: y - h * 0.8 - pad, w: w + pad * 2, h: h + pad * 2 };
+            if (box.x < 0 || box.x + box.w > width) continue;
+            const cost = taken.reduce((sum, other) => sum + overlap(box, other), 0);
+            if (!best || cost < best.cost) best = { x, y, anchor, box, cost };
+            if (cost === 0) break;
+        }
+        if (!best) continue;
+        label.setAttribute("x", best.x);
+        label.setAttribute("y", best.y);
+        label.setAttribute("text-anchor", best.anchor);
+        taken.push(best.box);
+    }
+}
+
 // A tooltip that follows the pointer rather than SVG's own <title>, which waits
 // about a second and then lets the window manager put it wherever it likes --
 // far from the point it describes, which reads as a bug.
@@ -169,6 +248,20 @@ function bindTips(root) {
     root.addEventListener("pointerout", (event) => {
         if (event.target.closest("[data-tip]")) tip.hidden = true;
     });
+}
+
+// Summary figures as a one-row table rather than a flat run of label/value
+// pairs: it puts them on a card like every other block of content, lines the
+// numbers up under their names, and needs no styling of its own.
+function metricsTable(pairs) {
+    const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
+    if (!cells.length) return "";
+    return `<div class="wrap"><table class="summary">
+        <thead><tr>${cells.map(([label]) =>
+            `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead>
+        <tbody><tr>${cells.map(([, value]) =>
+            `<td>${value}</td>`).join("")}</tr></tbody>
+    </table></div>`;
 }
 
 // Invented data must never be mistaken for a measurement, so it is called out on

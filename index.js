@@ -78,7 +78,7 @@ function renderLeaderboard(rows, hues) {
         // it would also draw a coloured nub on a row that solved nothing.
         const fill = row.rate
             ? `<span class="bar-fill" style="width:${row.rate * 100}%;background:${
-                hues.get(row.model)}"></span>`
+                hueFill(hues.get(row.model))}"></span>`
             : "";
         const errored = row.errored
             ? ` <span class="note" title="${row.errored} of ${row.attempts} trials reported an error">${row.errored}${NBSP}err</span>`
@@ -127,7 +127,7 @@ function renderChart(rows, hues, shapes) {
     const points = rows.filter((row) => row.rate !== null);
     if (!points.length) return `<p class="empty">Nothing to plot.</p>`;
 
-    const W = 900, H = 320, L = 52, R = 28, T = 28, B = 44;
+    const W = 900, H = 380, L = 52, R = 28, T = 34, B = 44;
     const plotW = W - L - R, plotH = H - T - B;
     const xTicks = niceTicks(Math.max(...points.map((p) => p.cost / p.attempts)));
     const xMax = xTicks[xTicks.length - 1];
@@ -142,22 +142,26 @@ function renderChart(rows, hues, shapes) {
     const xAxis = xTicks.map((value) => `<text class="tick" x="${px(value)}"
         y="${T + plotH + 18}" text-anchor="middle">$${value.toFixed(2)}</text>`).join("");
 
-    // Rows tie constantly -- four configurations sit on the 100% line here -- so
-    // nothing is written next to a point. Colour carries the model, shape carries
-    // the configuration, and the tooltip carries the numbers. Each marker gets an
-    // invisible disc behind it so a 6px shape is not a 6px hit target.
+    const names = trimCommonPrefix([...new Set(points.map((p) => p.model))]);
+
+    // Every point keeps its name, coloured to its model. Where they land is
+    // settled after the fact by layoutChartLabels(), which can measure the text.
+    // Each marker also gets an invisible disc, so a 6px shape is not a 6px target.
     const dots = points.map((row) => {
         const x = px(row.cost / row.attempts), y = py(row.rate);
+        const name = `${names.get(row.model)} · ${row.config}`;
         const tip = `${shortModel(row.model)} · ${row.config} — ${percent(row.rate)}`
             + ` (${row.solved}/${row.graded}), ${money(row.cost / row.attempts)}/trial`;
         return `<g data-tip="${escapeHtml(tip)}">
             <circle class="hit" cx="${x}" cy="${y}" r="13"/>
-            ${marker(shapes.get(row.config), x, y, `fill:${hues.get(row.model)}`)}
+            ${marker(shapes.get(row.config), x, y, `fill:${hueFill(hues.get(row.model))}`)}
+            <text class="dot-label" data-cx="${x}" data-cy="${y}" x="${x + 11}"
+                y="${y + 4}" style="fill:${hueText(hues.get(row.model))}">${escapeHtml(name)}</text>
         </g>`;
     }).join("");
 
     const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
-        .map(([model, colour]) => `<span><i style="background:${colour}"></i>
+        .map(([model, hue]) => `<span><i style="background:${hueFill(hue)}"></i>
             ${escapeHtml(shortModel(model))}</span>`).join("");
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
         .map(([config, shape]) => `<span><svg viewBox="0 0 14 14" aria-hidden="true">${
@@ -193,7 +197,11 @@ function render() {
             ? renderChart(rows, hues, shapes)
             : renderLeaderboard(rows, hues),
     ].join("");
-    bindTips(document.getElementById("content"));
+    const content = document.getElementById("content");
+    bindTips(content);
+    const chart = content.querySelector(".chart");
+    layoutChartLabels(chart);
+    document.fonts?.ready.then(() => layoutChartLabels(chart));
 }
 
 // The whole view is in the URL, so a filtered leaderboard or the chart is a
