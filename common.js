@@ -58,14 +58,23 @@ function money(amount) {
     return amount === null || amount === undefined ? "—" : `$${amount.toFixed(2)}`;
 }
 
+// The verifier decides the result. An error in the agent loop is worth flagging
+// beside that verdict but never in place of it: a run can lose its API
+// connection on the last step and still leave behind a project that grades
+// clean, and calling that `error` both hides a real pass and disagrees with the
+// leaderboard, which counts the reward. The error stands alone only when there
+// is no grade to report.
 function outcome(trial) {
-    if (trial.error) return `<span class="badge fail">error</span>`;
     if (trial.reward === null || trial.reward === undefined) {
-        return `<span class="badge tag">no reward</span>`;
+        return trial.error
+            ? `<span class="badge fail">error</span>`
+            : `<span class="badge tag">no reward</span>`;
     }
-    return trial.reward >= 1
+    const badge = trial.reward >= 1
         ? `<span class="badge pass">pass</span>`
         : `<span class="badge fail">fail</span>`;
+    if (!trial.error) return badge;
+    return `${badge} <span class="note" title="${escapeHtml(trial.error)}">error</span>`;
 }
 
 function trialUrl(id) {
