@@ -184,7 +184,12 @@ h2.title {
     margin: 0 0 .35rem;
 }
 p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height: 1.5; }
-.crumb { margin: 0 0 1.5rem; font-size: .82rem; color: var(--faint); }
+.crumb {
+    display: flex; align-items: baseline; flex-wrap: wrap; gap: .5rem;
+    margin: 0 0 1.6rem; font-size: .82rem; color: var(--faint);
+}
+.crumb-sep { color: var(--rule); font-size: .95rem; }
+.crumb-dot { color: var(--faint); }
 
 .banner {
     margin: 0 0 1.25rem;
@@ -330,6 +335,8 @@ table.summary td {
     .split { grid-template-columns: minmax(0, 1fr); gap: 1rem; }
 }
 .split > .steps { min-width: 0; }
+/* File paths need more room than event-type labels do. */
+@media (min-width: 761px) { .split.changes { grid-template-columns: 268px minmax(0, 1fr); } }
 
 .panel-title {
     margin: 0 0 .6rem; font-size: .84rem; font-weight: 600; color: var(--ink);
@@ -411,82 +418,103 @@ table.summary td {
     border-radius: 0 0 var(--radius-l) var(--radius-l);
 }
 
-/* A prompt, a thought and a command are three different things to read, so
-   they are set three different ways: the instruction as a card, thinking as
-   quiet italics behind a dotted rule, tool calls as collapsed monospace. */
-.event { margin-bottom: .5rem; padding-left: .85rem; border-left: 2px solid var(--hairline); }
-.event > header { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .25rem; }
-.event .step { color: var(--faint); font-size: .74rem; font-variant-numeric: tabular-nums; }
-.event .message { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The trace. A rail of typed icons down the left, prose in cards, tool calls as
+   one collapsed line each -- so the shape of a run is legible before a word of
+   it is read, and a thought is never buried inside a card about something else. */
+.trace { list-style: none; margin: 0; padding: 0; }
+.trace-count { margin: 0 0 .7rem; }
 
-.event[data-kind="prompt"] {
-    padding: .8rem 1rem;
-    margin-bottom: 1rem;
-    border: 1px solid var(--rule);
-    border-left: 3px solid var(--accent);
-    border-radius: 0 var(--radius-m) var(--radius-m) 0;
+.tr { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: .75rem; }
+.tr-rail { position: relative; display: flex; justify-content: center; }
+/* The line runs the full height of the cell and the icon covers it, which joins
+   consecutive entries without needing to know which one is last. */
+.tr-rail::before {
+    content: ""; position: absolute; top: 0; bottom: 0;
+    width: 1px; background: var(--rule);
+}
+.tr:first-child .tr-rail::before { top: 13px; }
+.tr:last-child .tr-rail::before { bottom: calc(100% - 13px); }
+.tr-icon {
+    position: relative; z-index: 1; margin-top: 1px;
+    width: 24px; height: 24px; border-radius: 999px;
+    border: 1px solid var(--card-border); background: var(--surface);
+    display: grid; place-items: center; color: var(--faint);
+}
+.tr-icon svg { width: 13px; height: 13px; }
+.tr-body { min-width: 0; padding-bottom: .6rem; }
+
+.tr[data-type="prompt"] .tr-icon,
+.tr[data-type="message"] .tr-icon { color: var(--accent-text); border-color: var(--accent); }
+.tr[data-type="thinking"] .tr-icon { color: var(--aura-purple-text); }
+
+.tr-card {
+    padding: .75rem .9rem;
     background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-m);
     box-shadow: var(--shadow-xs);
 }
-.event[data-kind="prompt"] .message { color: var(--meta); }
-
-.event[data-kind="thinking"] { border-left-style: dotted; border-left-color: var(--rule); }
-.event[data-kind="thinking"] .message {
-    font-style: italic; color: var(--faint);
+.tr-label {
+    display: block; margin-bottom: .4rem;
+    font-size: .66rem; font-weight: 600; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--faint);
+}
+.tr-step { margin-left: .5rem; font-weight: 400; letter-spacing: .04em; }
+.tr-text {
     white-space: pre-wrap; overflow-wrap: anywhere;
+    line-height: 1.65; color: var(--ink);
 }
+.tr[data-type="prompt"] .tr-card { border-left: 2px solid var(--accent); }
 
-/* Reasoning is not the same thing as what the model said, so it is not set the
-   same way: its own labelled block, quieter, behind a dotted rule. */
-.thought {
-    margin: .5rem 0 .1rem;
-    padding: .1rem 0 .1rem .7rem;
-    border-left: 2px dotted var(--rule);
+details.tr-tool > summary {
+    display: flex; align-items: baseline; gap: .6rem; cursor: pointer;
+    padding: .45rem .7rem;
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-m);
+    list-style: none;
 }
-.thought-label {
-    display: block; margin-bottom: .15rem;
-    color: var(--faint); font-size: .66rem; font-weight: 500;
-    text-transform: uppercase; letter-spacing: .08em;
+details.tr-tool > summary::-webkit-details-marker { display: none; }
+details.tr-tool[open] > summary { border-radius: var(--radius-m) var(--radius-m) 0 0; }
+details.tr-tool > summary:hover { background: var(--container-strong); }
+.tr-tool .tname {
+    flex: none; font-size: .66rem; font-weight: 600; letter-spacing: .09em;
+    text-transform: uppercase; color: var(--accent-text);
 }
-.thought-body {
-    color: var(--faint); font-style: italic; font-size: .95em;
-    white-space: pre-wrap; overflow-wrap: anywhere;
+.tr-tool .tsum {
+    flex: 1 1 auto; min-width: 0;
+    font-family: var(--mono); font-size: .78rem; color: var(--meta);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-
-/* Clamped with a fade, not a scrollbar: the fade says there is more without
-   putting a scroll container inside the page scroll. */
-.thought-body.clamped, .message.clamped {
-    max-height: 13em;
-    overflow: hidden;
-    mask-image: linear-gradient(to bottom, #000 65%, transparent 100%);
+.tr-tool .tmeta {
+    flex: none; font-size: .72rem; color: var(--faint);
+    font-variant-numeric: tabular-nums;
 }
-.more {
-    appearance: none; cursor: pointer; font: inherit;
-    font-size: .78rem; font-weight: 500;
-    margin-top: .3rem; padding: 0;
-    border: 0; background: none; color: var(--accent-text);
+/* A chevron that turns, so open and closed are distinguishable without colour. */
+.tr-tool .tmeta::after {
+    content: ""; display: inline-block; margin-left: .5rem; translate: 0 -1px;
+    width: 5px; height: 5px; border: 1px solid var(--faint);
+    border-width: 0 1px 1px 0; rotate: -45deg;
+    transition: rotate .12s ease-out;
 }
-.more:hover { text-decoration: underline; }
-
-details.call { margin-top: .35rem; }
-details.call > summary {
-    cursor: pointer; font-family: var(--mono); font-size: .8rem;
-    color: var(--meta); background: var(--container);
-    border: 1px solid var(--hairline);
-    padding: .3rem .5rem; border-radius: var(--radius-s); overflow-wrap: anywhere;
+details.tr-tool[open] .tmeta::after { rotate: 45deg; }
+.tr-tool > pre {
+    margin: 0;
+    border-radius: 0 0 var(--radius-m) var(--radius-m);
+    border-top: 0;
+    box-shadow: none;
 }
-details.call > summary:hover { border-color: var(--rule); }
-details.call .tool { color: var(--accent-text); font-weight: 600; }
 
 /* ------------------------------------------------------------------- code */
 
 pre {
-    margin: .35rem 0 0;
-    padding: .7rem .8rem;
-    background: var(--container);
-    color: var(--meta);
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-m);
+    margin: .35rem 0 1.25rem;
+    padding: .8rem .9rem;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-xs);
     overflow-x: auto;
     font-family: var(--mono);
     font-size: .79rem;

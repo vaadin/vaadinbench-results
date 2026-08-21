@@ -31,18 +31,72 @@ const EVENT_TREE = [
 ];
 
 let trial = null;
+let trace = [];
 let activeTab = new URLSearchParams(location.search).get("tab") ?? "trajectory";
 let activeFile = 0;
 const hiddenKinds = new Set();
+
+const TYPE_LABELS = { prompt: "Prompt", message: "Message", thinking: "Thought" };
+
+// One entry per thing that happened, not one per step. A step can hold a
+// message, the reasoning behind it and several tool calls at once; rendering
+// those as a single block is what buried a thought inside a card labelled
+// "Other". `publish.py` already classifies every call, so each one can be typed
+// and filtered on its own.
+function buildTrace() {
+    const entries = [];
+    for (const event of trial.trajectory) {
+        const base = { step: event.step, source: event.source };
+        if (event.message) {
+            entries.push({
+                ...base,
+                type: event.source === "user" ? "prompt" : "message",
+                text: event.message,
+            });
+        }
+        if (event.reasoning) {
+            entries.push({ ...base, type: "thinking", text: event.reasoning });
+        }
+        for (const call of event.calls ?? []) {
+            entries.push({ ...base, type: call.kind ?? "other", call });
+        }
+    }
+    return entries;
+}
+
+// 16x16, stroked in currentColor, so a rail icon inherits the entry's colour.
+const TYPE_ICONS = {
+    prompt: '<path d="M2.6 4.2h10.8v6.8H7.4L4.2 13.6V11H2.6z"/>',
+    message: '<path d="M2.6 4.2h10.8v6.8H8.6L5.4 13.6V11H2.6z"/>',
+    thinking: '<circle cx="8" cy="8" r="3.6"/><path d="M8 1.8v1.5M8 12.7v1.5M1.8 8h1.5M12.7 8h1.5M3.6 3.6l1.1 1.1M11.3 11.3l1.1 1.1M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1"/>',
+    read: '<path d="M3.6 2.8h8.8v10.4H3.6z"/><path d="M5.8 5.6h4.4M5.8 8h4.4M5.8 10.4h2.8"/>',
+    search: '<circle cx="7" cy="7" r="3.8"/><path d="M9.9 9.9l3.3 3.3"/>',
+    edit: '<path d="M11.1 2.5l2.4 2.4-8.1 8.1-3.1.7.7-3.1z"/>',
+    bash: '<path d="M2.6 3.4h10.8v9.2H2.6z"/><path d="M4.9 7.1l1.6 1.5-1.6 1.5M8.4 10.1h2.8"/>',
+    test: '<path d="M2.9 8.3l3.3 3.3 6.9-7"/>',
+    agent: '<circle cx="5.7" cy="6.1" r="2.3"/><circle cx="10.4" cy="9.5" r="2.3"/>',
+    plan: '<path d="M3.2 4.4h9.6M3.2 8h9.6M3.2 11.6h6.4"/>',
+    other: '<circle cx="8" cy="8" r="4.2"/>',
+};
+
+function icon(type) {
+    return `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor"
+        stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"
+        aria-hidden="true">${TYPE_ICONS[type] ?? TYPE_ICONS.other}</svg>`;
+}
 
 // The page title lives in the shell, so the trial names itself one level down
 // and the breadcrumb carries the way back to the configuration it came from.
 function renderCrumb() {
     const config = configOf(trial.job);
+    // The separator between levels has to differ from the one inside a level:
+    // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
+    // really one link and then a model-and-configuration pair.
     document.getElementById("crumb").innerHTML =
-        `<a href="index.html">Leaderboard</a> ·
-         <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))} ·
-            ${escapeHtml(config)}</a>`;
+        `<a href="index.html">Leaderboard</a>
+         <span class="crumb-sep" aria-hidden="true">›</span>
+         <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))}
+            <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
 }
 
 function renderHeader() {
@@ -66,7 +120,7 @@ function renderHeader() {
 
 function renderTabs() {
     const tabs = [
-        ["trajectory", `Trajectory (${trial.trajectory.length})`],
+        ["trajectory", `Trajectory (${trace.length})`],
         ["changes", "Changes"],
         ["verifier", "Verifier"],
         ["instruction", "Instruction"],
@@ -76,12 +130,12 @@ function renderTabs() {
     ).join("")}</div>`;
 }
 
-// `mixed` counts once per event, not once per tool in it, so the numbers here add
-// up to the trajectory length -- which is what the tab's own count says.
+// Counting entries rather than steps, so the panel's numbers add up to the count
+// on the tab and a step holding a thought and two commands contributes three.
 function kindCounts() {
     const counts = new Map();
-    for (const event of trial.trajectory) {
-        counts.set(event.kind, (counts.get(event.kind) ?? 0) + 1);
+    for (const entry of trace) {
+        counts.set(entry.type, (counts.get(entry.type) ?? 0) + 1);
     }
     return counts;
 }
@@ -139,67 +193,56 @@ function renderFacets() {
     </aside>`;
 }
 
-function renderCall(call) {
-    const output = call.output
-        ? `<pre>${escapeHtml(call.output)}</pre>${
-            call.output_truncated ? `<p class="truncated">Output truncated.</p>` : ""}`
+// Tool output is the one thing here that is not prose, so it is the one thing
+// that stays collapsed: the summary line says what ran and how much came back.
+function renderTool(entry) {
+    const call = entry.call;
+    const lines = call.output ? call.output.split("\n").length : 0;
+    const meta = call.output
+        ? `${lines} line${lines === 1 ? "" : "s"}${call.output_truncated ? "+" : ""}`
+        : "no output";
+    const body = call.output
+        ? `<pre>${escapeHtml(call.output)}</pre>${call.output_truncated
+            ? `<p class="truncated">Output truncated.</p>` : ""}`
         : `<p class="truncated">No output recorded.</p>`;
-    return `<details class="call">
-        <summary><span class="tool">${escapeHtml(call.name)}</span>
-            ${escapeHtml(call.summary)}</summary>
-        ${output}
+    return `<details class="tr-tool">
+        <summary>
+            <span class="tname">${escapeHtml(call.name)}</span>
+            <span class="tsum">${escapeHtml(call.summary ?? "")}</span>
+            <span class="tmeta">${meta}</span>
+        </summary>
+        ${body}
     </details>`;
 }
 
-const LONG_MESSAGE = 700;
-const expanded = new Set();
-
-// A long message is clamped with a fade rather than a scrollbar: a scroll
-// container nested inside the page scroll is awkward to use and, on the task
-// prompt, produced a scrollbar on something nobody asked to scroll.
-function renderMessage(event, index) {
-    if (!event.message) return "";
-    const long = event.message.length > LONG_MESSAGE;
-    const open = expanded.has(`m${index}`);
-    const cls = long && !open ? "message clamped" : "message";
-    const toggle = long
-        ? `<button class="more" data-more="m${index}">${open ? "Show less" : "Show more"}</button>`
-        : "";
-    return `<div class="${cls}">${escapeHtml(event.message)}</div>${toggle}`;
-}
-
-function renderThought(event, index) {
-    if (!event.reasoning) return "";
-    const long = event.reasoning.length > LONG_MESSAGE;
-    const open = expanded.has(`t${index}`);
-    const cls = long && !open ? "thought-body clamped" : "thought-body";
-    const toggle = long
-        ? `<button class="more" data-more="t${index}">${open ? "Show less" : "Show more"}</button>`
-        : "";
-    return `<div class="thought"><span class="thought-label">Thinking</span>
-        <div class="${cls}">${escapeHtml(event.reasoning)}</div>${toggle}</div>`;
-}
-
-function renderEvent(event, index) {
-    const message = renderMessage(event, index);
-    const reasoning = renderThought(event, index);
-    return `<article class="event" data-kind="${escapeHtml(event.kind)}">
-        <header>
-            <span class="badge tag">${escapeHtml(KIND_LABELS[event.kind] ?? event.kind)}</span>
-            <span class="step">step ${event.step ?? "—"} · ${escapeHtml(event.source)}</span>
-        </header>
-        ${message}
-        ${reasoning}
-        ${event.calls.map(renderCall).join("")}
-    </article>`;
+// Prompts, thoughts and the model's own messages are prose and are shown whole:
+// they are the record of what happened, and a fold over them hides the part
+// somebody came to read.
+function renderEntry(entry) {
+    const label = TYPE_LABELS[entry.type] ?? KIND_LABELS[entry.type] ?? entry.type;
+    const body = entry.call
+        ? renderTool(entry)
+        : `<div class="tr-card">
+                <span class="tr-label">${escapeHtml(label)}
+                    <span class="tr-step">step ${entry.step ?? "—"}</span></span>
+                <div class="tr-text">${escapeHtml(entry.text)}</div>
+            </div>`;
+    return `<li class="tr" data-type="${escapeHtml(entry.type)}">
+        <span class="tr-rail"><span class="tr-icon">${icon(entry.type)}</span></span>
+        <div class="tr-body">${body}</div>
+    </li>`;
 }
 
 function renderTrajectory() {
-    const visible = trial.trajectory.filter((event) => !hiddenKinds.has(event.kind));
+    const visible = trace.filter((entry) => !hiddenKinds.has(entry.type));
     const body = visible.length
-        ? visible.map((event, index) => renderEvent(event, index)).join("")
+        ? `<ol class="trace">${visible.map(renderEntry).join("")}</ol>`
         : `<p class="empty">Every event type is hidden.</p>`;
-    return `<div class="split">${renderFacets()}<div class="steps">${body}</div></div>`;
+    return `<div class="split">${renderFacets()}
+        <div class="steps">
+            <p class="panel-note trace-count">${visible.length} of ${trace.length} events</p>
+            ${body}
+        </div></div>`;
 }
 
 // A line's kind is a property of the whole line, so each one is its own block
@@ -416,13 +459,6 @@ document.getElementById("content").addEventListener("click", (event) => {
         render();
         return;
     }
-    const more = event.target.closest("[data-more]");
-    if (more) {
-        const key = more.dataset.more;
-        expanded.has(key) ? expanded.delete(key) : expanded.add(key);
-        render();
-        return;
-    }
     const facet = event.target.closest("[data-kinds]");
     if (facet) {
         const kinds = facet.dataset.kinds.split(",");
@@ -448,6 +484,7 @@ if (!id) {
 } else {
     fetchJson(`data/trials/${encodeURIComponent(id)}.json`).then((loaded) => {
         trial = loaded;
+        trace = buildTrace();
         render();
         renderFooter(null);
     }).catch(showError);
