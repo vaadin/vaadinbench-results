@@ -113,8 +113,13 @@ function outcome(trial) {
     return `${badge} <span class="note" title="${escapeHtml(trial.error)}">error</span>`;
 }
 
-function trialUrl(id) {
-    return `trial.html?id=${encodeURIComponent(id)}`;
+// The job rides along so the trial page can check that the file it loaded is
+// the run that was clicked. Ids used to omit the job, which let three trials
+// share one, and the page had no way to notice it was showing another run.
+function trialUrl(id, job) {
+    const query = new URLSearchParams({ id });
+    if (job) query.set("job", job);
+    return `trial.html?${query}`;
 }
 
 function runUrl(model, config) {
@@ -248,6 +253,177 @@ function bindTips(root) {
     root.addEventListener("pointerout", (event) => {
         if (event.target.closest("[data-tip]")) tip.hidden = true;
     });
+}
+
+// ------------------------------------------------------------------ markdown
+
+// Task prompts and agent messages are written in Markdown, and reading them as
+// raw text means reading the punctuation instead of the prose.
+//
+// This is a deliberate subset -- headings, paragraphs, lists, code, emphasis,
+// links, quotes, rules -- not a CommonMark implementation, because the input is
+// the narrow dialect these agents actually emit and a real parser is a
+// dependency this site does not have a way to carry.
+//
+// SECURITY: the text is agent output, so it is escaped *first* and every tag
+// below is one this function wrote. Nothing from the input is ever interpolated
+// as markup, and link targets are checked against a scheme allowlist, so a
+// `javascript:` href renders as plain text rather than a link.
+
+const MD_SAFE_URL = /^(https?:\/\/|mailto:|#|\/)[^\s]*$/i;
+
+function mdUrl(url) {
+    // Already HTML-escaped, so quotes cannot terminate the attribute.
+    return MD_SAFE_URL.test(url.trim()) ? url.trim() : "";
+}
+
+// Inline spans, on already-escaped text. Code first, so emphasis markers inside
+// a code span are left alone; the placeholder can never appear in the input,
+// because U+0000 does not survive escaping.
+function mdInline(text) {
+    const code = [];
+    let out = text.replace(/`([^`]+)`/g, (_, body) => {
+        code.push(body);
+        return `\u0000${code.length - 1}\u0000`;
+    });
+
+    out = out
+        .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
+        .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label, href) => {
+            const url = mdUrl(href);
+            return url ? `<a href="${url}">${label}</a>` : label;
+        })
+        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+        .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+        .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
+        .replace(/(^|[\s(])_([^_\n]+)_/g, "$1<em>$2</em>")
+        .replace(/~~([^~]+)~~/g, "<del>$1</del>");
+
+    return out.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${code[Number(i)]}</code>`);
+}
+
+// Lists nest by indent, so they are built depth-first: an item deeper than the
+// level being built starts a sublist inside the item before it.
+function mdList(items, start, indent) {
+    const tag = items[start].ordered ? "ol" : "ul";
+    let html = `<${tag}>`;
+    let i = start;
+    while (i < items.length && items[i].indent >= indent) {
+        if (items[i].indent > indent) {
+            const [sub, next] = mdList(items, i, items[i].indent);
+            html += sub;
+            i = next;
+            continue;
+        }
+        html += `<li>${mdInline(items[i].text)}`;
+        if (i + 1 < items.length && items[i + 1].indent > indent) {
+            const [sub, next] = mdList(items, i + 1, items[i + 1].indent);
+            html += sub;
+            i = next;
+        } else {
+            i += 1;
+        }
+        html += "</li>";
+    }
+    return [`${html}</${tag}>`, i];
+}
+
+const MD_ITEM = /^(\s*)(?:([-*+])|(\d+)[.)])\s+(.*)$/;
+
+function renderMarkdown(text) {
+    const lines = escapeHtml(text ?? "").split("\n");
+    const out = [];
+    let i = 0;
+
+    while (i < lines.length) {
+        const line = lines[i];
+
+        // Fenced code. An unterminated fence runs to the end rather than
+        // swallowing the rest of the document into a paragraph.
+        const fence = line.match(/^\s*```+\s*([\w+-]*)\s*$/);
+        if (fence) {
+            const body = [];
+            i += 1;
+            while (i < lines.length && !/^\s*```+\s*$/.test(lines[i])) {
+                body.push(lines[i]);
+                i += 1;
+            }
+            i += 1;
+            out.push(`<pre><code>${body.join("\n")}</code></pre>`);
+            continue;
+        }
+
+        if (!line.trim()) { i += 1; continue; }
+
+        if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
+            out.push("<hr>");
+            i += 1;
+            continue;
+        }
+
+        const heading = line.match(/^(#{1,6})\s+(.*)$/);
+        if (heading) {
+            const level = heading[1].length;
+            out.push(`<h${level}>${mdInline(heading[2].trim())}</h${level}>`);
+            i += 1;
+            continue;
+        }
+
+        if (/^\s*&gt;\s?/.test(line)) {
+            const body = [];
+            while (i < lines.length && /^\s*&gt;\s?/.test(lines[i])) {
+                body.push(lines[i].replace(/^\s*&gt;\s?/, ""));
+                i += 1;
+            }
+            out.push(`<blockquote>${renderMarkdown(unescapeHtml(body.join("\n")))}</blockquote>`);
+            continue;
+        }
+
+        if (MD_ITEM.test(line)) {
+            const items = [];
+            while (i < lines.length) {
+                const match = lines[i].match(MD_ITEM);
+                if (match) {
+                    items.push({
+                        indent: match[1].length,
+                        ordered: Boolean(match[3]),
+                        text: match[4],
+                    });
+                    i += 1;
+                } else if (lines[i].trim() && /^\s+/.test(lines[i]) && items.length) {
+                    // A wrapped continuation line belongs to the item above it.
+                    items[items.length - 1].text += ` ${lines[i].trim()}`;
+                    i += 1;
+                } else {
+                    break;
+                }
+            }
+            out.push(mdList(items, 0, items[0].indent)[0]);
+            continue;
+        }
+
+        const paragraph = [];
+        while (i < lines.length && lines[i].trim()
+            && !MD_ITEM.test(lines[i])
+            && !/^(#{1,6})\s/.test(lines[i])
+            && !/^\s*```/.test(lines[i])
+            && !/^\s*&gt;\s?/.test(lines[i])) {
+            paragraph.push(lines[i]);
+            i += 1;
+        }
+        out.push(`<p>${mdInline(paragraph.join("\n"))}</p>`);
+    }
+
+    return out.join("");
+}
+
+// Blockquote bodies are re-parsed, and the parser escapes what it is given, so
+// one round has to be undone to avoid escaping the escapes.
+function unescapeHtml(value) {
+    return String(value)
+        .replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"').replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
 }
 
 // Summary figures as a one-row table rather than a flat run of label/value

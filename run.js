@@ -33,7 +33,7 @@ function renderTrials(rows) {
             || a.job.localeCompare(b.job)
             || a.attempt - b.attempt)
         .map((trial) => `<tr>
-            <td class="name"><a href="${trialUrl(trial.id)}">${escapeHtml(shortTask(trial.task))}</a>
+            <td class="name"><a href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
                 <span class="sub">${escapeHtml(trial.job)}</span></td>
             <td class="num">${trial.attempt}</td>
             <td>${outcome(trial)}</td>

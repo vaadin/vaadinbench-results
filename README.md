@@ -85,8 +85,12 @@ to diff against when Aura moves.
 They live at the repository root because that is where Pages serves this branch
 from; `.nojekyll` turns off the Jekyll pass, since there is nothing to render.
 
-A trial's id is `base64(task|model|attempt)`, so a link to a trial survives a
-republish. `trial.html?id=…&tab=verifier` opens straight to a tab, and the
+A trial's id is `base64(job|task|model|attempt)`, so a link to a trial survives a
+republish. The job is part of it because it has to be: without it, one task and
+model run in three configurations produced three trials sharing a single id, so
+`data/trials/<id>.json` was written three times and only the last job survived
+— the index still listed all three rows, and two of them opened another run's
+trajectory, reward and diff. `trial.html?id=…&tab=verifier` opens straight to a tab, and the
 leaderboard keeps its tab and both filters in the query string, so
 `index.html?tab=chart&models=anthropic/claude-opus-5` is a link rather than a
 set of clicks to describe.

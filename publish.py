@@ -111,13 +111,20 @@ def clip(text: str | None, limit: int) -> tuple[str | None, bool]:
 # ---------------------------------------------------------------- trial identity
 
 
-def trial_id(task: str, model: str, attempt: int) -> str:
+def trial_id(job: str, task: str, model: str, attempt: int) -> str:
     """A stable, URL-safe id, so a link to a trial survives a re-publish.
 
-    The same scheme ReactBench uses: base64 of `task|model|attempt`, which is
-    reversible, needs no registry, and stays put as long as those three do.
+    Base64 of `job|task|model|attempt`: reversible, needs no registry, and stays
+    put as long as those four do.
+
+    The job has to be in there. Without it, running the same task and model in
+    three configurations produced three trials with one id between them, so
+    `data/trials/<id>.json` was written three times and only the last job
+    survived -- the index still listed all three rows, and two of them linked to
+    another run's trajectory, reward and diff. A row saying `fail` opened a page
+    saying `pass`.
     """
-    raw = f"{task}|{model}|{attempt}".encode("utf-8")
+    raw = f"{job}|{task}|{model}|{attempt}".encode("utf-8")
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
@@ -415,7 +422,7 @@ def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] 
     trajectory = read_json(trial_dir / "agent" / "trajectory.json") or {}
     events, instruction = build_trajectory(trajectory)
     totals = token_totals(result)
-    identifier = trial_id(task, model, attempt)
+    identifier = trial_id(job, task, model, attempt)
 
     row = {
         "id": identifier,

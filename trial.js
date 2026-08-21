@@ -99,8 +99,23 @@ function renderCrumb() {
             <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
 }
 
+// If the caller said which run it wanted and the file says otherwise, the data
+// on the page belongs to a different trial. That used to happen silently: ids
+// omitted the job, so `data/trials/<id>.json` was overwritten by whichever job
+// published last. Saying so is better than rendering another run's numbers
+// under this one's heading.
+function jobWarning() {
+    const wanted = new URLSearchParams(location.search).get("job");
+    if (!wanted || wanted === trial.job) return "";
+    return `<div class="banner"><strong>This is a different run.</strong>
+        The link asked for <code>${escapeHtml(wanted)}</code> but the stored
+        trial is from <code>${escapeHtml(trial.job)}</code>. Trial ids used to
+        omit the job, so runs of the same task and model overwrote each other.
+        Re-run <code>publish.py</code> to separate them.</div>`;
+}
+
 function renderHeader() {
-    return `${syntheticBanner(trial.synthetic)}
+    return `${syntheticBanner(trial.synthetic)}${jobWarning()}
         <h2 class="title">${escapeHtml(shortTask(trial.task))} ·
             ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="lede">
@@ -225,7 +240,7 @@ function renderEntry(entry) {
         : `<div class="tr-card">
                 <span class="tr-label">${escapeHtml(label)}
                     <span class="tr-step">step ${entry.step ?? "—"}</span></span>
-                <div class="tr-text">${escapeHtml(entry.text)}</div>
+                <div class="md">${renderMarkdown(entry.text)}</div>
             </div>`;
     return `<li class="tr" data-type="${escapeHtml(entry.type)}">
         <span class="tr-rail"><span class="tr-icon">${icon(entry.type)}</span></span>
@@ -428,7 +443,7 @@ function renderVerifier() {
 
 function renderInstruction() {
     return trial.instruction
-        ? `<pre class="wrapped">${escapeHtml(trial.instruction)}</pre>`
+        ? `<div class="md card">${renderMarkdown(trial.instruction)}</div>`
         : `<p class="empty">No prompt was recorded in the trajectory.</p>`;
 }
 
