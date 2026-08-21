@@ -74,7 +74,12 @@ function renderTabs() {
 function renderLeaderboard(rows, hues) {
     if (!rows.length) return `<p class="empty">Nothing matches this filter.</p>`;
     const body = rows.map((row, i) => {
-        const width = row.rate === null ? 0 : row.rate * 100;
+        // No fill at all at zero: a minimum width keeps a 1% score visible, but
+        // it would also draw a coloured nub on a row that solved nothing.
+        const fill = row.rate
+            ? `<span class="bar-fill" style="width:${row.rate * 100}%;background:${
+                hues.get(row.model)}"></span>`
+            : "";
         const errored = row.errored
             ? ` <span class="note" title="${row.errored} of ${row.attempts} trials reported an error">${row.errored}${NBSP}err</span>`
             : "";
@@ -83,8 +88,7 @@ function renderLeaderboard(rows, hues) {
             <td class="rank">${i + 1}</td>
             <td class="name">${escapeHtml(shortModel(row.model))}
                 <span class="sub">${escapeHtml(row.config)}</span></td>
-            <td class="bar"><span class="bar-track"><span class="bar-fill"
-                style="width:${width}%;background:${hues.get(row.model)}"></span></span></td>
+            <td class="bar"><span class="bar-track">${fill}</span></td>
             <td class="num">${percent(row.rate)}</td>
             <td class="num">${row.solved}/${row.graded}${errored}</td>
             <td class="num">${row.tasks.size}</td>
@@ -119,11 +123,11 @@ function niceTicks(max, target = 5) {
 
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
-function renderChart(rows, hues) {
+function renderChart(rows, hues, shapes) {
     const points = rows.filter((row) => row.rate !== null);
     if (!points.length) return `<p class="empty">Nothing to plot.</p>`;
 
-    const W = 760, H = 420, L = 46, R = 18, T = 16, B = 44;
+    const W = 900, H = 320, L = 52, R = 28, T = 28, B = 44;
     const plotW = W - L - R, plotH = H - T - B;
     const xTicks = niceTicks(Math.max(...points.map((p) => p.cost / p.attempts)));
     const xMax = xTicks[xTicks.length - 1];
@@ -138,58 +142,58 @@ function renderChart(rows, hues) {
     const xAxis = xTicks.map((value) => `<text class="tick" x="${px(value)}"
         y="${T + plotH + 18}" text-anchor="middle">$${value.toFixed(2)}</text>`).join("");
 
-    // Rows tie often -- three configurations at 100% put three dots on the same
-    // gridline -- so a label takes the first free slot below its own dot instead
-    // of landing on top of the last one. Points are already in rank order, so
-    // which label moves is stable between renders.
-    const placed = [];
-    const freeY = (x, y) => {
-        let slot = y + 4;
-        while (placed.some((p) => Math.abs(p.y - slot) < 12 && Math.abs(p.x - x) < 130)) {
-            slot += 13;
-        }
-        placed.push({ x, y: slot });
-        return slot;
-    };
-
+    // Rows tie constantly -- four configurations sit on the 100% line here -- so
+    // nothing is written next to a point. Colour carries the model, shape carries
+    // the configuration, and the tooltip carries the numbers. Each marker gets an
+    // invisible disc behind it so a 6px shape is not a 6px hit target.
     const dots = points.map((row) => {
         const x = px(row.cost / row.attempts), y = py(row.rate);
-        // Labels flip to the inside near the right edge so they never run off
-        // the plot on a narrow viewport.
-        const right = x > L + plotW * 0.72;
-        const labelX = right ? x - 9 : x + 9;
-        return `<circle class="dot" cx="${x}" cy="${y}" r="5"
-                style="fill:${hues.get(row.model)}"/>
-            <text class="dot-label" x="${labelX}" y="${freeY(labelX, y)}"
-                text-anchor="${right ? "end" : "start"}">${escapeHtml(row.config)}</text>`;
+        const tip = `${shortModel(row.model)} · ${row.config} — ${percent(row.rate)}`
+            + ` (${row.solved}/${row.graded}), ${money(row.cost / row.attempts)}/trial`;
+        return `<g data-tip="${escapeHtml(tip)}">
+            <circle class="hit" cx="${x}" cy="${y}" r="13"/>
+            ${marker(shapes.get(row.config), x, y, `fill:${hues.get(row.model)}`)}
+        </g>`;
     }).join("");
 
-    const legend = [...hues].filter(([model]) => points.some((p) => p.model === model))
+    const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
         .map(([model, colour]) => `<span><i style="background:${colour}"></i>
             ${escapeHtml(shortModel(model))}</span>`).join("");
+    const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
+        .map(([config, shape]) => `<span><svg viewBox="0 0 14 14" aria-hidden="true">${
+            marker(shape, 7, 7, "", "shape", 5)
+        }</svg>${escapeHtml(config)}</span>`).join("");
 
-    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+    return `<div class="chart-wrap"><div class="tip" hidden></div>
+    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
         aria-label="Score against cost per trial">
         ${grid}
         <line class="axis" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
         <line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
         ${xAxis}
+        <text class="axis-title" x="${L}" y="${T - 12}">Score</text>
         <text class="axis-title" x="${W - R}" y="${H - 6}" text-anchor="end">Cost / trial</text>
-        <text class="axis-title" x="${L - 8}" y="${T - 4}" text-anchor="end">Score</text>
         ${dots}
-    </svg>
-    <div class="legend">${legend}</div>`;
+    </svg></div>
+    <div class="legend">${models}</div>
+    <div class="legend">${configs}</div>`;
 }
 
 function render() {
     const rows = summarize(visible());
+    // Both maps are built from every trial, not the filtered set, so a model
+    // keeps its colour and a configuration its shape as chips are toggled.
     const hues = hueMap(trials.map((trial) => trial.model));
+    const shapes = shapeMap(trials.map((trial) => configOf(trial.job)));
     document.getElementById("content").innerHTML = [
         syntheticBanner(runs.some((run) => run.synthetic)),
         renderTabs(),
         renderFilters(),
-        state.tab === "chart" ? renderChart(rows, hues) : renderLeaderboard(rows, hues),
+        state.tab === "chart"
+            ? renderChart(rows, hues, shapes)
+            : renderLeaderboard(rows, hues),
     ].join("");
+    bindTips(document.getElementById("content"));
 }
 
 // The whole view is in the URL, so a filtered leaderboard or the chart is a

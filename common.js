@@ -119,6 +119,58 @@ function hueMap(models) {
         [model, `var(--aura-${HUES[i % HUES.length]})`]));
 }
 
+// Configurations are the other axis of comparison, and colour is already spent
+// on models, so they get a shape. Nine points labelled in text collide with each
+// other and with the dots; two legends and a tooltip do not.
+const SHAPES = ["circle", "square", "triangle", "diamond"];
+
+function shapeMap(configs) {
+    const sorted = [...new Set(configs)].sort();
+    return new Map(sorted.map((config, i) => [config, SHAPES[i % SHAPES.length]]));
+}
+
+const SHAPE_TAGS = { circle: "circle", square: "rect", triangle: "polygon", diamond: "polygon" };
+
+function marker(shape, x, y, style, klass = "dot", r = 6) {
+    const kind = SHAPE_TAGS[shape] ? shape : "circle";
+    const body = {
+        circle: `<circle cx="${x}" cy="${y}" r="${r}"`,
+        square: `<rect x="${x - r * 0.9}" y="${y - r * 0.9}" width="${r * 1.8}"
+            height="${r * 1.8}" rx="1"`,
+        triangle: `<polygon points="${x},${y - r * 1.15} ${x + r},${y + r * 0.8}
+            ${x - r},${y + r * 0.8}"`,
+        diamond: `<polygon points="${x},${y - r * 1.25} ${x + r * 1.05},${y}
+            ${x},${y + r * 1.25} ${x - r * 1.05},${y}"`,
+    }[kind];
+    return `${body} class="${klass}" style="${style}"/>`;
+}
+
+// A tooltip that follows the pointer rather than SVG's own <title>, which waits
+// about a second and then lets the window manager put it wherever it likes --
+// far from the point it describes, which reads as a bug.
+function bindTips(root) {
+    const tip = root.querySelector(".tip");
+    if (!tip) return;
+    const show = (target) => {
+        const box = target.getBoundingClientRect();
+        const frame = tip.parentElement.getBoundingClientRect();
+        tip.textContent = target.dataset.tip;
+        tip.hidden = false;
+        // Measured after the text is in, so the width is the real one, then
+        // clamped so a point near either edge keeps the whole label on screen.
+        const left = box.left - frame.left + box.width / 2 - tip.offsetWidth / 2;
+        tip.style.left = `${Math.max(0, Math.min(left, frame.width - tip.offsetWidth))}px`;
+        tip.style.top = `${box.top - frame.top - tip.offsetHeight - 8}px`;
+    };
+    root.addEventListener("pointerover", (event) => {
+        const target = event.target.closest("[data-tip]");
+        if (target) show(target);
+    });
+    root.addEventListener("pointerout", (event) => {
+        if (event.target.closest("[data-tip]")) tip.hidden = true;
+    });
+}
+
 // Invented data must never be mistaken for a measurement, so it is called out on
 // every page that shows any, not only where it was generated.
 function syntheticBanner(isSynthetic) {

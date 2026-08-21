@@ -76,16 +76,22 @@
     --faint: color-mix(in oklch, var(--ink) 45%, transparent);
     --hairline: color-mix(in srgb, var(--border-base) 8%, transparent);
     --rule: color-mix(in srgb, var(--border-base) 20%, transparent);
+    --card-border: color-mix(in srgb, var(--border-base) 16%, transparent);
     --container: color-mix(in srgb, var(--container-base) 4%, transparent);
     --container-strong: color-mix(in srgb, var(--container-base) 8.5%, transparent);
-    --pass-bg: color-mix(in oklch, var(--aura-green) 14%, var(--surface));
-    --fail-bg: color-mix(in oklch, var(--aura-red) 14%, var(--surface));
+    /* oklab, not oklch: oklch is polar, so mixing a saturated colour with a
+       near-neutral one interpolates the hue angle and drags the result towards
+       the neutral's nominal hue -- 10% green over a hue-248 surface came out
+       blue. oklab is rectangular, so a small amount of green reads as green.
+       Aura mixes in oklab and srgb for the same reason. */
+    --pass-bg: color-mix(in oklab, var(--aura-green) 14%, var(--surface));
+    --fail-bg: color-mix(in oklab, var(--aura-red) 14%, var(--surface));
     --add: var(--pass);
-    --add-bg: color-mix(in oklch, var(--aura-green) var(--diff-mix), var(--surface));
-    --add-gutter: color-mix(in oklch, var(--aura-green) 45%, var(--surface));
+    --add-bg: color-mix(in oklab, var(--aura-green) var(--diff-mix), var(--surface));
+    --add-gutter: color-mix(in oklab, var(--aura-green) 45%, var(--surface));
     --del: var(--fail);
-    --del-bg: color-mix(in oklch, var(--aura-red) var(--diff-mix), var(--surface));
-    --del-gutter: color-mix(in oklch, var(--aura-red) 45%, var(--surface));
+    --del-bg: color-mix(in oklab, var(--aura-red) var(--diff-mix), var(--surface));
+    --del-gutter: color-mix(in oklab, var(--aura-red) 45%, var(--surface));
 }
 
 * { box-sizing: border-box; }
@@ -209,19 +215,26 @@ p.lede { margin: -.9rem 0 1.3rem; color: var(--faint); font-size: .88rem; }
 
 /* ----------------------------------------------------------------- tables */
 
-.wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: .88rem; }
-th, td { text-align: left; padding: .55rem .7rem; white-space: nowrap; }
+.wrap {
+    overflow-x: auto; overscroll-behavior-x: contain;
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-xs);
+}
+table { width: 100%; min-width: 680px; border-collapse: collapse; font-size: .88rem; }
+th, td { text-align: left; padding: .6rem .9rem; white-space: nowrap; }
 th {
     color: var(--faint); font-weight: 500; font-size: .7rem;
     text-transform: uppercase; letter-spacing: .07em;
-    border-bottom: 1px solid var(--rule);
+    border-bottom: 1px solid var(--card-border);
+    background: var(--container);
 }
+thead tr:first-child th:first-child { border-top-left-radius: var(--radius-l); }
+thead tr:first-child th:last-child { border-top-right-radius: var(--radius-l); }
 td { border-bottom: 1px solid var(--hairline); }
 tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-th:first-child, td:first-child { padding-left: 0; }
-th:last-child, td:last-child { padding-right: 0; }
 
 tr.pick { cursor: pointer; }
 tr.pick:hover { background: var(--container); }
@@ -232,12 +245,33 @@ td.name { font-weight: 500; }
 /* The score column doubles as the bar chart: one track per row, filled to the
    pass rate, coloured by model so a row and its dot in the chart match. */
 td.bar { width: 38%; min-width: 130px; }
-.bar-track { height: 6px; border-radius: 999px; background: var(--container-strong); overflow: hidden; }
-.bar-fill { display: block; height: 100%; border-radius: 999px; min-width: 2px; }
+.bar-track {
+    display: block; height: 6px; border-radius: 999px;
+    background: var(--container-strong); overflow: hidden;
+}
+.bar-fill { display: block; height: 100%; border-radius: 999px; min-width: 3px; }
 
 /* ------------------------------------------------------------------ chart */
 
+.chart-wrap {
+    position: relative;
+    padding: 1rem 1.1rem .6rem;
+    background: var(--surface);
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-xs);
+}
 .chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .hit { fill: transparent; }
+.tip {
+    position: absolute; z-index: 2; pointer-events: none;
+    padding: .3rem .5rem; border-radius: var(--radius-s);
+    border: 1px solid var(--rule); background: var(--surface);
+    box-shadow: var(--shadow-s);
+    color: var(--ink); font-size: .78rem; white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+.tip[hidden] { display: none; }
 .chart .axis { stroke: var(--rule); }
 .chart .gridline { stroke: var(--hairline); }
 .chart .tick { fill: var(--faint); font: 11px var(--font); font-variant-numeric: tabular-nums; }
@@ -247,6 +281,8 @@ td.bar { width: 38%; min-width: 130px; }
 .legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .9rem; font-size: .8rem; color: var(--meta); }
 .legend span { display: inline-flex; align-items: center; gap: .35rem; }
 .legend i { width: 8px; height: 8px; border-radius: 999px; }
+.legend svg { width: 13px; height: 13px; overflow: visible; }
+.legend .shape { fill: var(--faint); }
 
 /* ----------------------------------------------------------------- badges */
 
@@ -287,7 +323,12 @@ td.bar { width: 38%; min-width: 130px; }
     background: var(--surface);
     box-shadow: var(--shadow-xs);
 }
-.event[data-kind="prompt"] .message { color: var(--meta); }
+.event[data-kind="prompt"] .message {
+    color: var(--meta);
+    max-height: 15em;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+}
 
 .event[data-kind="thinking"] { border-left-style: dotted; border-left-color: var(--rule); }
 .event[data-kind="thinking"] .message, .event .reasoning {
