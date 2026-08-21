@@ -1,171 +1,357 @@
+/* Vaadin Aura, transplanted.
+
+   Aura computes almost every colour at runtime from `--aura-background-color`
+   using relative-colour syntax, which needs Aura's own stylesheet and the web
+   components that carry it. This site ships neither, so the values below are
+   Aura's formulas evaluated by hand at its defaults -- contrast level 1,
+   surface level 1, surface opacity 0.5 -- and written out as literal oklch().
+   Anything derived from another token still uses color-mix(), so changing
+   --bg or --accent moves the rest with it.
+
+   Sources: @vaadin/aura/src/{color,palette,surface,typography}.css. */
+
 :root {
     color-scheme: light dark;
-    --bg: #fbfbfa;
-    --panel: #ffffff;
-    --border: #e3e2df;
-    --text: #1c1b19;
-    --muted: #6b6862;
-    --accent: #1a6ef5;
-    --pass: #1a7f4b;
-    --pass-bg: #e6f4ec;
-    --fail: #b4342a;
-    --fail-bg: #fbeae8;
-    --code-bg: #f5f4f1;
-    --add: #1a7f4b;
-    --del: #b4342a;
+
+    /* Aura's own palette, verbatim. */
+    --aura-red: oklch(.59 .2 25);
+    --aura-orange: oklch(.61 .35 87);
+    --aura-yellow: oklch(.89 .3 98);
+    --aura-green: oklch(.6 .2 155);
+    --aura-blue: oklch(.55 .2 264);
+    --aura-purple: oklch(.58 .22 290);
+
+    /* --aura-background-color-light, and the two stops Aura's gradient adds. */
+    --bg: oklch(.95 .005 248);
+    --bg-glow: oklch(.965 .005 248);
+    --bg-alt: oklch(.955 0 251);
+
+    /* --aura-surface-color-solid at level 1: l + (1 - l) * 0.6016. */
+    --surface: oklch(.98 .0027 248);
+    --ink: oklch(.15 .004 248);
+    --border-base: oklch(.1 .005 248);
+    --container-base: oklch(.1 .0075 248);
+
+    --accent: var(--aura-blue);
+    --accent-text: oklch(.5 .18 264);
+    --accent-contrast: #fff;
+
+    /* The `-text` palette variants: min(.55, .3 + .75c) lightness, .9c chroma. */
+    --pass: oklch(.45 .18 155);
+    --fail: oklch(.45 .18 25);
+    --diff-mix: 10%;
+
+    --shadow-xs: 0 1px 2px oklch(.15 .004 248 / .06);
+    --shadow-s: 0 2px 8px oklch(.15 .004 248 / .07);
+
+    --font: "Instrument Sans", system-ui, ui-sans-serif, sans-serif;
     --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --radius-s: 4px;
+    --radius-m: 6px;
+    --radius-l: 10px;
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #16161a;
-        --panel: #1d1d22;
-        --border: #2e2e35;
-        --text: #e7e6e3;
-        --muted: #9a978f;
-        --accent: #6ea8fe;
-        --pass: #5fd39a;
-        --pass-bg: #14301f;
-        --fail: #f08b80;
-        --fail-bg: #331817;
-        --code-bg: #17171b;
-        --add: #5fd39a;
-        --del: #f08b80;
+        --bg: oklch(.2 .01 260);
+        --bg-glow: oklch(.23 .012 260);
+        --bg-alt: oklch(.185 .008 260);
+        --surface: oklch(.23 .01 260);
+        --ink: oklch(1 .002 260);
+        --border-base: oklch(.85 .008 260);
+        --container-base: oklch(1 .01 260);
+        --accent-text: oklch(.8 .18 264);
+        --pass: oklch(.8 .18 155);
+        --fail: oklch(.8 .18 25);
+        --diff-mix: 22%;
+        --shadow-xs: 0 1px 2px oklch(0 0 0 / .4);
+        --shadow-s: 0 2px 8px oklch(0 0 0 / .45);
     }
+}
+
+/* Everything below is derived, so it follows the tokens above into either
+   scheme without being restated. */
+:root {
+    --meta: color-mix(in oklch, var(--ink) 65%, transparent);
+    --faint: color-mix(in oklch, var(--ink) 45%, transparent);
+    --hairline: color-mix(in srgb, var(--border-base) 8%, transparent);
+    --rule: color-mix(in srgb, var(--border-base) 20%, transparent);
+    --container: color-mix(in srgb, var(--container-base) 4%, transparent);
+    --container-strong: color-mix(in srgb, var(--container-base) 8.5%, transparent);
+    --pass-bg: color-mix(in oklch, var(--aura-green) 14%, var(--surface));
+    --fail-bg: color-mix(in oklch, var(--aura-red) 14%, var(--surface));
+    --add: var(--pass);
+    --add-bg: color-mix(in oklch, var(--aura-green) var(--diff-mix), var(--surface));
+    --add-gutter: color-mix(in oklch, var(--aura-green) 45%, var(--surface));
+    --del: var(--fail);
+    --del-bg: color-mix(in oklch, var(--aura-red) var(--diff-mix), var(--surface));
+    --del-gutter: color-mix(in oklch, var(--aura-red) 45%, var(--surface));
 }
 
 * { box-sizing: border-box; }
 
+/* Aura sets its gradient on <html> with a fixed viewport-sized background, so
+   the glow stays put while the page scrolls under it. */
+html {
+    background:
+        radial-gradient(circle at 0% 0%, var(--bg-glow), transparent 30%),
+        radial-gradient(circle at 25% 0%, var(--bg) 33%, var(--bg-alt)),
+        var(--bg);
+    background-size: 100vw 100vh;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+}
+
 body {
     margin: 0;
-    padding: 2.5rem 1.5rem 5rem;
-    background: var(--bg);
-    color: var(--text);
-    font: 15px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding: 2rem 1.5rem 5rem;
+    color: var(--ink);
+    font: 14px/1.4 var(--font);
+    -webkit-font-smoothing: antialiased;
 }
 
 main { max-width: 1080px; margin: 0 auto; }
 
-a { color: var(--accent); text-decoration: none; }
+a { color: var(--accent-text); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-h1 { font-size: 1.6rem; margin: 0 0 .25rem; letter-spacing: -.01em; }
-h2 { font-size: 1.05rem; margin: 2.5rem 0 .75rem; letter-spacing: -.01em; }
-p.lede { margin: 0 0 2rem; color: var(--muted); }
+/* ------------------------------------------------------------------ brand */
+
+.brand { display: flex; align-items: center; gap: .6rem; margin: 0 0 1.5rem; }
+.brand h1 {
+    font-size: 1.15rem; font-weight: 600; letter-spacing: -.01em;
+    margin: 0; color: var(--ink);
+}
+.brand .sub { color: var(--faint); font-size: .82rem; margin-left: .1rem; }
+
+/* The reindeer draws itself once, then breathes. `pathLength="1"` lets the
+   dash length be 1 regardless of the real geometry, so no measuring. */
+.mark { width: 26px; height: 30px; flex: none; overflow: visible; }
+.mark path {
+    fill: var(--accent);
+    fill-opacity: 0;
+    stroke: var(--accent);
+    stroke-width: 14;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation:
+        mark-draw 2.2s cubic-bezier(.4, 0, .2, 1) forwards,
+        mark-ink 1.4s ease-out 1.5s forwards;
+}
+@keyframes mark-draw { to { stroke-dashoffset: 0; } }
+@keyframes mark-ink { to { fill-opacity: 1; stroke-opacity: 0; } }
+
+/* The ambient part: 1px of drift over 16 seconds. Slow enough to read as the
+   page being alive rather than as something moving. */
+.mark { animation: mark-breathe 16s ease-in-out 3s infinite; }
+@keyframes mark-breathe {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-1px) scale(1.015); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mark, .mark path { animation: none; }
+    .mark path { fill-opacity: 1; stroke-opacity: 0; }
+}
+
+h2 {
+    font-size: .72rem; margin: 2rem 0 .5rem; color: var(--faint);
+    text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
+}
+p.lede { margin: -.9rem 0 1.3rem; color: var(--faint); font-size: .88rem; }
+.crumb { margin: 0 0 1rem; font-size: .82rem; color: var(--faint); }
 
 .banner {
-    margin: 0 0 1.5rem;
+    margin: 0 0 1.25rem;
     padding: .7rem .9rem;
-    border: 1px solid var(--border);
+    border: 1px solid var(--rule);
     border-left: 3px solid var(--fail);
-    border-radius: 6px;
-    background: var(--panel);
-    color: var(--muted);
-    font-size: .9rem;
+    border-radius: var(--radius-m);
+    background: var(--surface);
+    box-shadow: var(--shadow-xs);
+    color: var(--meta);
+    font-size: .86rem;
 }
 
-table { width: 100%; border-collapse: collapse; font-size: .92rem; }
-th, td {
-    text-align: left;
-    padding: .55rem .7rem;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
+/* ------------------------------------------------------------------- tabs */
+
+.tabs { display: flex; gap: 1.1rem; border-bottom: 1px solid var(--hairline); margin-bottom: 1.1rem; }
+.tabs button {
+    appearance: none; border: 0; background: none; cursor: pointer;
+    font: inherit; font-size: .88rem; font-weight: 500; color: var(--faint);
+    padding: 0 0 .5rem; margin-bottom: -1px;
+    border-bottom: 2px solid transparent;
 }
-th { color: var(--muted); font-weight: 500; font-size: .82rem; text-transform: uppercase; letter-spacing: .04em; }
-tbody tr:hover { background: var(--panel); }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--accent-text); border-bottom-color: var(--accent); }
+
+/* ---------------------------------------------------------------- filters */
+
+.filters { display: flex; flex-direction: column; gap: .4rem; margin-bottom: 1.3rem; }
+.filter { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem; }
+.filter > .key {
+    width: 6rem; flex: none; color: var(--faint);
+    font-size: .7rem; text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
+}
+.chip {
+    appearance: none; cursor: pointer; font: inherit; font-size: .8rem; font-weight: 500;
+    padding: .2rem .65rem; border-radius: 999px;
+    border: 1px solid var(--rule); background: var(--surface);
+    color: var(--meta); box-shadow: var(--shadow-xs);
+}
+.chip:hover { color: var(--ink); border-color: var(--accent); }
+.chip[aria-pressed="true"] {
+    color: var(--accent-contrast); background: var(--accent);
+    border-color: var(--accent); box-shadow: var(--shadow-s);
+}
+
+/* ----------------------------------------------------------------- tables */
+
+.wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+th, td { text-align: left; padding: .55rem .7rem; white-space: nowrap; }
+th {
+    color: var(--faint); font-weight: 500; font-size: .7rem;
+    text-transform: uppercase; letter-spacing: .07em;
+    border-bottom: 1px solid var(--rule);
+}
+td { border-bottom: 1px solid var(--hairline); }
+tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
-.wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+th:first-child, td:first-child { padding-left: 0; }
+th:last-child, td:last-child { padding-right: 0; }
+
+tr.pick { cursor: pointer; }
+tr.pick:hover { background: var(--container); }
+td .sub { display: block; color: var(--faint); font-size: .76rem; margin-top: .1rem; }
+td.rank { color: var(--faint); font-variant-numeric: tabular-nums; width: 1.5rem; }
+td.name { font-weight: 500; }
+
+/* The score column doubles as the bar chart: one track per row, filled to the
+   pass rate, coloured by model so a row and its dot in the chart match. */
+td.bar { width: 38%; min-width: 130px; }
+.bar-track { height: 6px; border-radius: 999px; background: var(--container-strong); overflow: hidden; }
+.bar-fill { display: block; height: 100%; border-radius: 999px; min-width: 2px; }
+
+/* ------------------------------------------------------------------ chart */
+
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart .axis { stroke: var(--rule); }
+.chart .gridline { stroke: var(--hairline); }
+.chart .tick { fill: var(--faint); font: 11px var(--font); font-variant-numeric: tabular-nums; }
+.chart .axis-title { fill: var(--faint); font: 500 10px var(--font); text-transform: uppercase; letter-spacing: .07em; }
+.chart .dot { stroke: var(--surface); stroke-width: 1.5; fill-opacity: .9; }
+.chart .dot-label { fill: var(--meta); font: 11px var(--font); }
+.legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .9rem; font-size: .8rem; color: var(--meta); }
+.legend span { display: inline-flex; align-items: center; gap: .35rem; }
+.legend i { width: 8px; height: 8px; border-radius: 999px; }
+
+/* ----------------------------------------------------------------- badges */
 
 .badge {
-    display: inline-block;
-    padding: .1rem .5rem;
-    border-radius: 999px;
-    font-size: .78rem;
-    font-weight: 600;
+    display: inline-block; padding: .05rem .4rem; border-radius: var(--radius-s);
+    font-size: .75rem; font-weight: 600;
 }
 .badge.pass { color: var(--pass); background: var(--pass-bg); }
 .badge.fail { color: var(--fail); background: var(--fail-bg); }
-.badge.tag { color: var(--muted); background: var(--code-bg); font-weight: 500; }
-.note { color: var(--muted); font-size: .8rem; white-space: nowrap; }
+.badge.tag { color: var(--meta); background: var(--container-strong); font-weight: 500; }
+.note { color: var(--faint); font-size: .76rem; white-space: nowrap; }
 
-.metrics { display: flex; flex-wrap: wrap; gap: 1.75rem; margin: 1.25rem 0 2rem; }
-.metric .label { display: block; color: var(--muted); font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
-.metric .value { font-size: 1.2rem; font-variant-numeric: tabular-nums; }
-
-.tabs { display: flex; gap: .35rem; border-bottom: 1px solid var(--border); margin-bottom: 1.25rem; }
-.tabs button {
-    appearance: none;
-    border: 0;
-    background: none;
-    color: var(--muted);
-    font: inherit;
-    padding: .5rem .8rem;
-    border-bottom: 2px solid transparent;
-    cursor: pointer;
+.metrics { display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0 0 1.6rem; }
+.metric .label {
+    display: block; color: var(--faint); font-size: .7rem;
+    text-transform: uppercase; letter-spacing: .07em; font-weight: 500;
 }
-.tabs button[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.metric .value { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
 
-.facets { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1.25rem; }
-.facets button {
-    appearance: none;
-    border: 1px solid var(--border);
-    background: var(--panel);
-    color: var(--muted);
-    font: inherit;
-    font-size: .84rem;
-    padding: .25rem .65rem;
-    border-radius: 999px;
-    cursor: pointer;
-}
-.facets button[aria-pressed="true"] { color: var(--text); border-color: var(--accent); }
+/* ------------------------------------------------------------- trajectory */
 
-.event {
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--panel);
-    padding: .85rem 1rem;
-    margin-bottom: .6rem;
-}
-.event > header { display: flex; align-items: baseline; gap: .6rem; margin-bottom: .4rem; }
-.event .step { color: var(--muted); font-size: .8rem; font-variant-numeric: tabular-nums; }
-.event .message { white-space: pre-wrap; }
-.event .reasoning {
-    margin-top: .6rem;
-    padding-left: .8rem;
-    border-left: 2px solid var(--border);
-    color: var(--muted);
-    white-space: pre-wrap;
-    font-size: .93rem;
-}
+.facets { display: flex; flex-wrap: wrap; gap: .3rem; margin-bottom: 1.1rem; }
 
-details.call { margin-top: .6rem; }
+/* A prompt, a thought and a command are three different things to read, so
+   they are set three different ways: the instruction as a card, thinking as
+   quiet italics behind a dotted rule, tool calls as collapsed monospace. */
+.event { margin-bottom: .5rem; padding-left: .85rem; border-left: 2px solid var(--hairline); }
+.event > header { display: flex; align-items: baseline; gap: .5rem; margin-bottom: .25rem; }
+.event .step { color: var(--faint); font-size: .74rem; font-variant-numeric: tabular-nums; }
+.event .message { white-space: pre-wrap; overflow-wrap: anywhere; }
+
+.event[data-kind="prompt"] {
+    padding: .8rem 1rem;
+    margin-bottom: 1rem;
+    border: 1px solid var(--rule);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 var(--radius-m) var(--radius-m) 0;
+    background: var(--surface);
+    box-shadow: var(--shadow-xs);
+}
+.event[data-kind="prompt"] .message { color: var(--meta); }
+
+.event[data-kind="thinking"] { border-left-style: dotted; border-left-color: var(--rule); }
+.event[data-kind="thinking"] .message, .event .reasoning {
+    font-style: italic; color: var(--faint);
+    white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.event .reasoning { margin-top: .35rem; }
+
+details.call { margin-top: .35rem; }
 details.call > summary {
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: .85rem;
-    padding: .35rem .5rem;
-    background: var(--code-bg);
-    border-radius: 5px;
-    overflow-wrap: anywhere;
+    cursor: pointer; font-family: var(--mono); font-size: .8rem;
+    color: var(--meta); background: var(--container);
+    border: 1px solid var(--hairline);
+    padding: .3rem .5rem; border-radius: var(--radius-s); overflow-wrap: anywhere;
 }
-details.call .tool { color: var(--muted); }
+details.call > summary:hover { border-color: var(--rule); }
+details.call .tool { color: var(--accent-text); font-weight: 600; }
+
+/* ------------------------------------------------------------------- code */
 
 pre {
-    margin: .5rem 0 0;
+    margin: .35rem 0 0;
     padding: .7rem .8rem;
-    background: var(--code-bg);
-    border-radius: 6px;
+    background: var(--container);
+    color: var(--meta);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-m);
     overflow-x: auto;
     font-family: var(--mono);
-    font-size: .82rem;
-    line-height: 1.5;
+    font-size: .79rem;
+    line-height: 1.55;
     white-space: pre;
 }
 pre.wrapped { white-space: pre-wrap; overflow-wrap: anywhere; }
-.diff .add { color: var(--add); }
-.diff .del { color: var(--del); }
-.diff .hunk { color: var(--muted); }
 
-.truncated { color: var(--muted); font-size: .8rem; margin-top: .35rem; }
-.empty { color: var(--muted); }
-footer { max-width: 1080px; margin: 4rem auto 0; color: var(--muted); font-size: .85rem; }
+/* A line's kind belongs to the whole line, so it gets the whole line. `.rows`
+   is as wide as the longest one, which is what lets a tint run to the right
+   edge instead of stopping where the text does. */
+.diff {
+    margin: .35rem 0 0; overflow-x: auto;
+    border: 1px solid var(--hairline); border-radius: var(--radius-m);
+    background: var(--surface);
+}
+.diff .rows { min-width: max-content; font-family: var(--mono); font-size: .79rem; line-height: 1.6; }
+.diff .dl {
+    display: block; padding: 0 .8rem 0 .5rem;
+    white-space: pre; border-left: 3px solid transparent;
+    color: var(--meta);
+}
+.diff .dl.add { background: var(--add-bg); color: var(--add); border-left-color: var(--add-gutter); }
+.diff .dl.del { background: var(--del-bg); color: var(--del); border-left-color: var(--del-gutter); }
+.diff .dl.hunk { color: var(--faint); background: var(--container); }
+.diff .dl.file {
+    color: var(--ink); background: var(--container-strong); font-weight: 600;
+    padding: .3rem .8rem .3rem .5rem;
+    border-top: 1px solid var(--hairline);
+}
+.diff .rows > .dl.file:first-child { border-top: 0; }
+.diff .dl.meta { color: var(--faint); }
+
+.truncated { color: var(--faint); font-size: .76rem; margin-top: .35rem; }
+.empty { color: var(--faint); }
+footer {
+    max-width: 1080px; margin: 3.5rem auto 0; padding-top: 1rem;
+    border-top: 1px solid var(--hairline);
+    color: var(--faint); font-size: .8rem;
+}

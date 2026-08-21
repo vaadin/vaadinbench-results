@@ -15,9 +15,19 @@ function metric(label, value) {
         <span class="value">${value}</span></div>`;
 }
 
+// The page title lives in the shell, so the trial names itself one level down
+// and the breadcrumb carries the way back to the configuration it came from.
+function renderCrumb() {
+    const config = configOf(trial.job);
+    document.getElementById("crumb").innerHTML =
+        `<a href="index.html">Leaderboard</a> ·
+         <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))} ·
+            ${escapeHtml(config)}</a>`;
+}
+
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
-        <h1>${escapeHtml(shortTask(trial.task))} · ${escapeHtml(shortModel(trial.model))}</h1>
+        <h2>${escapeHtml(shortTask(trial.task))} · ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="lede">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
@@ -74,7 +84,7 @@ function renderEvent(event) {
         ? `<div class="message">${escapeHtml(event.message)}</div>` : "";
     const reasoning = event.reasoning
         ? `<div class="reasoning">${escapeHtml(event.reasoning)}</div>` : "";
-    return `<article class="event">
+    return `<article class="event" data-kind="${escapeHtml(event.kind)}">
         <header>
             <span class="badge tag">${escapeHtml(KIND_LABELS[event.kind] ?? event.kind)}</span>
             <span class="step">step ${event.step ?? "—"} · ${escapeHtml(event.source)}</span>
@@ -93,16 +103,31 @@ function renderTrajectory() {
     return renderFacets() + visible.map(renderEvent).join("");
 }
 
-// A patch is easier to read with the three line kinds coloured, and that is all
-// the highlighting it needs — anything more would be a diff viewer.
+// A line's kind is a property of the whole line, so each one is its own block
+// and takes a background across the full width rather than a colour on the text.
+// Order matters: `+++ b/file` and `--- a/file` start with the same characters as
+// an added and a removed line, and are neither.
+function lineKind(line) {
+    if (line.startsWith("diff --git")) return "file";
+    if (line.startsWith("+++") || line.startsWith("---")
+        || line.startsWith("index ") || line.startsWith("new file")
+        || line.startsWith("deleted file") || line.startsWith("similarity ")
+        || line.startsWith("rename ")) return "meta";
+    if (line.startsWith("@@")) return "hunk";
+    if (line.startsWith("+")) return "add";
+    if (line.startsWith("-")) return "del";
+    return "";
+}
+
 function renderPatch(patch) {
-    return patch.split("\n").map((line) => {
-        const cls = line.startsWith("+") ? "add"
-            : line.startsWith("-") ? "del"
-            : line.startsWith("@@") || line.startsWith("diff ") ? "hunk" : "";
-        const text = escapeHtml(line) || "&nbsp;";
-        return cls ? `<span class="${cls}">${text}</span>` : text;
-    }).join("\n");
+    const rows = patch.split("\n").map((line) => {
+        // `diff --git a/x b/x` names the file twice; once is enough for a header.
+        const text = line.startsWith("diff --git")
+            ? line.replace(/^diff --git a\/(.*) b\/.*$/, "$1")
+            : line;
+        return `<span class="dl ${lineKind(line)}">${escapeHtml(text) || " "}</span>`;
+    }).join("");
+    return `<div class="diff"><div class="rows">${rows}</div></div>`;
 }
 
 function renderChanges() {
@@ -111,7 +136,7 @@ function renderChanges() {
         return `<p class="empty">The agent changed nothing, or no patch was captured.</p>`;
     }
     return `${changes.diffstat ? `<pre>${escapeHtml(changes.diffstat)}</pre>` : ""}
-        ${changes.patch ? `<pre class="diff">${renderPatch(changes.patch)}</pre>` : ""}
+        ${changes.patch ? renderPatch(changes.patch) : ""}
         ${changes.patch_truncated ? `<p class="truncated">Patch truncated.</p>` : ""}`;
 }
 
@@ -192,6 +217,7 @@ function render() {
     const view = views[activeTab] ?? views.trajectory;
     document.getElementById("content").innerHTML =
         renderHeader() + renderTabs() + view();
+    renderCrumb();
     document.title = `${shortTask(trial.task)} · ${shortModel(trial.model)} · VaadinBench`;
 }
 
