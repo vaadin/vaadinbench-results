@@ -381,6 +381,23 @@ td.bar { width: 38%; min-width: 130px; }
 .legend svg, .legend .glyph { width: 13px; height: 13px; overflow: visible; }
 .legend .shape { fill: var(--faint); }
 
+/* --------------------------------------------------------------- appendix */
+
+/* Deliberately the smallest type on the page: it is there when a column or a
+   configuration name needs explaining, and out of the way when it does not. */
+.appendix { margin: -.6rem 0 1.6rem; color: var(--faint); font-size: .72rem; line-height: 1.6; }
+.appendix p { margin: 0 0 .55rem; max-width: 78ch; }
+.appendix strong { font-weight: 600; color: var(--meta); }
+.appendix code { font-family: var(--mono); font-size: .95em; }
+.appendix dl { margin: 0; display: grid; gap: .2rem; }
+.appendix dl div { max-width: 78ch; }
+.appendix dt {
+    display: inline-flex; align-items: center; gap: .3rem;
+    font-weight: 600; color: var(--meta);
+}
+.appendix dd { display: inline; margin: 0; }
+.appendix .glyph { width: 11px; height: 11px; overflow: visible; }
+
 /* ----------------------------------------------------------------- badges */
 
 .badge {
