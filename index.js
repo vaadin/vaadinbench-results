@@ -4,8 +4,30 @@
 let trials = [];
 let runs = [];
 const params = new URLSearchParams(location.search);
+const COLUMNS = [
+    { key: "model", label: "Model", dir: "asc",
+        value: (row) => `${shortModel(row.model)} ${row.config}`.toLowerCase() },
+    { key: "score", label: "Score", num: true, dir: "desc",
+        value: (row) => row.rate ?? -1 },
+    { key: "solved", label: "Solved", num: true, dir: "desc", value: (row) => row.solved },
+    { key: "tasks", label: "Tasks", num: true, dir: "desc", value: (row) => row.tasks.size },
+    { key: "cost", label: "Cost / trial", num: true, dir: "asc",
+        value: (row) => row.cost / row.attempts },
+    { key: "time", label: "Time / trial", num: true, dir: "asc",
+        value: (row) => row.duration / row.attempts },
+];
+
+// Score descending is what summarize() already ranks by, so it is the default
+// here too: the page opens on the ranking it has always opened on.
+const DEFAULT_SORT = COLUMNS.find((column) => column.key === "score");
+const sortColumn = COLUMNS.find((column) => column.key === params.get("sort"))
+    ?? DEFAULT_SORT;
+
 const state = {
     tab: params.get("tab") === "chart" ? "chart" : "leaderboard",
+    sort: sortColumn.key,
+    dir: params.get("dir") === "asc" || params.get("dir") === "desc"
+        ? params.get("dir") : sortColumn.dir,
     models: new Set((params.get("models") ?? "").split(",").filter(Boolean)),
     // Every configuration now has a full set of runs, so none of them is
     // missing data that a comparison would misread. The filter opens empty,
@@ -58,6 +80,15 @@ function summarize(rows) {
             || a.cost / a.attempts - b.cost / b.attempts);
 }
 
+function sortRows(rows) {
+    const column = COLUMNS.find((entry) => entry.key === state.sort) ?? DEFAULT_SORT;
+    const sign = state.dir === "asc" ? 1 : -1;
+    return [...rows].sort((a, b) => {
+        const x = column.value(a), y = column.value(b);
+        return sign * (typeof x === "string" ? x.localeCompare(y) : x - y);
+    });
+}
+
 function visible() {
     return trials.filter((trial) =>
         (!state.models.size || state.models.has(trial.model))
@@ -99,9 +130,26 @@ function renderTabs() {
     </div>`;
 }
 
+function renderHead() {
+    const cell = (column) => {
+        const active = state.sort === column.key;
+        const order = state.dir === "asc" ? "ascending" : "descending";
+        return `<th class="sort${column.num ? " num" : ""}"
+            aria-sort="${active ? order : "none"}">
+            <button data-sort="${column.key}" title="Sort by ${
+                escapeHtml(column.label.toLowerCase())}">${escapeHtml(column.label)}<span
+                class="arrow">${active ? (state.dir === "asc" ? "↑" : "↓") : ""}</span></button>
+        </th>`;
+    };
+    const [model, ...rest] = COLUMNS;
+    return `<thead><tr>
+        <th></th>${cell(model)}<th></th>${rest.map(cell).join("")}
+    </tr></thead>`;
+}
+
 function renderLeaderboard(rows, hues, configHues, shapes) {
     if (!rows.length) return `<p class="empty">Nothing matches this filter.</p>`;
-    const body = rows.map((row, i) => {
+    const body = sortRows(rows).map((row, i) => {
         // No fill at all at zero: a minimum width keeps a 1% score visible, but
         // it would also draw a coloured nub on a row that solved nothing.
         const fill = row.rate
@@ -127,47 +175,9 @@ function renderLeaderboard(rows, hues, configHues, shapes) {
     }).join("");
 
     return `<div class="wrap"><table>
-        <thead><tr>
-            <th></th><th>Model</th><th></th>
-            <th class="num">Score</th><th class="num">Solved</th>
-            <th class="num">Tasks</th><th class="num">Cost / trial</th>
-            <th class="num">Time / trial</th>
-        </tr></thead>
+        ${renderHead()}
         <tbody>${body}</tbody>
-    </table></div>
-    ${renderAppendix(rows, configHues, shapes)}`;
-}
-
-const CONFIG_NOTES = {
-    "vanilla": `Claude Code as it ships. Both Vaadin plugins are in the image
-        and both are switched off, so the agent has the model, the CLI and the
-        project — nothing about Vaadin it was not trained on.`,
-    "vaadin-skills": `The <code>vaadin-skills</code> plugin: its Vaadin skills,
-        and the <code>vaadin</code> documentation MCP server the plugin declares
-        itself.`,
-    "vaadin-skills-tools": `<code>vaadin-skills</code> plus
-        <code>vaadin-agent-tools</code>: two more skills, a bundled CLI, and a
-        theme check that runs after every edit.`,
-};
-
-// Fine print, under the numbers rather than in them: the two averaged columns
-// say what they average over, and each configuration in the table says what it
-// actually was. Both are things a reader needs once, not on every row.
-function renderAppendix(rows, configHues, shapes) {
-    const configs = [...new Set(rows.map((row) => row.config))]
-        .filter((config) => CONFIG_NOTES[config]).sort();
-    const gloss = configs.map((config) => `<div>
-        <dt>${shapeGlyph(shapes.get(config), configHues.get(config))}${
-            escapeHtml(config)}</dt>
-        <dd>— ${CONFIG_NOTES[config]}</dd>
-    </div>`).join("");
-    return `<div class="appendix">
-        <p><strong>Cost / trial</strong> and <strong>Time / trial</strong> are
-        averages over the row's attempts, not the run's total: a configuration
-        that was run twice would otherwise read as twice the price of one run of
-        the same thing.</p>
-        ${gloss ? `<dl>${gloss}</dl>` : ""}
-    </div>`;
+    </table></div>`;
 }
 
 // The chart says what it is plotting and lets that be changed, because the two
@@ -252,7 +262,7 @@ function renderChart(rows, hues, shapes, configHues) {
 
     return `${head}<div class="chart-wrap"><div class="tip" hidden></div>
     <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
-        aria-label="Score against ${escapeHtml(metric.label)}">
+        aria-label="Score against cost per trial">
         ${grid}
         <line class="axis" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
         <line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
@@ -298,6 +308,10 @@ function syncUrl() {
     set("models", [...state.models].join(","));
     set("configs", [...state.configs].join(","));
     set("x", state.x === "tokens" ? "tokens" : "");
+    const column = COLUMNS.find((entry) => entry.key === state.sort) ?? DEFAULT_SORT;
+    const isDefault = column === DEFAULT_SORT && state.dir === DEFAULT_SORT.dir;
+    set("sort", isDefault ? "" : column.key);
+    set("dir", state.dir === column.dir ? "" : state.dir);
     history.replaceState(null, "", url);
 }
 
@@ -314,6 +328,19 @@ document.getElementById("content").addEventListener("click", (event) => {
         state.x = axis.dataset.x;
         syncUrl();
         render();
+        return;
+    }
+    const sort = event.target.closest("[data-sort]");
+    if (sort) {
+        const column = COLUMNS.find((entry) => entry.key === sort.dataset.sort);
+        if (column) {
+            state.dir = state.sort === column.key
+                ? (state.dir === "asc" ? "desc" : "asc")
+                : column.dir;
+            state.sort = column.key;
+            syncUrl();
+            render();
+        }
         return;
     }
     const chip = event.target.closest("[data-facet]");
