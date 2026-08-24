@@ -290,6 +290,15 @@ td { border-bottom: 1px solid var(--hairline); }
 tbody tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 
+/* A sortable header is still a header: it takes the click itself rather than
+   turning the row into a row of controls. The column being sorted by is the one
+   in full-contrast ink, and its arrow says which way. Every header keeps a slot
+   for that arrow, so nothing shifts sideways as the sort moves. */
+th.sort { cursor: pointer; user-select: none; }
+th.sort:hover { color: var(--ink); }
+th.sort:not([aria-sort="none"]) { color: var(--ink); }
+.arrow { display: inline-block; width: .6em; margin-left: .25rem; }
+
 /* A clickable row: the whole row is the target, so the hover tint has to be
    visible enough to say so, and nothing inside it should look like the one
    clickable part -- the task link keeps the row's own colour until hover. */
