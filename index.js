@@ -134,12 +134,11 @@ function renderHead() {
     const cell = (column) => {
         const active = state.sort === column.key;
         const order = state.dir === "asc" ? "ascending" : "descending";
-        return `<th class="sort${column.num ? " num" : ""}"
-            aria-sort="${active ? order : "none"}">
-            <button data-sort="${column.key}" title="Sort by ${
-                escapeHtml(column.label.toLowerCase())}">${escapeHtml(column.label)}<span
-                class="arrow">${active ? (state.dir === "asc" ? "↑" : "↓") : ""}</span></button>
-        </th>`;
+        return `<th class="sort${column.num ? " num" : ""}" data-sort="${column.key}"
+            aria-sort="${active ? order : "none"}"
+            title="Sort by ${escapeHtml(column.label.toLowerCase())}">${
+            escapeHtml(column.label)}<span class="arrow">${
+            active ? (state.dir === "asc" ? "↑" : "↓") : ""}</span></th>`;
     };
     const [model, ...rest] = COLUMNS;
     return `<thead><tr>
