@@ -17,14 +17,17 @@ const state = {
 // What the chart plots score against. Cost is the money question; output tokens
 // is the same shape of question with the pricing taken out, which is the one to
 // ask when comparing how much work two models did rather than what it billed.
+// Cost is the total the configuration billed -- the number someone actually
+// pays -- and comparable across rows because every configuration has the same
+// set of runs behind it.
 const METRICS = {
     cost: {
-        label: "cost per trial", axis: "Cost per trial",
-        value: (row) => row.cost / row.attempts,
+        label: "total cost", axis: "Total cost", unit: "",
+        value: (row) => row.cost,
         tick: (value) => `$${value.toFixed(2)}`, format: money,
     },
     tokens: {
-        label: "output tokens per trial", axis: "Output tokens per trial",
+        label: "output tokens per trial", axis: "Output tokens per trial", unit: "/trial",
         value: (row) => row.out / row.attempts,
         tick: (value) => tokens(Math.round(value)), format: (value) => tokens(Math.round(value)),
     },
@@ -55,7 +58,7 @@ function summarize(rows) {
     return [...byPair.values()]
         .map((row) => ({ ...row, rate: row.graded ? row.solved / row.graded : null }))
         .sort((a, b) => (b.rate ?? -1) - (a.rate ?? -1)
-            || a.cost / a.attempts - b.cost / b.attempts);
+            || a.cost - b.cost);
 }
 
 function visible() {
@@ -121,7 +124,7 @@ function renderLeaderboard(rows, hues, configHues, shapes) {
             <td class="num">${percent(row.rate)}</td>
             <td class="num">${row.solved}/${row.graded}</td>
             <td class="num">${row.tasks.size}</td>
-            <td class="num">${money(row.cost / row.attempts)}</td>
+            <td class="num">${money(row.cost)}</td>
             <td class="num">${duration(row.duration / row.attempts)}</td>
         </tr>`;
     }).join("");
@@ -198,7 +201,7 @@ function renderChart(rows, hues, shapes, configHues) {
         // its name, and the chip above already says which model this is.
         const name = names.size > 1 ? `${names.get(row.model)} · ${row.config}` : row.config;
         const tip = `${shortModel(row.model)} · ${row.config} — ${percent(row.rate)}`
-            + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
+            + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}${metric.unit}`;
         return `<g data-tip="${escapeHtml(tip)}">
             <circle class="hit" cx="${x}" cy="${y}" r="13"/>
             ${marker(shapes.get(row.config), x, y, `fill:${hueFill(hues.get(row.model))}`)}
@@ -218,7 +221,7 @@ function renderChart(rows, hues, shapes, configHues) {
 
     return `${head}<div class="chart-wrap"><div class="tip" hidden></div>
     <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
-        aria-label="Score against cost per trial">
+        aria-label="Score against ${escapeHtml(metric.label)}">
         ${grid}
         <line class="axis" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
         <line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
