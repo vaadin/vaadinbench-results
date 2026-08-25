@@ -95,6 +95,27 @@ function visible() {
         && (!state.configs.size || state.configs.has(configOf(trial.job))));
 }
 
+// What a configuration actually gave the agent. The chips name the runs; a
+// name alone does not say what was switched on, and that is the whole variable
+// the benchmark is measuring. Read from the configs the tasks repo runs --
+// `vaadin-bench/configs/*.yaml` -- so this stays a description of them rather
+// than a guess. A configuration with no entry here simply goes unglossed.
+const CONFIG_NOTES = {
+    "vanilla": "Claude Code as it ships, with both Vaadin plugins switched off.",
+    "vaadin-skills": "The vaadin-skills plugin: three Vaadin skills and the documentation MCP server they declare.",
+    "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit.",
+};
+
+// One line per configuration, under its chips. Short on purpose: the point is
+// to say what the agent had, not to document the plugins.
+function renderConfigNotes(configs) {
+    const described = configs.filter((config) => CONFIG_NOTES[config]);
+    if (!described.length) return "";
+    return `<dl class="config-notes">${described.map((config) => `
+        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(CONFIG_NOTES[config])}</dd>`
+    ).join("")}</dl>`;
+}
+
 // An empty set means no filter rather than nothing selected: a page that opens
 // showing everything is the useful default, and clearing the last chip should
 // go back to that instead of emptying the table.
@@ -119,6 +140,7 @@ function renderFilters(hues, configHues, shapes) {
             ${configs.map((config) => chip("configs", config, configHues.get(config),
                 shapeGlyph(shapes.get(config), configHues.get(config)), config)).join("")}
         </div>
+        ${renderConfigNotes(configs)}
     </div>`;
 }
 
