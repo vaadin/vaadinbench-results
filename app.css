@@ -266,6 +266,23 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
 .chip[aria-pressed="false"]:hover .swatch,
 .chip[aria-pressed="false"]:hover .glyph { opacity: 1; }
 
+/* The gloss under the config chips. Aligned to the chips rather than the key
+   column, so it reads as a caption on them; small and faint, because it is a
+   footnote to the table and not a thing to read first. */
+.config-notes {
+    display: grid; grid-template-columns: max-content minmax(0, 1fr);
+    column-gap: .6rem; row-gap: .15rem;
+    margin: .3rem 0 0; padding-left: 6rem; font-size: .75rem; line-height: 1.45;
+}
+.config-notes dt { color: var(--meta); font-weight: 500; }
+.config-notes dd { margin: 0; color: var(--faint); }
+/* Narrow enough and the two columns stop helping: the names wrap away from
+   their descriptions, so they stack instead. */
+@media (max-width: 640px) {
+    .config-notes { grid-template-columns: minmax(0, 1fr); padding-left: 0; row-gap: 0; }
+    .config-notes dd { margin-bottom: .3rem; }
+}
+
 /* ----------------------------------------------------------------- tables */
 
 .wrap {
