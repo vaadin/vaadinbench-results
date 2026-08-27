@@ -101,9 +101,12 @@ function visible() {
 // `vaadin-bench/configs/*.yaml` -- so this stays a description of them rather
 // than a guess. A configuration with no entry here simply goes unglossed.
 const CONFIG_NOTES = {
-    "vanilla": "Claude Code as it ships, with both Vaadin plugins switched off.",
-    "vaadin-skills": "The vaadin-skills plugin: three Vaadin skills and the documentation MCP server they declare.",
-    "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit.",
+    "vanilla": "Nothing but the model: each agent as it ships, with every Vaadin plugin, skill and server switched off.",
+    "vaadin-skills": "Three Vaadin skills and the documentation MCP server at /docs — a plugin for Claude Code, a skills directory and the same server for Codex.",
+    "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit. Claude Code only, since the hook is a Claude Code hook.",
+    "vaadin-mcp": "The documentation MCP server at /docs on its own, with no skills — the control the two server URLs are compared against.",
+    "vaadin-mcp-java": "The newer /docs-java documentation server on its own. Identical to vaadin-mcp but for the URL, so the difference between them is the difference between the servers.",
+    "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
 
 // One line per configuration, under its chips. Short on purpose: the point is
@@ -129,16 +132,34 @@ function renderFilters(hues, configHues, shapes) {
         data-facet="${key}" data-value="${escapeHtml(value)}"
         style="--chip:${hueFill(hue)};--chip-text:${hueText(hue)}"
         aria-pressed="${state[key].has(value)}">${mark}${escapeHtml(label)}</button>`;
+    // Turning a filter off means unpressing every chip you pressed. One button
+    // per row, because the two rows filter independently and clearing both when
+    // only one is in the way is its own annoyance. It appears only with
+    // something to clear: beside an untouched row it would be a control that
+    // does nothing.
+    //
+    // The cross is drawn rather than typed -- `×` sits off its own centre in
+    // most faces, and `✕` is missing from some. It carries a label for anyone
+    // not looking at it, since a bare cross says nothing aloud.
+    const clear = (key) => state[key].size
+        ? `<button class="chip-clear" data-clear="${key}"
+            title="Clear the ${key === "models" ? "model" : "configuration"} filter"
+            aria-label="Clear the ${key === "models" ? "model" : "configuration"} filter"
+            ><svg viewBox="0 0 12 12" aria-hidden="true"><path
+                d="M3.2 3.2l5.6 5.6M8.8 3.2l-5.6 5.6"/></svg></button>`
+        : "";
     return `<div class="filters">
         <div class="filter">
             <span class="key">Model</span>
             ${models.map((model) => chip("models", model, hues.get(model),
                 `<i class="swatch"></i>`, shortModel(model))).join("")}
+            ${clear("models")}
         </div>
         <div class="filter">
             <span class="key">Config</span>
             ${configs.map((config) => chip("configs", config, configHues.get(config),
                 shapeGlyph(shapes.get(config), configHues.get(config)), config)).join("")}
+            ${clear("configs")}
         </div>
         ${renderConfigNotes(configs)}
     </div>`;
@@ -364,6 +385,13 @@ document.getElementById("content").addEventListener("click", (event) => {
         }
         return;
     }
+    const reset = event.target.closest("[data-clear]");
+    if (reset) {
+        state[reset.dataset.clear].clear();
+        syncUrl();
+        render();
+        return;
+    }
     const chip = event.target.closest("[data-facet]");
     if (chip) {
         const chosen = state[chip.dataset.facet];
@@ -377,7 +405,7 @@ document.getElementById("content").addEventListener("click", (event) => {
     if (row) location.href = runUrl(row.dataset.model, row.dataset.config);
 });
 
-fetchJson("data/index.json").then((index) => {
+fetchJson(dataUrl("index.json")).then((index) => {
     runs = index.runs ?? [];
     trials = runs.flatMap((run) => run.trials ?? []);
     if (!trials.length) {

@@ -92,7 +92,7 @@ function renderCrumb(config = configOf(trial.job)) {
     // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
     // really one link and then a model-and-configuration pair.
     document.getElementById("crumb").innerHTML =
-        `<a href="index.html">Leaderboard</a>
+        `<a href="${leaderboardUrl()}">Leaderboard</a>
          <span class="crumb-sep" aria-hidden="true">›</span>
          <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))}
             <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
@@ -343,17 +343,31 @@ function fileStat(file) {
         ${file.removed ? `<span class="stat-del">−${file.removed}</span>` : ""}`;
 }
 
+// A diff the run did not carry, rebuilt by publish.py from the finished tree it
+// did. Saying so is the whole point: it is a comparison against the baseline the
+// task starts the agent from, not the record of what the agent wrote, and the
+// dotfiles Harbor's capture drops are outside it. Named rather than implied, so
+// nobody reads a rebuilt patch as a captured one.
+function reconstructedNote(changes) {
+    if (!changes.reconstructed) return "";
+    return `<p class="rebuilt">Rebuilt from the agent's finished project against
+        <code>${escapeHtml(changes.reconstructed)}</code>, because this run
+        captured no patch of its own. Files whose names begin with a dot are not
+        in the capture, so they are not in this diff.</p>`;
+}
+
 function renderChanges() {
     const changes = trial.changes ?? {};
     if (!changes.patch && !changes.diffstat) {
         return `<p class="empty">The agent changed nothing, or no patch was captured.</p>`;
     }
+    const note = reconstructedNote(changes);
     const truncated = changes.patch_truncated
         ? `<p class="truncated">Patch truncated.</p>` : "";
     const files = changes.patch ? splitPatch(changes.patch) : [];
     if (!files.length) {
         // No recognisable file headers: show what there is rather than nothing.
-        return `${changes.diffstat ? `<pre>${escapeHtml(changes.diffstat)}</pre>` : ""}
+        return `${note}${changes.diffstat ? `<pre>${escapeHtml(changes.diffstat)}</pre>` : ""}
             ${changes.patch ? renderPatch(changes.patch) : ""}${truncated}`;
     }
 
@@ -374,7 +388,7 @@ function renderChanges() {
         </button></li>`;
     }).join("");
 
-    return `<div class="split changes">
+    return `${note}<div class="split changes">
         <aside class="files">
             <h3 class="panel-title">Files</h3>
             ${summary ? `<p class="panel-note">${escapeHtml(summary)}</p>` : ""}
@@ -513,9 +527,9 @@ document.getElementById("content").addEventListener("click", (event) => {
 const id = new URLSearchParams(location.search).get("id");
 if (!id) {
     document.getElementById("content").innerHTML =
-        `<p class="empty">No trial requested. <a href="index.html">Back to the results.</a></p>`;
+        `<p class="empty">No trial requested. <a href="${leaderboardUrl()}">Back to the results.</a></p>`;
 } else {
-    fetchJson(`data/trials/${encodeURIComponent(id)}.json`).then((loaded) => {
+    fetchJson(dataUrl(`trials/${encodeURIComponent(id)}.json`)).then((loaded) => {
         trial = loaded;
         trace = buildTrace();
         render();

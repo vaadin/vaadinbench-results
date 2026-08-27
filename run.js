@@ -66,9 +66,9 @@ content.addEventListener("click", (event) => {
 
 if (!wanted.model || !wanted.config) {
     content.innerHTML =
-        `<p class="empty">No configuration requested. <a href="index.html">Back to the leaderboard.</a></p>`;
+        `<p class="empty">No configuration requested. <a href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`;
 } else {
-    fetchJson("data/index.json").then((index) => {
+    fetchJson(dataUrl("index.json")).then((index) => {
         const runs = index.runs ?? [];
         const rows = runs.flatMap((run) => run.trials ?? []).filter((trial) =>
             trial.model === wanted.model && configOf(trial.job) === wanted.config);
@@ -76,7 +76,7 @@ if (!wanted.model || !wanted.config) {
         if (!rows.length) {
             content.innerHTML = `<p class="empty">No trials for
                 ${escapeHtml(shortModel(wanted.model))} in
-                ${escapeHtml(wanted.config)}. <a href="index.html">Back to the leaderboard.</a></p>`;
+                ${escapeHtml(wanted.config)}. <a href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`;
         } else {
             content.innerHTML = syntheticBanner(rows.some((t) => t.synthetic))
                 + renderHeader(rows) + renderTrials(rows);
