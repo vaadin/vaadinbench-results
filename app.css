@@ -222,17 +222,18 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
 
 /* ------------------------------------------------------- benchmark switch */
 
-/* The bar sits opposite the wordmark: what you are looking at on the left, the
-   way to the rest on the right. It is written by common.js from the registry
-   and stays empty while there is only one benchmark, so the header does not
-   grow a control that leads nowhere. */
+/* The bar sits opposite the wordmark: the page on the left, the way to the rest
+   of them on the right. It is written by common.js from the registry and stays
+   empty while there is only one benchmark, so the header does not grow a
+   control that leads nowhere.
+
+   The left margin is not only the flex push. If this stylesheet is ever stale
+   in a reader's browser -- the pages carry no cache-busting -- `auto` collapses
+   and the link lands against the wordmark; a real margin keeps them apart
+   whatever else fails to apply. */
 .bench-bar {
-    margin-left: auto; display: flex; align-items: center; gap: .7rem;
-    font-size: .82rem;
-}
-.bench-name {
-    color: var(--meta); max-width: 34ch;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    margin-left: auto; padding-left: 2rem;
+    display: flex; align-items: center; font-size: .82rem;
 }
 .bench-switch {
     color: var(--ink); text-decoration: none; white-space: nowrap;

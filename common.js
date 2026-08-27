@@ -520,11 +520,13 @@ function renderFooter(generatedAt) {
         <a href="https://github.com/vesanieminen/vaadinbench">tasks</a>`;
 }
 
-// The benchmark this page is on, and the way to the others. Rendered from the
-// registry rather than written into each page, so adding or renaming a benchmark
-// takes no edit to the HTML. Two is where it starts earning its space: with one
-// benchmark the bar would be a label beside a link to a list of the page you are
-// already on, so it stays hidden until there is a choice to make.
+// The way to the other benchmarks. Just the way there: which benchmark this is
+// belongs to the page below, which says it in its own rows, and repeating it in
+// the header only competes with the wordmark.
+//
+// Rendered from the registry rather than written into each page, so it appears
+// on its own once a second benchmark is published -- with one, it would be a
+// link to a list of the page you are already on.
 // The pages carry `index.html` in their own markup -- the wordmark, run.html's
 // crumb. Inside a benchmark that has to mean this benchmark's leaderboard, or
 // the way home is a silent jump back to the default with no sign it happened.
@@ -539,12 +541,9 @@ function renderBenchmarkBar() {
     const slot = document.getElementById("benchmark");
     if (!slot) return;
     fetchJson("data/benchmarks.json").then((registry) => {
-        const all = registry.benchmarks ?? [];
-        if (all.length < 2) return;
-        const current = all.find((entry) => entry.slug === benchmark);
-        slot.innerHTML = `<span class="bench-name"
-            >${escapeHtml(current?.name ?? benchmark)}</span>
-            <a class="bench-switch" href="benchmarks.html">All benchmarks</a>`;
+        if ((registry.benchmarks ?? []).length < 2) return;
+        slot.innerHTML =
+            `<a class="bench-switch" href="benchmarks.html">All benchmarks</a>`;
     }).catch(() => {
         // No registry is the state this site was in before benchmarks existed.
         // The page below it works either way, so it says nothing.
