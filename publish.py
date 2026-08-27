@@ -29,6 +29,8 @@ import argparse
 import base64
 import json
 import re
+import shutil
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -437,6 +439,166 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
     }
 
 
+# -------------------------------------------------------------- reconstruction
+
+# TEMPORARY, and meant to be deleted. Since the tasks repo split the agent and
+# verifier into separate containers, nothing writes `agent.patch`: the verifier
+# imports the finished `/app` rather than diffing it, so a run arrives with no
+# changes to show. What it does still carry is that finished tree, at
+# `artifacts/app`, and every task starts the agent from a baseline this can
+# reach -- so the diff is rebuilt here instead of being lost.
+#
+# It is the one thing in this file that reads something outside the job
+# directory, which is a rule worth breaking only for as long as it takes to fix
+# the run: vaadinbench#27 restores the patch upstream, and #7 deletes everything
+# below once a run carries one again.
+#
+# It fails closed. Each baseline shape is recognised explicitly from the task's
+# own environment Dockerfile, and an environment this does not recognise
+# produces no diff at all rather than a wrong one: a diff against the wrong
+# baseline is worse than an empty tab, because it reads as a measurement.
+COPIED_APP = re.compile(r"^COPY\s+app/\s+/app/", re.M)
+EMPTY_APP = re.compile(r"^RUN\s+rm -rf /app\s*&&\s*mkdir -p /app", re.M)
+CLONED_APP = re.compile(r"git clone (\S+) /app", re.M)
+PINNED_SHA = re.compile(r"^ARG BASE_SHA=(\S+)", re.M)
+
+# Harbor's capture of `/app` holds no dotfiles -- no `.classpath`, no
+# `.settings/`, no `.git`. Diffing it against a baseline that has them reports
+# the agent deleting files it never touched, so they come off both sides. The
+# cost is that a dotfile the agent really did write is outside the diff, which
+# is why the page calls the result reconstructed rather than captured.
+def visible_files(root: Path) -> list[Path]:
+    return [
+        path for path in sorted(root.rglob("*"))
+        if path.is_file()
+        and not any(part.startswith(".") or part == "target" for part in
+                    path.relative_to(root).parts)
+    ]
+
+
+def copy_visible(src: Path, dst: Path) -> None:
+    for path in visible_files(src):
+        target = dst / path.relative_to(src)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(path.read_bytes())
+
+
+def git(*args: str, cwd: Path) -> subprocess.CompletedProcess:
+    return subprocess.run(
+        ["git", "-c", "user.name=VaadinBench", "-c", "user.email=bench@vaadin.invalid",
+         *args],
+        cwd=cwd, capture_output=True, text=True, check=False,
+    )
+
+
+class Baselines:
+    """The tree each task starts the agent from, and the diff against it.
+
+    One git repository per task, built once and reused: the baseline is its only
+    commit, and each trial's captured tree is laid over it, diffed, and rolled
+    back. That is the same shape `agent.patch` had when a task still wrote one,
+    so the page renders it without knowing the difference.
+    """
+
+    def __init__(self, tasks_dir: Path, cache: Path) -> None:
+        self.tasks_dir = tasks_dir
+        self.cache = cache
+        self.repos: dict[str, tuple[Path, str] | None] = {}
+
+    def source(self, task: str) -> tuple[Path | None, str] | None:
+        """Where the baseline comes from, or None if the environment is unknown."""
+        environment = self.tasks_dir / task / "environment"
+        dockerfile = read_text(environment / "Dockerfile")
+        if dockerfile is None:
+            return None
+        if EMPTY_APP.search(dockerfile):
+            return None, "an empty directory"
+        if COPIED_APP.search(dockerfile) and (environment / "app").is_dir():
+            return environment / "app", f"tasks/{task}/environment/app"
+        clone, sha = CLONED_APP.search(dockerfile), PINNED_SHA.search(dockerfile)
+        if clone and sha:
+            return self.clone(task, clone.group(1), sha.group(1), environment)
+        return None
+
+    def clone(self, task: str, url: str, sha: str, environment: Path):
+        """The upstream project at its pinned commit, plus the task's pom patch.
+
+        Cloned once into a cache outside the repository. The image applies
+        `pom-additions.patch` before the baseline commit, so the agent starts from
+        the patched tree and the patch is not part of what it changed.
+        """
+        target = self.cache / task
+        name = f"{url.rstrip('/').split('/')[-1]}@{sha[:7]}"
+        if not target.exists():
+            target.parent.mkdir(parents=True, exist_ok=True)
+            print(f"  cloning baseline {name}", file=sys.stderr)
+            clone = subprocess.run(["git", "clone", "--quiet", url, str(target)],
+                                   capture_output=True, text=True, check=False)
+            if clone.returncode:
+                print(f"  baseline clone failed: {clone.stderr.strip()}", file=sys.stderr)
+                return None
+            if git("checkout", "-q", sha, cwd=target).returncode:
+                print(f"  baseline commit {sha} not found", file=sys.stderr)
+                return None
+            additions = environment / "pom-additions.patch"
+            if additions.exists():
+                patched = subprocess.run(
+                    ["patch", "-p1", "-d", str(target), "-i", str(additions)],
+                    capture_output=True, text=True, check=False)
+                if patched.returncode:
+                    print(f"  baseline patch failed: {patched.stdout.strip()}",
+                          file=sys.stderr)
+                    return None
+                name += " + pom-additions.patch"
+        return target, name
+
+    def repo(self, task: str) -> tuple[Path, str] | None:
+        """A git repository holding the baseline as its only commit."""
+        if task in self.repos:
+            return self.repos[task]
+        self.repos[task] = None
+        source = self.source(task)
+        if source is not None:
+            tree, described = source
+            work = self.cache / "repos" / task
+            work.mkdir(parents=True, exist_ok=True)
+            if git("init", "-q", "-b", "baseline", ".", cwd=work).returncode == 0:
+                if tree is not None:
+                    copy_visible(tree, work)
+                git("add", "-A", cwd=work)
+                git("commit", "-q", "--allow-empty", "-m", "baseline", cwd=work)
+                self.repos[task] = (work, described)
+        if self.repos[task] is None:
+            print(f"  no baseline for {task}: publishing it without a diff",
+                  file=sys.stderr)
+        return self.repos[task]
+
+    def diff(self, task: str, app: Path) -> dict[str, Any] | None:
+        """The captured tree as a patch against the task's baseline."""
+        prepared = self.repo(task)
+        if prepared is None:
+            return None
+        work, described = prepared
+        for path in work.iterdir():
+            if path.name != ".git":
+                shutil.rmtree(path) if path.is_dir() else path.unlink()
+        copy_visible(app, work)
+        git("add", "-A", cwd=work)
+        patch = git("diff", "--cached", "--no-color", cwd=work).stdout
+        diffstat = git("diff", "--cached", "--no-color", "--stat", cwd=work).stdout
+        git("reset", "-q", "--hard", cwd=work)
+        git("clean", "-qfd", cwd=work)
+        if not patch.strip():
+            return None
+        clipped, truncated = clip(patch, MAX_PATCH)
+        return {
+            "diffstat": diffstat or None,
+            "patch": clipped,
+            "patch_truncated": truncated,
+            "reconstructed": described,
+        }
+
+
 # ----------------------------------------------------------------------- trial
 
 
@@ -491,7 +653,8 @@ def seconds_between(timing: dict[str, Any] | None) -> float | None:
     return round((b - a).total_seconds(), 1)
 
 
-def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] | None:
+def collect_trial(trial_dir: Path, job: str, attempt: int,
+                  baselines: Baselines | None = None) -> tuple[dict, dict] | None:
     result = read_json(trial_dir / "result.json")
     if not isinstance(result, dict):
         return None
@@ -532,15 +695,21 @@ def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] 
     patch, patch_truncated = clip(
         read_text(artifact(trial_dir, "agent.patch")), MAX_PATCH
     )
+    changes = {
+        "diffstat": read_text(artifact(trial_dir, "agent-diff-stat.txt"), 20_000),
+        "patch": patch,
+        "patch_truncated": patch_truncated,
+    }
+    # Only when the run carries none of its own: a patch a task wrote is the
+    # measurement, and is never replaced by one rebuilt here.
+    app = trial_dir / "artifacts" / "app"
+    if patch is None and baselines is not None and app.is_dir():
+        changes = baselines.diff(shortest_task(task), app) or changes
     detail = {
         **row,
         "instruction": instruction,
         "trajectory": events,
-        "changes": {
-            "diffstat": read_text(artifact(trial_dir, "agent-diff-stat.txt"), 20_000),
-            "patch": patch,
-            "patch_truncated": patch_truncated,
-        },
+        "changes": changes,
         "verifier": verifier_summary(trial_dir),
     }
     return row, detail
@@ -549,7 +718,12 @@ def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] 
 # ------------------------------------------------------------------------- job
 
 
-def collect_job(job_dir: Path) -> dict[str, Any]:
+def shortest_task(task: str) -> str:
+    """`vaadin/flow-new-view` is `tasks/flow-new-view` on disk."""
+    return str(task).split("/")[-1]
+
+
+def collect_job(job_dir: Path, baselines: Baselines | None = None) -> dict[str, Any]:
     job = job_dir.name
     synthetic = (job_dir / "SYNTHETIC").exists()
     trial_dirs = sorted(
@@ -570,7 +744,7 @@ def collect_job(job_dir: Path) -> dict[str, Any]:
             "/".join(p for p in (model_info.get("provider"), model_info.get("name")) if p),
         )
         seen[key] = seen.get(key, 0) + 1
-        collected = collect_trial(trial_dir, job, seen[key])
+        collected = collect_trial(trial_dir, job, seen[key], baselines)
         if collected is None:
             print(f"  skipped {trial_dir.name}: no readable result.json", file=sys.stderr)
             continue
@@ -581,9 +755,12 @@ def collect_job(job_dir: Path) -> dict[str, Any]:
         details.append(detail)
 
     unpatched = sum(1 for d in details if d["changes"]["patch"] is None)
+    rebuilt = sum(1 for d in details if d["changes"].get("reconstructed"))
     if unpatched:
         print(f"  no patch captured for {unpatched}/{len(details)} trials",
               file=sys.stderr)
+    if rebuilt:
+        print(f"  rebuilt the diff for {rebuilt}/{len(details)} trials")
 
     for detail in details:
         (DATA / "trials" / f"{detail['id']}.json").write_text(
@@ -605,7 +782,22 @@ def main() -> int:
         action="store_true",
         help="Add to the published set instead of replacing it",
     )
+    parser.add_argument(
+        "--baselines",
+        type=Path,
+        metavar="TASKS_DIR",
+        help="Rebuild the diff for trials that carry none, against the baseline "
+             "each task's environment starts the agent from. Temporary: see the "
+             "reconstruction section above.",
+    )
     args = parser.parse_args()
+
+    baselines = None
+    if args.baselines:
+        if not args.baselines.is_dir():
+            print(f"not a directory: {args.baselines}", file=sys.stderr)
+            return 1
+        baselines = Baselines(args.baselines, SITE / ".baselines")
 
     (DATA / "trials").mkdir(parents=True, exist_ok=True)
     index_path = DATA / "index.json"
@@ -617,7 +809,7 @@ def main() -> int:
             print(f"not a directory: {job_dir}", file=sys.stderr)
             return 1
         print(f"{job_dir.name}")
-        run = collect_job(job_dir)
+        run = collect_job(job_dir, baselines)
         if not run["trials"]:
             print("  no trials found", file=sys.stderr)
             continue

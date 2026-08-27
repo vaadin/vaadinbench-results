@@ -14,13 +14,17 @@ A run happens on the machine with Docker and the model credentials. This repo
 turns its output into the site:
 
 ```bash
-./publish.py ../vaadin-bench/jobs/new-project-3models
+./publish.py --baselines ../vaadin-bench/tasks ../vaadin-bench/jobs/new-project-3models
 git add data && git commit -m "Publish new-project-3models" && git push
 ```
 
 The push *is* the deploy: GitHub Pages serves `main` from the repository root,
 so there is no workflow and nothing to build. Pass several job directories at
 once, or `--keep` to add a run without republishing the ones already there.
+
+`--baselines` is temporary and is explained under [Rebuilt diffs](#rebuilt-diffs).
+Without it a run from after the container split publishes with an empty Changes
+tab.
 
 ## What gets published
 
@@ -44,13 +48,45 @@ Harbor collects a container's `/logs` verbatim, so everything a task writes to
 writes to `/logs/verifier` sits at `verifier/` — the paths above are the real
 ones, and reading the shallower `artifacts/` finds nothing.
 
-The last row is conditional because since the tasks repo split the agent and
-verifier into separate containers, nothing writes `agent.patch`: the verifier
-imports the finished `/app` rather than diffing it. Runs from before the split
-have their patches and keep them; runs from after arrive with none, and the
-Changes tab says so rather than showing a blank. `publish.py` reports the count
-per job, so a run that lost one file is distinguishable from a run that never
-had any.
+The last row is conditional, and the next section is why.
+
+### Rebuilt diffs
+
+Since the tasks repo split the agent and verifier into separate containers,
+nothing writes `agent.patch`: the verifier imports the finished `/app` rather
+than diffing it. Runs from before the split have their patches and keep them;
+runs from after arrive with none, and the whole Changes tab goes blank —
+`vaadinbench#27` is the fix, and `#7` is the issue that deletes what this
+section describes once that lands.
+
+Until then, `--baselines` rebuilds the diff from what a run *does* still carry:
+`artifacts/app`, the agent's finished project. It is compared against the tree
+the task's environment starts the agent from, read from the task's own
+Dockerfile:
+
+| Task | Baseline |
+| --- | --- |
+| `flow-grid-filtering` | `environment/app/`, copied into the image verbatim |
+| `flow-new-view` | the upstream project at the pinned `BASE_SHA`, plus `pom-additions.patch` — cloned once into `.baselines/` |
+| `flow-new-project` | an empty directory, by design: creating the project is the task |
+
+Three things to know before trusting one.
+
+It **fails closed**. Each of those shapes is recognised explicitly, and a task
+whose environment does not match one produces no diff rather than a wrong one. A
+diff against the wrong baseline is worse than an empty tab, because it reads as
+a measurement — which is also why it is only correct while the tasks checkout
+sits at the commit the run used.
+
+It is **not complete**. Harbor's capture of `/app` holds no dotfiles, so
+`.classpath`, `.settings/` and anything else beginning with a dot is outside it.
+They come off the baseline side too, or every trial would appear to have deleted
+them; the cost is that a dotfile the agent really wrote is not in the diff.
+
+It is **never preferred**. A patch a task wrote is the measurement and is used
+whenever there is one. Only a trial with none gets a rebuilt diff, and the trial
+page names the baseline it was rebuilt against rather than letting it pass for a
+captured one.
 
 `test-stdout.txt` is the verifier script's own stdout and stderr, and it is the
 only place that says *why* a trial scored what it did: a reward of 0 with no

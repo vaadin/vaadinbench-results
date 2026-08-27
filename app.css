@@ -689,6 +689,18 @@ pre.wrapped { white-space: pre-wrap; overflow-wrap: anywhere; }
 .diff .dl.meta { color: var(--faint); }
 
 .truncated { color: var(--faint); font-size: .76rem; margin-top: .35rem; }
+
+/* A rebuilt diff is not a captured one, and the difference has to survive a
+   glance. Set apart from the diff below it rather than tucked into the file
+   list, where the eye going straight to the code would miss it. */
+.rebuilt {
+    color: var(--faint); font-size: .78rem; line-height: 1.5;
+    margin: 0 0 .9rem; padding: .55rem .7rem;
+    border-left: 2px solid var(--aura-orange);
+    background: color-mix(in oklab, var(--aura-orange) 7%, var(--surface));
+    border-radius: 0 4px 4px 0;
+}
+.rebuilt code { font-size: .95em; }
 .empty { color: var(--faint); }
 footer {
     max-width: 1080px; margin: 3.5rem auto 0; padding-top: 1rem;
