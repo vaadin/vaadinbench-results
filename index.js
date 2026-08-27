@@ -132,16 +132,28 @@ function renderFilters(hues, configHues, shapes) {
         data-facet="${key}" data-value="${escapeHtml(value)}"
         style="--chip:${hueFill(hue)};--chip-text:${hueText(hue)}"
         aria-pressed="${state[key].has(value)}">${mark}${escapeHtml(label)}</button>`;
+    // Turning a filter off means unpressing every chip you pressed, and the row
+    // gives no sign of how many that is once the selection has scrolled past
+    // being memorable. One button per row, because the two rows filter
+    // independently and clearing both when only one is in the way is its own
+    // annoyance. It appears only with something to clear: a permanent Clear
+    // beside an untouched row is a control that does nothing.
+    const clear = (key) => state[key].size
+        ? `<button class="chip-clear" data-clear="${key}"
+            >Clear<span class="note"> ${state[key].size}</span></button>`
+        : "";
     return `<div class="filters">
         <div class="filter">
             <span class="key">Model</span>
             ${models.map((model) => chip("models", model, hues.get(model),
                 `<i class="swatch"></i>`, shortModel(model))).join("")}
+            ${clear("models")}
         </div>
         <div class="filter">
             <span class="key">Config</span>
             ${configs.map((config) => chip("configs", config, configHues.get(config),
                 shapeGlyph(shapes.get(config), configHues.get(config)), config)).join("")}
+            ${clear("configs")}
         </div>
         ${renderConfigNotes(configs)}
     </div>`;
@@ -365,6 +377,13 @@ document.getElementById("content").addEventListener("click", (event) => {
             syncUrl();
             render();
         }
+        return;
+    }
+    const reset = event.target.closest("[data-clear]");
+    if (reset) {
+        state[reset.dataset.clear].clear();
+        syncUrl();
+        render();
         return;
     }
     const chip = event.target.closest("[data-facet]");

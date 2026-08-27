@@ -296,6 +296,19 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
     border: 1px solid var(--rule); background: var(--surface);
     color: var(--chip-text, var(--meta)); box-shadow: var(--shadow-xs);
 }
+/* Clearing a row is not one of its values, so it does not wear a chip's pill.
+   Quieter than the chips beside it and set apart by a margin: it undoes the
+   selection rather than adding to it, and should never be the thing the eye
+   picks first in a row of colours. */
+.chip-clear {
+    appearance: none; cursor: pointer; font: inherit; font-size: .78rem;
+    border: 0; background: none; padding: .2rem .35rem; margin-left: .35rem;
+    color: var(--faint); text-decoration: underline; text-underline-offset: 3px;
+    text-decoration-color: var(--rule);
+}
+.chip-clear:hover { color: var(--ink); text-decoration-color: currentColor; }
+.chip-clear .note { font-variant-numeric: tabular-nums; }
+
 .chip .swatch {
     width: 9px; height: 9px; flex: none; border-radius: 999px;
     background: var(--chip, var(--faint));

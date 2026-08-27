@@ -295,11 +295,28 @@ def content_to_text(content: Any) -> str:
 # ------------------------------------------------------------------ trajectory
 
 
+# Not every user step is the task. Codex opens with one of its own -- a list of
+# plugins it could install, then its environment context -- before the
+# instruction is ever mentioned, and taking the first user step as the prompt
+# filled the Instruction tab with a list of SaaS connectors on all 81 of its
+# trials. What marks it is that it is nothing but context envelopes: remove the
+# `<tag>…</tag>` blocks and there is no text left. That holds without naming any
+# tag, which matters because the next harness will wrap its scaffolding in
+# different ones. A real instruction is prose and survives the same removal.
+CONTEXT_ENVELOPE = re.compile(r"<([a-z_][\w-]*)>.*?</\1>", re.S)
+
+
+def is_scaffolding(text: str) -> bool:
+    return not CONTEXT_ENVELOPE.sub("", text).strip()
+
+
 def build_trajectory(trajectory: dict[str, Any]) -> tuple[list[dict[str, Any]], str | None]:
     """Flatten ATIF steps into render-ready events, and lift out the prompt.
 
-    The instruction the agent was given is the first user step, so the site can
-    show it without depending on a checkout of the task repository.
+    The instruction the agent was given is the first user step that is not the
+    harness talking to itself, so the site can show it without depending on a
+    checkout of the task repository. It stays in the trajectory either way --
+    what the agent was sent is what the trajectory is for.
     """
     events: list[dict[str, Any]] = []
     instruction: str | None = None
@@ -317,7 +334,8 @@ def build_trajectory(trajectory: dict[str, Any]) -> tuple[list[dict[str, Any]], 
     for step in trajectory.get("steps") or []:
         source = step.get("source", "agent")
         text = content_to_text(step.get("message"))
-        if source == "user" and instruction is None and text.strip():
+        if (source == "user" and instruction is None
+                and text.strip() and not is_scaffolding(text)):
             instruction = text
 
         calls = []
