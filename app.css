@@ -299,15 +299,22 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
 /* Clearing a row is not one of its values, so it does not wear a chip's pill.
    Quieter than the chips beside it and set apart by a margin: it undoes the
    selection rather than adding to it, and should never be the thing the eye
-   picks first in a row of colours. */
+   picks first in a row of colours. Sized to the chips it sits among, so the row
+   keeps one height. */
 .chip-clear {
-    appearance: none; cursor: pointer; font: inherit; font-size: .78rem;
-    border: 0; background: none; padding: .2rem .35rem; margin-left: .35rem;
-    color: var(--faint); text-decoration: underline; text-underline-offset: 3px;
-    text-decoration-color: var(--rule);
+    appearance: none; cursor: pointer; border: 0; background: none;
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 1.4rem; height: 1.4rem; padding: 0; margin-left: .3rem;
+    border-radius: 999px; color: var(--faint);
 }
-.chip-clear:hover { color: var(--ink); text-decoration-color: currentColor; }
-.chip-clear .note { font-variant-numeric: tabular-nums; }
+.chip-clear svg { width: 12px; height: 12px; }
+.chip-clear path {
+    fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round;
+}
+.chip-clear:hover {
+    color: var(--ink);
+    background: color-mix(in oklab, var(--ink) 8%, transparent);
+}
 
 .chip .swatch {
     width: 9px; height: 9px; flex: none; border-radius: 999px;

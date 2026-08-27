@@ -132,15 +132,21 @@ function renderFilters(hues, configHues, shapes) {
         data-facet="${key}" data-value="${escapeHtml(value)}"
         style="--chip:${hueFill(hue)};--chip-text:${hueText(hue)}"
         aria-pressed="${state[key].has(value)}">${mark}${escapeHtml(label)}</button>`;
-    // Turning a filter off means unpressing every chip you pressed, and the row
-    // gives no sign of how many that is once the selection has scrolled past
-    // being memorable. One button per row, because the two rows filter
-    // independently and clearing both when only one is in the way is its own
-    // annoyance. It appears only with something to clear: a permanent Clear
-    // beside an untouched row is a control that does nothing.
+    // Turning a filter off means unpressing every chip you pressed. One button
+    // per row, because the two rows filter independently and clearing both when
+    // only one is in the way is its own annoyance. It appears only with
+    // something to clear: beside an untouched row it would be a control that
+    // does nothing.
+    //
+    // The cross is drawn rather than typed -- `×` sits off its own centre in
+    // most faces, and `✕` is missing from some. It carries a label for anyone
+    // not looking at it, since a bare cross says nothing aloud.
     const clear = (key) => state[key].size
         ? `<button class="chip-clear" data-clear="${key}"
-            >Clear<span class="note"> ${state[key].size}</span></button>`
+            title="Clear the ${key === "models" ? "model" : "configuration"} filter"
+            aria-label="Clear the ${key === "models" ? "model" : "configuration"} filter"
+            ><svg viewBox="0 0 12 12" aria-hidden="true"><path
+                d="M3.2 3.2l5.6 5.6M8.8 3.2l-5.6 5.6"/></svg></button>`
         : "";
     return `<div class="filters">
         <div class="filter">
