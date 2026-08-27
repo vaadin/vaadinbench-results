@@ -133,7 +133,10 @@ function runUrl(model, config) {
 // One hue per model, from Aura's palette, so a row's bar and its dot in the
 // chart are the same colour. Assigned by position in the sorted model list
 // rather than by name, so a new model picks up the next hue on its own.
-const HUES = ["blue", "purple", "orange", "green", "red", "yellow"];
+// Yellow is out for the same reason it is out of CONFIG_HUES: its text variant
+// is the one in the palette that cannot be read at chip size, and a sixth model
+// -- which is what a second agent brings -- is what first reaches that far.
+const HUES = ["blue", "purple", "orange", "green", "red", "teal"];
 
 function hueMap(models) {
     const sorted = [...new Set(models)].sort();

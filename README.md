@@ -34,14 +34,23 @@ goes out today, per trial:
 | Task, agent, model, attempt, reward, duration, tokens, cost | `result.json` |
 | The prompt the agent was given | first user step of the trajectory |
 | Every step: message, reasoning, tool calls and their output | `agent/trajectory.json` |
-| Diffstat and patch | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
 | The verifier's console output, last 40 KB | `verifier/test-stdout.txt` |
-| Generated-project report | `artifacts/logs/artifacts/structure.txt` |
+| Generated-project report | `verifier/structure.txt` |
+| Diffstat and patch, when a run has them | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
 
-Harbor collects the container's `/logs` into `artifacts/logs`, so everything a
-task writes to `/logs/artifacts` sits at `artifacts/logs/artifacts/` — the paths
-above are the real ones, and reading the shallower `artifacts/` finds nothing.
+Harbor collects a container's `/logs` verbatim, so everything a task writes to
+`/logs/artifacts` sits at `artifacts/logs/artifacts/` and everything the verifier
+writes to `/logs/verifier` sits at `verifier/` — the paths above are the real
+ones, and reading the shallower `artifacts/` finds nothing.
+
+The last row is conditional because since the tasks repo split the agent and
+verifier into separate containers, nothing writes `agent.patch`: the verifier
+imports the finished `/app` rather than diffing it. Runs from before the split
+have their patches and keep them; runs from after arrive with none, and the
+Changes tab says so rather than showing a blank. `publish.py` reports the count
+per job, so a run that lost one file is distinguishable from a run that never
+had any.
 
 `test-stdout.txt` is the verifier script's own stdout and stderr, and it is the
 only place that says *why* a trial scored what it did: a reward of 0 with no
@@ -101,6 +110,13 @@ versioned schema whose steps carry `source`, `message`, `reasoning_content` and
 the buckets the page offers as filters — reads, searches, edits, bash, tests. It
 is the one place that guesses: an unknown tool name becomes "other" rather than
 being forced into a bucket it does not belong in.
+
+Codex needs one step more, because it has a single tool. Reading a file, running
+Maven and writing a class all arrive as `exec`, carrying a snippet of JavaScript
+that calls the harness's own functions — `tools.exec_command`, `tools.apply_patch`,
+`tools.update_plan`. On the tool name alone a Codex trial is two thousand
+identical `other` steps with every filter empty, so the snippet is read for what
+it calls and the command inside it, which is also what the step is labelled with.
 
 ## Working on the site
 

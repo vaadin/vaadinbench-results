@@ -165,9 +165,71 @@ TOOL_KINDS: dict[str, str] = {
 # benchmark it is the moment the agent finds out whether it was right.
 TEST_COMMAND = re.compile(r"\b(mvn|mvnw|gradle|npm (run )?test|pytest|vitest|jest)\b")
 
+# Codex has one tool. Every action -- reading a file, running Maven, writing a
+# class -- arrives as `exec` carrying a snippet of JavaScript that calls the
+# harness's own functions: `tools.exec_command({cmd: ...})` for a shell command,
+# `tools.apply_patch` for an edit, `tools.update_plan` for a todo list. Taken at
+# face value that is a trajectory of two thousand identical `other` steps, with
+# every filter on the page empty, so the snippet is read for what it calls.
+#
+# The keys in those object literals are JavaScript, so `cmd` is as likely to be
+# bare as quoted -- reading only the quoted form put three calls in four in the
+# wrong bucket.
+CODEX_COMMAND = re.compile(r'"?cmd"?\s*:\s*("(?:[^"\\]|\\.)*")')
+CODEX_PATCH_FILE = re.compile(r"\*\*\* (?:Add|Update|Delete) File: ([^\s\\]+)")
+CODEX_QUERY = re.compile(r'"?q"?\s*:\s*"((?:[^"\\]|\\.)*)"')
+CODEX_CALL = re.compile(r"tools\.([A-Za-z_0-9]+)")
+
+# In the order they decide a step: a snippet that patches is an edit whatever
+# else it goes on to do, and a plan update tacked onto real work is not what the
+# step was. `write_stdin` answers a command still running, so it is shell work
+# by another name.
+CODEX_KINDS = [
+    ("apply_patch", "edit"),
+    ("exec_command", "bash"),
+    ("write_stdin", "bash"),
+    ("web__run", "search"),
+    ("update_plan", "plan"),
+]
+
+
+def codex_calls(arguments: dict[str, Any]) -> str:
+    return str(arguments.get("input", ""))
+
+
+def codex_command(arguments: dict[str, Any]) -> str | None:
+    """The shell command inside a Codex `exec` snippet, if it holds one.
+
+    The snippet is JavaScript, not JSON, so the object passed to `exec_command`
+    is found by pattern and only its `cmd` string is decoded -- as a JSON string,
+    which is what the escapes in it are.
+    """
+    match = CODEX_COMMAND.search(codex_calls(arguments))
+    if not match:
+        return None
+    try:
+        return json.loads(match.group(1))
+    except json.JSONDecodeError:
+        return match.group(1).strip('"')
+
+
+def classify_codex(arguments: dict[str, Any]) -> str:
+    text = codex_calls(arguments)
+    for name, kind in CODEX_KINDS:
+        if f"tools.{name}" not in text:
+            continue
+        if kind != "bash":
+            return kind
+        command = codex_command(arguments)
+        return "test" if command and TEST_COMMAND.search(command) else "bash"
+    return "other"
+
 
 def classify(function_name: str, arguments: dict[str, Any]) -> str:
-    kind = TOOL_KINDS.get(function_name.lower().replace("_", ""), "other")
+    name = function_name.lower().replace("_", "")
+    if name == "exec":
+        return classify_codex(arguments)
+    kind = TOOL_KINDS.get(name, "other")
     if kind == "bash":
         command = str(arguments.get("command", ""))
         if TEST_COMMAND.search(command):
@@ -177,6 +239,21 @@ def classify(function_name: str, arguments: dict[str, Any]) -> str:
 
 def summarize_args(function_name: str, arguments: dict[str, Any]) -> str:
     """One line identifying what a call acted on — a path, a command, a pattern."""
+    if function_name.lower() == "exec":
+        files = CODEX_PATCH_FILE.findall(codex_calls(arguments))
+        if files:
+            return f"apply_patch {' '.join(files)}"[:MAX_ARG_PREVIEW]
+        command = codex_command(arguments)
+        if command:
+            return " ".join(command.split())[:MAX_ARG_PREVIEW]
+        # A search or a plan update carries no command and no file, and the
+        # snippet itself is not worth reading. Name what it called instead.
+        query = CODEX_QUERY.search(codex_calls(arguments))
+        called = CODEX_CALL.search(codex_calls(arguments))
+        if query:
+            return f"{called.group(1) if called else 'search'} {query.group(1)}"[:MAX_ARG_PREVIEW]
+        if called:
+            return called.group(1)
     for key in ("command", "file_path", "path", "pattern", "query", "url", "prompt"):
         value = arguments.get(key)
         if isinstance(value, str) and value.strip():
@@ -317,6 +394,11 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
     VaadinBench's from-scratch task, where the first gate compares the generated
     project file by file. It is simply absent for the other tasks, which is why
     nothing here requires it.
+
+    It is written to `$LOG_DIR`, and since the agent and verifier were split into
+    two containers that is the verifier's own directory rather than the agent's
+    `/logs/artifacts`. Both are read: the older runs already published wrote it
+    to the other place, and a republish of one of those should not lose it.
     """
     verifier = trial_dir / "verifier"
     reward_text = read_text(verifier / "reward.txt")
@@ -350,7 +432,8 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
         "failures": failures,
         "log": log,
         "log_truncated": log_truncated,
-        "structure": read_text(artifact(trial_dir, "structure.txt"), 20_000),
+        "structure": (read_text(verifier / "structure.txt", 20_000)
+                      or read_text(artifact(trial_dir, "structure.txt"), 20_000)),
     }
 
 
@@ -440,14 +523,15 @@ def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] 
         **totals,
     }
 
+    # `agent.patch` and its diffstat are whatever the task wrote to
+    # `/logs/artifacts`, and since the container split nothing writes them: the
+    # verifier imports the finished `/app` instead of diffing it. So a run can
+    # arrive with no changes to publish at all. The Changes tab already says so,
+    # and collect_job counts how many trials it happened to, because one trial
+    # missing a patch is a lost file and every trial missing one is the run.
     patch, patch_truncated = clip(
         read_text(artifact(trial_dir, "agent.patch")), MAX_PATCH
     )
-    # A trial with no patch is either an agent that changed nothing or a path
-    # that moved. The first is rare and the second is invisible on the page, so
-    # say which trial it was rather than publishing a blank Changes tab.
-    if patch is None:
-        print(f"  no patch captured for {trial_dir.name}", file=sys.stderr)
     detail = {
         **row,
         "instruction": instruction,
@@ -495,6 +579,11 @@ def collect_job(job_dir: Path) -> dict[str, Any]:
         detail["synthetic"] = synthetic
         rows.append(row)
         details.append(detail)
+
+    unpatched = sum(1 for d in details if d["changes"]["patch"] is None)
+    if unpatched:
+        print(f"  no patch captured for {unpatched}/{len(details)} trials",
+              file=sys.stderr)
 
     for detail in details:
         (DATA / "trials" / f"{detail['id']}.json").write_text(
