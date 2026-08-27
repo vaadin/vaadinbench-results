@@ -42,6 +42,16 @@ from xml.etree import ElementTree
 SITE = Path(__file__).resolve().parent
 DATA = SITE / "data"
 
+# A benchmark is a folder under `data/`, holding one index and its trials. The
+# site opens on DEFAULT_BENCHMARK and reaches the others through benchmarks.html,
+# so a published run belongs to exactly one of them and nothing is shared between
+# them but the pages. `data/benchmarks.json` is the registry the list page reads;
+# it is rebuilt by scanning, never edited, so it cannot drift from what is on
+# disk. Each folder's `benchmark.json` is the one thing a scan cannot infer --
+# what the benchmark is called.
+DEFAULT_BENCHMARK = "default"
+REGISTRY = DATA / "benchmarks.json"
+
 # Caps. A trajectory can carry a whole file's contents in one tool result, and a
 # from-scratch task's patch is an entire project. Truncation is recorded in the
 # data so the page can say so rather than quietly showing less than there was.
@@ -723,7 +733,8 @@ def shortest_task(task: str) -> str:
     return str(task).split("/")[-1]
 
 
-def collect_job(job_dir: Path, baselines: Baselines | None = None) -> dict[str, Any]:
+def collect_job(job_dir: Path, trials_dir: Path,
+                baselines: Baselines | None = None) -> dict[str, Any]:
     job = job_dir.name
     synthetic = (job_dir / "SYNTHETIC").exists()
     trial_dirs = sorted(
@@ -763,7 +774,7 @@ def collect_job(job_dir: Path, baselines: Baselines | None = None) -> dict[str, 
         print(f"  rebuilt the diff for {rebuilt}/{len(details)} trials")
 
     for detail in details:
-        (DATA / "trials" / f"{detail['id']}.json").write_text(
+        (trials_dir / f"{detail['id']}.json").write_text(
             json.dumps(detail, ensure_ascii=False), encoding="utf-8"
         )
 
@@ -774,9 +785,67 @@ def collect_job(job_dir: Path, baselines: Baselines | None = None) -> dict[str, 
     }
 
 
+# -------------------------------------------------------------------- registry
+
+
+def describe(benchmark_dir: Path) -> dict[str, Any] | None:
+    """One row of `benchmarks.json`, read from a benchmark folder.
+
+    Everything but the name is counted from the index, so the list page cannot
+    disagree with the benchmark it links to. A folder with no readable index is
+    not a benchmark yet and is left out rather than listed as empty.
+    """
+    index = read_json(benchmark_dir / "index.json")
+    if not isinstance(index, dict) or not index.get("runs"):
+        return None
+    named = read_json(benchmark_dir / "benchmark.json") or {}
+    runs = index["runs"]
+    trials = [trial for run in runs for trial in run.get("trials", [])]
+    rewarded = [t for t in trials if t.get("reward") is not None]
+    return {
+        "slug": benchmark_dir.name,
+        "name": named.get("name") or benchmark_dir.name,
+        "description": named.get("description"),
+        "generated_at": index.get("generated_at"),
+        "runs": len(runs),
+        "trials": len(trials),
+        "models": len({t.get("model") for t in trials}),
+        "configs": len({configuration_of(run["job"]) for run in runs}),
+        "tasks": len({t.get("task") for t in trials}),
+        "solved": sum(1 for t in rewarded if (t.get("reward") or 0) >= 1),
+        "graded": len(rewarded),
+        "synthetic": any(run.get("synthetic") for run in runs),
+    }
+
+
+def configuration_of(job: str) -> str:
+    """A job name without its timestamp — the same rule common.js applies."""
+    return re.sub(r"-\d{8}-\d{6}$", "", str(job)) or "unknown"
+
+
+def write_registry() -> list[dict[str, Any]]:
+    """Rebuild `benchmarks.json` from whatever folders are on disk.
+
+    Scanned rather than appended to, so deleting a benchmark folder is all it
+    takes to unpublish it, and a hand-edited registry cannot outlive the data it
+    describes. The default sorts first; the rest go by name, since that is the
+    order the list page shows them in.
+    """
+    found = [described for child in sorted(DATA.iterdir()) if child.is_dir()
+             for described in [describe(child)] if described]
+    found.sort(key=lambda row: (row["slug"] != DEFAULT_BENCHMARK, row["name"].lower()))
+    REGISTRY.write_text(
+        json.dumps({"default": DEFAULT_BENCHMARK, "benchmarks": found},
+                   ensure_ascii=False),
+        encoding="utf-8",
+    )
+    return found
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("job_dirs", nargs="+", type=Path, help="Harbor job directories")
+    parser.add_argument("job_dirs", nargs="*", type=Path,
+                        help="Harbor job directories")
     parser.add_argument(
         "--keep",
         action="store_true",
@@ -790,7 +859,36 @@ def main() -> int:
              "each task's environment starts the agent from. Temporary: see the "
              "reconstruction section above.",
     )
+    parser.add_argument(
+        "--benchmark",
+        default=DEFAULT_BENCHMARK,
+        metavar="SLUG",
+        help=f"Which benchmark to publish into, as a folder under data/ "
+             f"(default: {DEFAULT_BENCHMARK}, the one the site opens on)",
+    )
+    parser.add_argument(
+        "--name",
+        help="What to call this benchmark on the list page. Kept from the "
+             "previous publish when not given.",
+    )
+    parser.add_argument(
+        "--description",
+        help="One line under the name on the list page.",
+    )
+    parser.add_argument(
+        "--registry",
+        action="store_true",
+        help="Rebuild data/benchmarks.json from the folders on disk and stop",
+    )
     args = parser.parse_args()
+
+    if args.registry:
+        for row in write_registry():
+            print(f"{row['slug']:28} {row['name']}")
+        return 0
+
+    if not args.job_dirs:
+        parser.error("give at least one job directory, or --registry")
 
     baselines = None
     if args.baselines:
@@ -799,8 +897,20 @@ def main() -> int:
             return 1
         baselines = Baselines(args.baselines, SITE / ".baselines")
 
-    (DATA / "trials").mkdir(parents=True, exist_ok=True)
-    index_path = DATA / "index.json"
+    benchmark_dir = DATA / args.benchmark
+    (benchmark_dir / "trials").mkdir(parents=True, exist_ok=True)
+    index_path = benchmark_dir / "index.json"
+
+    # The name outlives a republish: it is given once, and every later publish of
+    # the same benchmark keeps it unless it is given again.
+    named = read_json(benchmark_dir / "benchmark.json") or {}
+    if args.name:
+        named["name"] = args.name
+    if args.description:
+        named["description"] = args.description
+    named.setdefault("name", args.benchmark)
+    (benchmark_dir / "benchmark.json").write_text(
+        json.dumps(named, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     existing = read_json(index_path) if args.keep else None
     runs = {run["job"]: run for run in (existing or {}).get("runs", [])}
 
@@ -809,7 +919,7 @@ def main() -> int:
             print(f"not a directory: {job_dir}", file=sys.stderr)
             return 1
         print(f"{job_dir.name}")
-        run = collect_job(job_dir, baselines)
+        run = collect_job(job_dir, benchmark_dir / "trials", baselines)
         if not run["trials"]:
             print("  no trials found", file=sys.stderr)
             continue
@@ -827,8 +937,10 @@ def main() -> int:
         "runs": sorted(runs.values(), key=lambda run: run["job"]),
     }
     index_path.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
-    print(f"\nwrote {index_path.name} "
-          f"and {len(list((DATA / 'trials').glob('*.json')))} trial files")
+    write_registry()
+    print(f"\nwrote {args.benchmark}/{index_path.name} and "
+          f"{len(list((benchmark_dir / 'trials').glob('*.json')))} trial files "
+          f"for {named['name']!r}")
     return 0
 
 

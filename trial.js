@@ -92,7 +92,7 @@ function renderCrumb(config = configOf(trial.job)) {
     // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
     // really one link and then a model-and-configuration pair.
     document.getElementById("crumb").innerHTML =
-        `<a href="index.html">Leaderboard</a>
+        `<a href="${leaderboardUrl()}">Leaderboard</a>
          <span class="crumb-sep" aria-hidden="true">›</span>
          <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))}
             <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
@@ -527,9 +527,9 @@ document.getElementById("content").addEventListener("click", (event) => {
 const id = new URLSearchParams(location.search).get("id");
 if (!id) {
     document.getElementById("content").innerHTML =
-        `<p class="empty">No trial requested. <a href="index.html">Back to the results.</a></p>`;
+        `<p class="empty">No trial requested. <a href="${leaderboardUrl()}">Back to the results.</a></p>`;
 } else {
-    fetchJson(`data/trials/${encodeURIComponent(id)}.json`).then((loaded) => {
+    fetchJson(dataUrl(`trials/${encodeURIComponent(id)}.json`)).then((loaded) => {
         trial = loaded;
         trace = buildTrace();
         render();

@@ -380,7 +380,7 @@ document.getElementById("content").addEventListener("click", (event) => {
     if (row) location.href = runUrl(row.dataset.model, row.dataset.config);
 });
 
-fetchJson("data/index.json").then((index) => {
+fetchJson(dataUrl("index.json")).then((index) => {
     runs = index.runs ?? [];
     trials = runs.flatMap((run) => run.trials ?? []);
     if (!trials.length) {

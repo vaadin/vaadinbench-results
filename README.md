@@ -8,6 +8,30 @@ a leaderboard, and behind every trial the trajectory the agent actually produced
 That repository is only the tasks. This one is only the results, so a run never
 touches the thing being measured.
 
+## Benchmarks
+
+The site holds more than one benchmark, and each is a folder under `data/`:
+
+```text
+data/benchmarks.json                 the registry the list page reads
+data/default/                        the benchmark the site opens on
+data/<slug>/index.json                   one row per trial
+data/<slug>/trials/<id>.json             one file per trial
+data/<slug>/benchmark.json               what it is called
+```
+
+A benchmark is a set of runs asking one question, and **nothing is compared
+across them** — different models, different tasks, different months. The pages
+show one at a time: `?benchmark=<slug>` selects it, `benchmarks.html` lists them
+all, and the default is left out of the query string entirely, so every URL that
+worked before there was more than one benchmark still resolves to it.
+
+`benchmarks.json` is rebuilt by scanning `data/`, never edited. Deleting a
+folder unpublishes it; `./publish.py --registry` rebuilds the list after one.
+Everything on a card is counted from the benchmark's own index, so the list
+cannot disagree with the page it links to — the one thing a scan cannot infer is
+the name, which is why each folder carries a `benchmark.json`.
+
 ## Publishing a run
 
 A run happens on the machine with Docker and the model credentials. This repo
@@ -17,6 +41,17 @@ turns its output into the site:
 ./publish.py --baselines ../vaadin-bench/tasks ../vaadin-bench/jobs/new-project-3models
 git add data && git commit -m "Publish new-project-3models" && git push
 ```
+
+That publishes into `default`. A run that belongs somewhere else names it, and
+names the benchmark the first time it is published:
+
+```bash
+./publish.py --benchmark mcp-servers --name "MCP servers, head to head" \
+    --baselines ../vaadin-bench/tasks ../vaadin-bench/jobs/mcp-*
+```
+
+The name and description stick: later publishes into the same benchmark keep
+them unless they are given again.
 
 The push *is* the deploy: GitHub Pages serves `main` from the repository root,
 so there is no workflow and nothing to build. Pass several job directories at
@@ -111,9 +146,13 @@ wrote:
 index.html          leaderboard: one row per model and configuration, plus a chart
 run.html            one configuration: its trials
 trial.html          one trial: trajectory, changes, verifier, instruction
-data/index.json         one row per trial
-data/trials/<id>.json   one file per trial
+benchmarks.html     every published benchmark, one card each
 ```
+
+Each page reads the benchmark named in its own query string, and every link it
+writes carries that name onward — a click that dropped it would land on the same
+model and configuration in another benchmark, which reads as the data changing
+rather than the benchmark.
 
 A **configuration** is a job name with its timestamp stripped —
 `vaadin-skills-20260820-171844` is one run of the `vaadin-skills`
@@ -166,8 +205,11 @@ produces — and it needs Harbor, which the tasks repo already has installed:
 
 ```bash
 ../vaadin-bench/.venv/bin/python fixtures/make_fixture.py
-./publish.py fixtures/jobs/example-3models
+./publish.py --benchmark scratch --name Scratch fixtures/jobs/example-3models
 ```
+
+Into its own benchmark, not over `default`: publishing without `--benchmark`
+replaces the front page with the fixture.
 
 That job carries a `SYNTHETIC` marker. `publish.py` copies the flag into the data
 and every page it reaches says so, so invented numbers cannot be mistaken for

@@ -35,6 +35,29 @@ function fetchJson(path) {
     });
 }
 
+// Which benchmark this page is showing. A benchmark is a folder under `data/`
+// with its own index and trials, and `?benchmark=<slug>` is how every page says
+// which one it is on. The default is the one the site opens on, and it is left
+// out of the query string entirely -- so the URLs that existed before there was
+// more than one benchmark still resolve to it.
+const DEFAULT_BENCHMARK = "default";
+const benchmark = new URLSearchParams(location.search).get("benchmark")
+    || DEFAULT_BENCHMARK;
+
+function dataUrl(path) {
+    return `data/${encodeURIComponent(benchmark)}/${path}`;
+}
+
+// Every internal link has to carry the benchmark, or one click lands back in the
+// default with the same model and configuration -- which would look like data
+// changing under the reader rather than a different benchmark.
+function pageUrl(page, params = {}) {
+    const query = new URLSearchParams(params);
+    if (benchmark !== DEFAULT_BENCHMARK) query.set("benchmark", benchmark);
+    const search = query.toString();
+    return search ? `${page}?${search}` : page;
+}
+
 // A model id is `provider/name`; the provider is noise in a table where every
 // row carries one, and the dated Haiku suffix is noise everywhere.
 function shortModel(model) {
@@ -121,13 +144,15 @@ function outcome(trial) {
 // the run that was clicked. Ids used to omit the job, which let three trials
 // share one, and the page had no way to notice it was showing another run.
 function trialUrl(id, job) {
-    const query = new URLSearchParams({ id });
-    if (job) query.set("job", job);
-    return `trial.html?${query}`;
+    return pageUrl("trial.html", job ? { id, job } : { id });
 }
 
 function runUrl(model, config) {
-    return `run.html?model=${encodeURIComponent(model)}&config=${encodeURIComponent(config)}`;
+    return pageUrl("run.html", { model, config });
+}
+
+function leaderboardUrl() {
+    return pageUrl("index.html");
 }
 
 // One hue per model, from Aura's palette, so a row's bar and its dot in the
@@ -495,9 +520,47 @@ function renderFooter(generatedAt) {
         <a href="https://github.com/vesanieminen/vaadinbench">tasks</a>`;
 }
 
+// The benchmark this page is on, and the way to the others. Rendered from the
+// registry rather than written into each page, so adding or renaming a benchmark
+// takes no edit to the HTML. Two is where it starts earning its space: with one
+// benchmark the bar would be a label beside a link to a list of the page you are
+// already on, so it stays hidden until there is a choice to make.
+// The pages carry `index.html` in their own markup -- the wordmark, run.html's
+// crumb. Inside a benchmark that has to mean this benchmark's leaderboard, or
+// the way home is a silent jump back to the default with no sign it happened.
+function localiseHomeLinks() {
+    if (benchmark === DEFAULT_BENCHMARK) return;
+    document.querySelectorAll('a[href="index.html"]').forEach((link) => {
+        link.setAttribute("href", leaderboardUrl());
+    });
+}
+
+function renderBenchmarkBar() {
+    const slot = document.getElementById("benchmark");
+    if (!slot) return;
+    fetchJson("data/benchmarks.json").then((registry) => {
+        const all = registry.benchmarks ?? [];
+        if (all.length < 2) return;
+        const current = all.find((entry) => entry.slug === benchmark);
+        slot.innerHTML = `<span class="bench-name"
+            >${escapeHtml(current?.name ?? benchmark)}</span>
+            <a class="bench-switch" href="benchmarks.html">All benchmarks</a>`;
+    }).catch(() => {
+        // No registry is the state this site was in before benchmarks existed.
+        // The page below it works either way, so it says nothing.
+    });
+}
+
 function showError(error) {
+    // A benchmark in the URL that has no folder fails here, as a 404 on a path
+    // nobody typed. Offer the list rather than leaving the reader to guess a
+    // slug back.
+    const elsewhere = benchmark === DEFAULT_BENCHMARK ? ""
+        : ` <a href="benchmarks.html">See the benchmarks that are published.</a>`;
     document.getElementById("content").innerHTML =
-        `<p class="empty">Could not load the data: ${escapeHtml(error.message)}</p>`;
+        `<p class="empty">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`;
 }
 
 renderMark();
+localiseHomeLinks();
+renderBenchmarkBar();
