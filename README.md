@@ -1,8 +1,8 @@
 # VaadinBench results
 
-**[vesanieminen.github.io/vaadinbench-results](https://vesanieminen.github.io/vaadinbench-results/)**
+**[https://vaadin.github.io/vaadinbench-results/](https://vaadin.github.io/vaadinbench-results/)**
 
-The published results for [VaadinBench](https://github.com/vesanieminen/vaadinbench):
+The published results for [VaadinBench](https://github.com/vaadin/vaadinbench):
 a leaderboard, and behind every trial the trajectory the agent actually produced.
 
 That repository is only the tasks. This one is only the results, so a run never
