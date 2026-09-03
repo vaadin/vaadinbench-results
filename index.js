@@ -1,12 +1,16 @@
-// The leaderboard: one row per model and configuration, and the same numbers
-// again as a cost/score scatter.
+// The leaderboard: one row per model, effort level and configuration, and the
+// same numbers again as a cost/score scatter.
 
 let trials = [];
 let runs = [];
 const params = new URLSearchParams(location.search);
 const COLUMNS = [
+    // Sorted by model first, then by how hard it was asked to think, then by
+    // configuration: the rank rather than the word, so `high` sorts above
+    // `medium` instead of under it.
     { key: "model", label: "Model", dir: "asc",
-        value: (row) => `${shortModel(row.model)} ${row.config}`.toLowerCase() },
+        value: (row) => `${shortModel(row.model)} ${effortRank(row.effort)} ${
+            row.config}`.toLowerCase() },
     { key: "score", label: "Score", num: true, dir: "desc",
         value: (row) => row.rate ?? -1 },
     { key: "solved", label: "Solved", num: true, dir: "desc", value: (row) => row.solved },
@@ -33,6 +37,7 @@ const state = {
     // missing data that a comparison would misread. The filter opens empty,
     // which shows all of them.
     configs: new Set((params.get("configs") ?? "").split(",").filter(Boolean)),
+    efforts: new Set((params.get("efforts") ?? "").split(",").filter(Boolean)),
     x: params.get("x") === "tokens" ? "tokens" : "cost",
 };
 
@@ -52,15 +57,19 @@ const METRICS = {
     },
 };
 
-// A configuration is what the run was testing; a model is who was doing it.
-// Neither alone is a result, so the pair is the unit the leaderboard ranks.
+// A configuration is what the run was testing; a model is who was doing it; the
+// effort is how hard it was asked to think. None of the three alone is a result,
+// so the three together are the unit the leaderboard ranks -- one model at two
+// levels is two conditions, and a row holding both would average away the thing
+// that was varied.
 function summarize(rows) {
     const byPair = new Map();
     for (const trial of rows) {
         const config = configOf(trial.job);
-        const key = `${trial.model} ${config}`;
+        const effort = effortOf(trial);
+        const key = `${trial.model} ${effort} ${config}`;
         const row = byPair.get(key) ?? {
-            model: trial.model, config, attempts: 0, solved: 0, graded: 0,
+            model: trial.model, effort, config, attempts: 0, solved: 0, graded: 0,
             cost: 0, out: 0, duration: 0, tasks: new Set(),
         };
         row.attempts += 1;
@@ -92,7 +101,8 @@ function sortRows(rows) {
 function visible() {
     return trials.filter((trial) =>
         (!state.models.size || state.models.has(trial.model))
-        && (!state.configs.size || state.configs.has(configOf(trial.job))));
+        && (!state.configs.size || state.configs.has(configOf(trial.job)))
+        && (!state.efforts.size || state.efforts.has(effortOf(trial))));
 }
 
 // What a configuration actually gave the agent. The chips name the runs; a
@@ -109,14 +119,28 @@ const CONFIG_NOTES = {
     "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
 
-// One line per configuration, under its chips. Short on purpose: the point is
-// to say what the agent had, not to document the plugins.
-function renderConfigNotes(configs) {
-    const described = configs.filter((config) => CONFIG_NOTES[config]);
-    if (!described.length) return "";
-    return `<dl class="config-notes">${described.map((config) => `
-        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(CONFIG_NOTES[config])}</dd>`
-    ).join("")}</dl>`;
+// One line per configuration, under the chips. Short on purpose: the point is to
+// say what the agent had, not to document the plugins.
+//
+// The effort row is glossed in the same list rather than one of its own, so the
+// terms line up in one column. A level is its own explanation and gets no line;
+// what the axis *is* needs one, and so does "default" -- the only value on that
+// row nobody chose, and one a reader could otherwise take for a level somewhere
+// below "low".
+function renderChipNotes(configs, efforts) {
+    const notes = configs.filter((config) => CONFIG_NOTES[config])
+        .map((config) => [config, CONFIG_NOTES[config]]);
+    if (efforts.length) {
+        notes.push(["effort", "How hard the run asked the model to think: "
+            + "Claude Code's --effort, Codex's model_reasoning_effort."]);
+    }
+    if (efforts.includes(DEFAULT_EFFORT)) {
+        notes.push([DEFAULT_EFFORT, "The run named no level, so the agent's own "
+            + "default is what ran. Not a level anyone picked."]);
+    }
+    if (!notes.length) return "";
+    return `<dl class="chip-notes">${notes.map(([term, note]) => `
+        <dt>${escapeHtml(term)}</dt><dd>${escapeHtml(note)}</dd>`).join("")}</dl>`;
 }
 
 // An empty set means no filter rather than nothing selected: a page that opens
@@ -128,23 +152,28 @@ function renderConfigNotes(configs) {
 function renderFilters(hues, configHues, shapes) {
     const models = [...new Set(trials.map((t) => t.model))].sort();
     const configs = [...new Set(trials.map((t) => configOf(t.job)))].sort();
-    const chip = (key, value, hue, mark, label) => `<button class="chip"
+    // Effort wears no colour and no shape -- see effortTag() -- so its chips are
+    // the label alone, and the row appears only where there is a level to pick.
+    const efforts = showsEffort(trials) ? sortedEfforts(trials) : [];
+    const chip = (key, value, hue, mark, label) => `<button class="chip${
+            mark ? "" : " plain"}"
         data-facet="${key}" data-value="${escapeHtml(value)}"
-        style="--chip:${hueFill(hue)};--chip-text:${hueText(hue)}"
+        ${hue ? `style="--chip:${hueFill(hue)};--chip-text:${hueText(hue)}"` : ""}
         aria-pressed="${state[key].has(value)}">${mark}${escapeHtml(label)}</button>`;
     // Turning a filter off means unpressing every chip you pressed. One button
-    // per row, because the two rows filter independently and clearing both when
-    // only one is in the way is its own annoyance. It appears only with
+    // per row, because the rows filter independently and clearing all of them
+    // when only one is in the way is its own annoyance. It appears only with
     // something to clear: beside an untouched row it would be a control that
     // does nothing.
     //
     // The cross is drawn rather than typed -- `×` sits off its own centre in
     // most faces, and `✕` is missing from some. It carries a label for anyone
     // not looking at it, since a bare cross says nothing aloud.
+    const facet = { models: "model", configs: "configuration", efforts: "effort" };
     const clear = (key) => state[key].size
         ? `<button class="chip-clear" data-clear="${key}"
-            title="Clear the ${key === "models" ? "model" : "configuration"} filter"
-            aria-label="Clear the ${key === "models" ? "model" : "configuration"} filter"
+            title="Clear the ${facet[key]} filter"
+            aria-label="Clear the ${facet[key]} filter"
             ><svg viewBox="0 0 12 12" aria-hidden="true"><path
                 d="M3.2 3.2l5.6 5.6M8.8 3.2l-5.6 5.6"/></svg></button>`
         : "";
@@ -161,7 +190,12 @@ function renderFilters(hues, configHues, shapes) {
                 shapeGlyph(shapes.get(config), configHues.get(config)), config)).join("")}
             ${clear("configs")}
         </div>
-        ${renderConfigNotes(configs)}
+        ${efforts.length ? `<div class="filter">
+            <span class="key">Effort</span>
+            ${efforts.map((effort) => chip("efforts", effort, null, "", effort)).join("")}
+            ${clear("efforts")}
+        </div>` : ""}
+        ${renderChipNotes(configs, efforts)}
     </div>`;
 }
 
@@ -191,6 +225,10 @@ function renderHead() {
 
 function renderLeaderboard(rows, hues, configHues, shapes) {
     if (!rows.length) return `<p class="empty">Nothing matches this filter.</p>`;
+    // Whether the effort is worth a tag is a property of the benchmark, not of
+    // the filter: read from every trial, so toggling a chip cannot make the
+    // remaining rows stop saying what they were run at.
+    const withEffort = showsEffort(trials);
     const body = sortRows(rows).map((row, i) => {
         // No fill at all at zero: a minimum width keeps a 1% score visible, but
         // it would also draw a coloured nub on a row that solved nothing.
@@ -201,10 +239,12 @@ function renderLeaderboard(rows, hues, configHues, shapes) {
         const configHue = configHues.get(row.config);
         return `<tr class="pick" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
+            data-effort="${escapeHtml(row.effort)}"
             style="--row:${hueFill(hues.get(row.model))};--cfg:${hueText(configHue)}">
             <td class="rank">${i + 1}</td>
             <td class="name"><span class="who"><i class="swatch"></i>${
-                escapeHtml(shortModel(row.model))}</span>
+                escapeHtml(shortModel(row.model))}${
+                withEffort ? effortTag(row.effort) : ""}</span>
                 <span class="sub">${shapeGlyph(shapes.get(row.config), configHue)}${
                     escapeHtml(row.config)}</span></td>
             <td class="bar"><span class="bar-track">${fill}</span></td>
@@ -274,6 +314,11 @@ function renderChart(rows, hues, shapes, configHues) {
         .join("");
 
     const names = trimCommonPrefix([...new Set(points.map((p) => p.model))]);
+    // A label has as much room as the points around it leave, so the effort
+    // joins one only where it tells two points apart. The tooltip has room
+    // whatever the plot looks like, and names the level whenever there is one.
+    const labelEffort = sortedEfforts(points).length > 1;
+    const namedEffort = showsEffort(trials);
 
     // Every point keeps its name, coloured to its model. Where they land is
     // settled after the fact by layoutChartLabels(), which can measure the text.
@@ -282,8 +327,12 @@ function renderChart(rows, hues, shapes, configHues) {
         const x = px(metric.value(row)), y = py(row.rate);
         // With one model in the plot trimCommonPrefix leaves nothing useful of
         // its name, and the chip above already says which model this is.
-        const name = names.size > 1 ? `${names.get(row.model)} · ${row.config}` : row.config;
-        const tip = `${shortModel(row.model)} · ${row.config} — ${percent(row.rate)}`
+        const effort = labelEffort ? ` · ${row.effort}` : "";
+        const name = names.size > 1
+            ? `${names.get(row.model)}${effort} · ${row.config}`
+            : `${row.config}${effort}`;
+        const tip = `${shortModel(row.model)}${namedEffort ? ` · ${row.effort} effort` : ""}`
+            + ` · ${row.config} — ${percent(row.rate)}`
             + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
         return `<g data-tip="${escapeHtml(tip)}">
             <circle class="hit" cx="${x}" cy="${y}" r="13"/>
@@ -349,6 +398,7 @@ function syncUrl() {
     set("tab", state.tab === "chart" ? "chart" : "");
     set("models", [...state.models].join(","));
     set("configs", [...state.configs].join(","));
+    set("efforts", [...state.efforts].join(","));
     set("x", state.x === "tokens" ? "tokens" : "");
     const column = COLUMNS.find((entry) => entry.key === state.sort) ?? DEFAULT_SORT;
     const isDefault = column === DEFAULT_SORT && state.dir === DEFAULT_SORT.dir;
@@ -402,7 +452,9 @@ document.getElementById("content").addEventListener("click", (event) => {
         return;
     }
     const row = event.target.closest("tr.pick");
-    if (row) location.href = runUrl(row.dataset.model, row.dataset.config);
+    if (row) {
+        location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
+    }
 });
 
 fetchJson(dataUrl("index.json")).then((index) => {

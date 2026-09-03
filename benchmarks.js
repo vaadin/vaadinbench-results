@@ -18,6 +18,10 @@ function renderCard(entry, isDefault) {
     const facts = [
         `${entry.models} model${entry.models === 1 ? "" : "s"}`,
         `${entry.configs} configuration${entry.configs === 1 ? "" : "s"}`,
+        // Only where it is one of the things being varied. One level -- named or
+        // left to the agent -- is a constant of the benchmark, and a card that
+        // announced it would put a fact where a difference belongs.
+        ...(entry.efforts > 1 ? [`${entry.efforts} effort levels`] : []),
         `${entry.tasks} task${entry.tasks === 1 ? "" : "s"}`,
         `${entry.trials} trial${entry.trials === 1 ? "" : "s"}`,
     ];

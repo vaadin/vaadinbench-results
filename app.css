@@ -316,6 +316,10 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
     background: color-mix(in oklab, var(--ink) 8%, transparent);
 }
 
+/* A chip with nothing in front of its label -- the effort row, which is text
+   only -- loses the room the swatch was sitting in. */
+.chip.plain { padding-left: .7rem; }
+
 .chip .swatch {
     width: 9px; height: 9px; flex: none; border-radius: 999px;
     background: var(--chip, var(--faint));
@@ -331,21 +335,22 @@ p.lede { margin: 0 0 1.5rem; color: var(--faint); font-size: .85rem; line-height
 .chip[aria-pressed="false"]:hover .swatch,
 .chip[aria-pressed="false"]:hover .glyph { opacity: 1; }
 
-/* The gloss under the config chips. Aligned to the chips rather than the key
-   column, so it reads as a caption on them; small and faint, because it is a
-   footnote to the table and not a thing to read first. */
-.config-notes {
+/* The gloss under a row of chips -- what each configuration gave the agent, what
+   an effort level is. Aligned to the chips rather than the key column, so it
+   reads as a caption on them; small and faint, because it is a footnote to the
+   table and not a thing to read first. */
+.chip-notes {
     display: grid; grid-template-columns: max-content minmax(0, 1fr);
     column-gap: .6rem; row-gap: .15rem;
     margin: .3rem 0 0; padding-left: 6rem; font-size: .75rem; line-height: 1.45;
 }
-.config-notes dt { color: var(--meta); font-weight: 500; }
-.config-notes dd { margin: 0; color: var(--faint); }
+.chip-notes dt { color: var(--meta); font-weight: 500; }
+.chip-notes dd { margin: 0; color: var(--faint); }
 /* Narrow enough and the two columns stop helping: the names wrap away from
    their descriptions, so they stack instead. */
 @media (max-width: 640px) {
-    .config-notes { grid-template-columns: minmax(0, 1fr); padding-left: 0; row-gap: 0; }
-    .config-notes dd { margin-bottom: .3rem; }
+    .chip-notes { grid-template-columns: minmax(0, 1fr); padding-left: 0; row-gap: 0; }
+    .chip-notes dd { margin-bottom: .3rem; }
 }
 
 /* ----------------------------------------------------------------- tables */
@@ -481,6 +486,14 @@ td.bar { width: 38%; min-width: 130px; }
 .badge.pass { color: var(--pass); background: var(--pass-bg); }
 .badge.fail { color: var(--fail); background: var(--fail-bg); }
 .badge.tag { color: var(--meta); background: var(--container-strong); font-weight: 500; }
+/* The effort level, wherever a model is named. Smaller than the name it follows
+   and carrying no colour of its own: colour belongs to models and shape to
+   configurations, and a third code competing with those two would say the three
+   axes rank equally. */
+.badge.effort { font-size: .7rem; letter-spacing: .01em; }
+/* In a name cell the flex gap already spaces it; a heading is running text, so
+   there it needs its own, and to sit on the type rather than the line. */
+h2.title .badge.effort { vertical-align: middle; margin-left: .45rem; }
 .note { color: var(--faint); font-size: .76rem; white-space: nowrap; }
 
 /* One row of figures, so the values carry the emphasis the labels do not. */
