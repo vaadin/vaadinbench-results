@@ -71,6 +71,7 @@ goes out today, per trial:
 | Published | Read from |
 | --- | --- |
 | Task, agent, model, attempt, reward, duration, tokens, cost | `result.json` |
+| The effort level the run asked for | `result.json`, the resolved trial config |
 | The prompt the agent was given | first user step of the trajectory |
 | Every step: message, reasoning, tool calls and their output | `agent/trajectory.json` |
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
@@ -83,7 +84,36 @@ Harbor collects a container's `/logs` verbatim, so everything a task writes to
 writes to `/logs/verifier` sits at `verifier/` — the paths above are the real
 ones, and reading the shallower `artifacts/` finds nothing.
 
-The last row is conditional, and the next section is why.
+Two of those rows need more than a line: the effort level is next, and the last
+row is conditional, which the section after that explains.
+
+### Effort
+
+One kwarg covers both agents: Harbor takes `reasoning_effort` and hands it to
+Claude Code as `--effort` and to Codex as `-c model_reasoning_effort`, then
+writes the resolved trial config into `result.json` — so what a run asked for is
+in the trial rather than in someone's notes about it. A configuration file names
+it per agent, beside the model:
+
+```yaml
+agents:
+  - name: claude-code
+    model_name: anthropic/claude-opus-5
+    kwargs:
+      reasoning_effort: high
+```
+
+**Only what the run states is published.** An agent left alone runs at its own
+default — Codex's is `high`, Claude Code's is whatever the CLI ships — and
+writing that default in here would turn a runner's build-time constant into
+something that reads as a measurement of this run. It publishes as nothing, and
+the site calls that "default": the level is unstated, not known to be low.
+
+It is a third axis beside the model and the configuration, and the pages treat it
+as one — the same model at two levels is two rows, because a row holding both
+would average away the only thing being varied. A benchmark where no run named a
+level says nothing about effort anywhere, which is every one published before
+this field existed.
 
 ### Rebuilt diffs
 
@@ -157,8 +187,8 @@ rather than the benchmark.
 A **configuration** is a job name with its timestamp stripped —
 `vaadin-skills-20260820-171844` is one run of the `vaadin-skills`
 configuration. It is what a run was testing, which skills and tools the agent
-had, so `(model, configuration)` is the pair the leaderboard ranks and repeated
-runs of one configuration collapse into a single row.
+had, so `(model, effort, configuration)` is what the leaderboard ranks and
+repeated runs of one configuration collapse into a single row.
 
 The colours are Vaadin's Aura theme. Aura computes nearly everything at runtime
 from `--aura-background-color`, using relative-colour syntax that needs Aura's
@@ -175,9 +205,12 @@ model run in three configurations produced three trials sharing a single id, so
 `data/trials/<id>.json` was written three times and only the last job survived
 — the index still listed all three rows, and two of them opened another run's
 trajectory, reward and diff. `trial.html?id=…&tab=verifier` opens straight to a tab, and the
-leaderboard keeps its tab and both filters in the query string, so
+leaderboard keeps its tab and all three filters in the query string, so
 `index.html?tab=chart&models=anthropic/claude-opus-5` is a link rather than a
-set of clicks to describe.
+set of clicks to describe. A run link carries `effort=` when the trials behind it
+named a level and leaves it out when they did not, the same way the default
+benchmark is left out — so a run link written before there was an effort field
+still opens the trials it always opened.
 
 Harbor writes the trajectory as **ATIF** (Agent Trajectory Interchange Format), a
 versioned schema whose steps carry `source`, `message`, `reasoning_content` and
@@ -207,6 +240,9 @@ produces — and it needs Harbor, which the tasks repo already has installed:
 ../vaadin-bench/.venv/bin/python fixtures/make_fixture.py
 ./publish.py --benchmark scratch --name Scratch fixtures/jobs/example-3models
 ```
+
+That job runs one model at two effort levels and another at none, so the effort
+axis has both of its shapes to render rather than only the interesting one.
 
 Into its own benchmark, not over `default`: publishing without `--benchmark`
 replaces the front page with the fixture.

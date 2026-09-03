@@ -8,6 +8,9 @@ same schemas a real run produces — `TrialResult` for `result.json` and ATIF fo
 `agent/trajectory.json`. If Harbor changes either, this stops working, which is
 the point: the fixture cannot drift into a shape the site will never actually see.
 
+It also runs one model at two effort levels and another at none, because the
+pages treat effort as an axis of its own and both of its shapes have to render.
+
 The job it writes is marked with a `SYNTHETIC` file. `publish.py` copies that
 flag into the data and the site labels every page it reaches, so invented numbers
 can never be mistaken for measurements.
@@ -235,6 +238,7 @@ def write_trial(
     cost: float,
     minutes: float,
     graded: bool = True,
+    effort: str | None = None,
 ) -> None:
     trial_dir = JOB / name
     (trial_dir / "agent").mkdir(parents=True, exist_ok=True)
@@ -252,7 +256,13 @@ def write_trial(
         "trial_uri": f"file:///jobs/example-3models/{name}",
         "task_id": {"path": "tasks/flow-new-project"},
         "task_checksum": "synthetic",
-        "config": {},
+        # Where Harbor records what the run asked for, and the only place the
+        # effort level is written down: `reasoning_effort` is one kwarg for both
+        # agents, `--effort` for Claude Code and `model_reasoning_effort` for
+        # Codex. A trial that names none is the other half of what the site has
+        # to render -- a run at whatever its agent defaults to -- so the fixture
+        # writes both shapes rather than only the interesting one.
+        "config": {"agent": {"kwargs": {"reasoning_effort": effort}}} if effort else {},
         "agent_info": {
             "name": "claude-code",
             "version": "2.1.235",
@@ -355,6 +365,7 @@ def main() -> None:
         downloaded_project_steps(),
         cost=1.86,
         minutes=6.2,
+        effort="high",
     )
     write_trial(
         "flow-new-project__claude-code__sonnet",
@@ -363,7 +374,23 @@ def main() -> None:
         downloaded_project_steps(),
         cost=0.74,
         minutes=4.1,
+        effort="high",
     )
+    # The same model at a second level, which is the case the leaderboard exists
+    # to keep apart: one model in one configuration is two rows here, and a page
+    # that collapsed them would average the variable away. It is also what gives
+    # the run page a pair with more than one level behind it.
+    write_trial(
+        "flow-new-project__claude-code__sonnet-low",
+        "anthropic/claude-sonnet-5",
+        0,
+        hand_written_steps(),
+        cost=0.19,
+        minutes=1.9,
+        effort="low",
+    )
+    # And one run that named no level at all, so the pages are developed against
+    # the shape every trial published before the field existed has.
     write_trial(
         "flow-new-project__claude-code__haiku",
         "anthropic/claude-haiku-4-5-20251001",
@@ -383,6 +410,7 @@ def main() -> None:
         cost=0.31,
         minutes=3.0,
         graded=False,
+        effort="high",
     )
     print(f"wrote {JOB}")
 

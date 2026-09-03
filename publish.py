@@ -641,6 +641,39 @@ def reward_of(result: dict[str, Any]) -> float | None:
     return None
 
 
+def effort_of(result: dict[str, Any]) -> str | None:
+    """The effort level the run asked the agent to think at, or None.
+
+    One kwarg covers both agents: Harbor takes `reasoning_effort` and hands it to
+    Claude Code as `--effort` and to Codex as `-c model_reasoning_effort`. The
+    resolved trial config is written into `result.json`, so what a run asked for
+    is in the trial itself rather than in someone's notes about it.
+
+    **Only what the run states is published.** An agent left alone runs at its
+    own default — Codex's is `high`, Claude Code's is whatever the CLI ships —
+    and writing that default in here would turn a runner's build-time constant
+    into something that reads as a measurement of this run. It publishes as
+    nothing instead, and the site calls that "default": the level is unstated,
+    not known to be low.
+    """
+    agent = (result.get("config") or {}).get("agent") or {}
+    kwargs = agent.get("kwargs") or {}
+    # Codex also takes a whole native `config.toml` as `config`, and stands its
+    # own flag down when that file names a level: then the file is what ran.
+    native = kwargs.get("config")
+    native = native if isinstance(native, dict) else {}
+    for value in (
+        kwargs.get("reasoning_effort"),
+        native.get("model_reasoning_effort"),
+        # The env fallback Claude Code's adapter declares, for a run that sets
+        # the level that way rather than as a kwarg.
+        (agent.get("env") or {}).get("CLAUDE_CODE_EFFORT_LEVEL"),
+    ):
+        if value not in (None, ""):
+            return str(value)
+    return None
+
+
 def token_totals(result: dict[str, Any]) -> dict[str, Any]:
     """Same aggregation Harbor does: single-step on the trial, else per step."""
     contexts = []
@@ -705,6 +738,7 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
         "agent": agent_info.get("name"),
         "agent_version": agent_info.get("version"),
         "model": model,
+        "effort": effort_of(result),
         "attempt": attempt,
         "reward": reward_of(result),
         "steps": len(events),
@@ -762,6 +796,13 @@ def collect_job(job_dir: Path, trials_dir: Path,
 
     # Attempts are per (task, model): the id has to distinguish `-k 3` repeats of
     # the same pairing, and nothing in the trial name does that reliably.
+    #
+    # Per (task, model) and not per (task, model, effort), even though a job can
+    # now run one model at two levels: the id is `job|task|model|attempt`, so
+    # counting each level from 1 would give the two conditions the same ids and
+    # one would overwrite the other's trial file. Counting straight through the
+    # job keeps them apart. The cost is only that a level's trials can start at
+    # attempt 3, which is the honest number of that pairing's run in the job.
     seen: dict[tuple[str, str], int] = {}
     rows, details = [], []
     for trial_dir in trial_dirs:
@@ -828,6 +869,10 @@ def describe(benchmark_dir: Path) -> dict[str, Any] | None:
         "runs": len(runs),
         "trials": len(trials),
         "models": len({t.get("model") for t in trials}),
+        # Counted with the unstated level as one of them, so a benchmark that ran
+        # half its models at a named effort and half at the agent's default says
+        # two rather than one. The card mentions this only above one.
+        "efforts": len({t.get("effort") for t in trials}),
         "configs": len({configuration_of(run["job"]) for run in runs}),
         "tasks": len({t.get("task") for t in trials}),
         "solved": sum(1 for t in rewarded if (t.get("reward") or 0) >= 1),

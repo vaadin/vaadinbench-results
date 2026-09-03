@@ -94,7 +94,8 @@ function renderCrumb(config = configOf(trial.job)) {
     document.getElementById("crumb").innerHTML =
         `<a href="${leaderboardUrl()}">Leaderboard</a>
          <span class="crumb-sep" aria-hidden="true">›</span>
-         <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))}
+         <a href="${runUrl(trial.model, config, effortOf(trial))}">${
+            escapeHtml(shortModel(trial.model))}
             <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
 }
 
@@ -120,7 +121,7 @@ function renderWrongJob(wanted) {
         re-publishing that job separates them again.</div>
         <h2 class="title">${escapeHtml(shortTask(trial.task))} ·
             ${escapeHtml(shortModel(trial.model))}</h2>
-        <p class="empty"><a href="${runUrl(trial.model, config)}">Back to
+        <p class="empty"><a href="${runUrl(trial.model, config, effortOf(trial))}">Back to
             ${escapeHtml(shortModel(trial.model))} ·
             ${escapeHtml(config)}</a></p>`;
 }
@@ -131,6 +132,7 @@ function renderHeader() {
             ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="lede">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
+            ${trial.effort ? `· ${escapeHtml(trial.effort)} effort` : ""}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
         </p>
         ${metricsTable([

@@ -96,6 +96,61 @@ function configOf(job) {
     return String(job ?? "").replace(/-\d{8}-\d{6}$/, "") || "unknown";
 }
 
+// ------------------------------------------------------------------- effort
+
+// The effort level a run asked its agent to think at: Claude Code's `--effort`,
+// Codex's `model_reasoning_effort`. It is a third axis beside the model and the
+// configuration, and it belongs in the same place they do -- one model at two
+// levels is two conditions, and a row that averaged them would hide the only
+// thing being varied.
+//
+// `publish.py` records the level a run stated and nothing else, so a trial that
+// names none ran at whatever its agent defaults to. That is a real condition
+// too, and the one every trial published before this field existed was in, so it
+// is a value here rather than a gap in the data.
+const DEFAULT_EFFORT = "default";
+
+function effortOf(trial) {
+    return trial?.effort || DEFAULT_EFFORT;
+}
+
+// Ordinal, not alphabetical: `high` belongs above `medium` because it is more
+// effort, and sorted as text it would land under it. The levels are Harbor's own
+// (`--effort` takes exactly these); one it grows later sorts after them all
+// rather than being dropped, so a new level shows up as itself.
+const EFFORT_LEVELS = [DEFAULT_EFFORT, "low", "medium", "high", "xhigh", "max", "ultracode"];
+
+function effortRank(effort) {
+    const at = EFFORT_LEVELS.indexOf(effort);
+    return at === -1 ? EFFORT_LEVELS.length : at;
+}
+
+function sortedEfforts(trials) {
+    return [...new Set(trials.map(effortOf))]
+        .sort((a, b) => effortRank(a) - effortRank(b) || a.localeCompare(b));
+}
+
+// Whether a page has anything to say about effort: some run named a level, or
+// the runs differ from each other. With every trial at its agent's default there
+// is nothing to show and the pages say nothing -- which is every benchmark
+// published before the field existed, and they look exactly as they did.
+function showsEffort(trials) {
+    const efforts = sortedEfforts(trials);
+    return efforts.length > 1 || efforts[0] !== DEFAULT_EFFORT;
+}
+
+// Named beside a model rather than instead of it, and in neutral ink: colour is
+// spent on models and shape on configurations, so a third code would compete
+// with both and imply the three axes rank equally.
+//
+// The level alone is enough under the leaderboard's own Effort chips, which say
+// what kind of word it is. A page with no chips over it spells it out, because
+// "max" beside a model name could be anything.
+function effortTag(effort, spellOut = false) {
+    return `<span class="badge tag effort" title="Effort level">${
+        escapeHtml(effort)}${spellOut ? " effort" : ""}</span>`;
+}
+
 // Round to whole seconds first, then split. Rounding the remainder instead let
 // 719.6s print as `11m 60s`: the minutes were floored off the unrounded value
 // and the seconds rounded up to a full minute on their own.
@@ -147,8 +202,14 @@ function trialUrl(id, job) {
     return pageUrl("trial.html", job ? { id, job } : { id });
 }
 
-function runUrl(model, config) {
-    return pageUrl("run.html", { model, config });
+// The effort rides along, because a model and a configuration no longer name one
+// row: run at two levels they are two. The unstated level is left out of the
+// query string, the way the default benchmark is -- so every run link written
+// before there was an effort field still opens the trials it always opened.
+function runUrl(model, config, effort = DEFAULT_EFFORT) {
+    return pageUrl("run.html", effort && effort !== DEFAULT_EFFORT
+        ? { model, config, effort }
+        : { model, config });
 }
 
 function leaderboardUrl() {
