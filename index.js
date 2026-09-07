@@ -250,33 +250,32 @@ function niceTicks(max, target = 5) {
 }
 
 // Where the good corner is, drawn rather than left to the reader. Both edges
-// are ones the chart already shows: the 75% gridline, which is the score bar a
-// run has to clear to be worth using at all, and the middle of the x axis.
-// Neither is a median -- a median moves with every filter chip and, in a field
-// where half the models are nearly free, would shrink the good corner to a
-// sliver -- so a point's quadrant means the same thing from one view to the
-// next. Between the two bands is the trade-off, left unshaded because that is
-// exactly what it is and the chart should not pretend to price it.
-const QUADRANT = { good: 0.75, poor: 0.5 };
+// are ones the chart already shows: the 50% gridline, and the middle of the x
+// axis. Neither is a median -- a median moves with every filter chip and, in a
+// field where half the models are nearly free, would shrink the good corner to
+// a sliver -- so a point's quadrant means the same thing from one view to the
+// next. One line each way, so the two shaded corners meet and every point is
+// on one side of both: solving more than half the tasks for less than half the
+// axis, or the opposite of that, with the two trade-off corners left plain
+// because a trade-off is exactly what they are.
+const QUADRANT = { score: 0.5 };
 
 function renderQuadrants(metric, xMax, px, py, box) {
-    const x = px(xMax / 2);
-    const good = py(QUADRANT.good), poor = py(QUADRANT.poor);
+    const x = px(xMax / 2), y = py(QUADRANT.score);
     if (!(x > box.left + 1 && x < box.right - 1)) return { bands: "", legend: "", note: "" };
     const band = (kind, x1, y1, x2, y2) => `<rect class="band band-${kind}"
         x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"/>`;
     const half = metric.format(xMax / 2);
     return {
-        bands: band("good", box.left, box.top, x, good)
-            + band("poor", x, poor, box.right, box.bottom),
+        bands: band("good", box.left, box.top, x, y)
+            + band("poor", x, y, box.right, box.bottom),
         legend: `<div class="legend legend-bands">
             <span><i class="band-swatch band-good"></i>Most attractive quadrant</span>
             <span><i class="band-swatch band-poor"></i>Least attractive</span>
         </div>`,
-        note: `<p class="chart-note">Green: ${percent(QUADRANT.good)} of the tasks
-            solved or better, for under ${escapeHtml(half)} a trial. Grey: under
-            ${percent(QUADRANT.poor)} solved, for more than that. Between the two
-            is the trade-off.</p>`,
+        note: `<p class="chart-note">Green: more than ${percent(QUADRANT.score)} of the
+            tasks solved, for under ${escapeHtml(half)} a trial. Grey: less than that,
+            for more than that. The other two corners are the trade-off.</p>`,
     };
 }
 
