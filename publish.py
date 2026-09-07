@@ -9,7 +9,7 @@ cannot be JSON — the screenshot the verifier took of the finished application:
 
     data/index.json            one row per trial, for the leaderboard
     data/trials/<id>.json      one file per trial, for the drill-down
-    data/screenshots/<id>.png  what the agent's application looks like
+    data/screenshots/<id>-<digest>.png   what that application looks like
 
 Nothing here talks to a network or a database. The site is those files plus
 four static assets, which is why GitHub Pages can serve the whole thing.
@@ -29,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import re
 import shutil
@@ -521,11 +522,20 @@ def screenshot(trial_dir: Path, identifier: str, shots: Path) -> dict[str, Any]:
         data = b""
 
     if data and len(data) <= MAX_SCREENSHOT_BYTES and png_dimensions(data):
+        # The name carries a digest of the bytes, so a trial republished with a
+        # different picture is a different URL. Pages serves an image with
+        # `max-age=600` and no way to override it, and only `fetchJson` opts into
+        # revalidation -- so a stable name would show a reader the old picture
+        # beside the new JSON for ten minutes, which is the same trap the JSON
+        # itself was caught in. The id still leads, so the files sort per trial and
+        # a superseded copy is recognisable beside its replacement; `prune_shots`
+        # is what stops it outliving the publish.
+        digest = hashlib.sha256(data).hexdigest()[:12]
         shots.mkdir(parents=True, exist_ok=True)
-        (shots / f"{identifier}.png").write_bytes(data)
+        (shots / f"{identifier}-{digest}.png").write_bytes(data)
         width, height = png_dimensions(data)
         return {
-            "path": f"screenshots/{identifier}.png",
+            "path": f"screenshots/{identifier}-{digest}.png",
             "width": width,
             "height": height,
             "bytes": len(data),
@@ -928,6 +938,42 @@ def configuration_of(job: str) -> str:
     return re.sub(r"-\d{8}-\d{6}$", "", str(job)) or "unknown"
 
 
+def prune_shots(benchmark_dir: Path, index: dict[str, Any]) -> int:
+    """Delete the screenshots the index no longer points at.
+
+    Two things leave one behind. A publish without `--keep` rebuilds the index
+    from the jobs named on the command line, so a job that is no longer published
+    keeps its files while nothing links to them; and a trial republished with a
+    different picture writes a new name, since the name carries a digest of the
+    bytes. Neither is visible on the site and both are tracked binaries, which is
+    what makes them worth deleting rather than tolerating: at up to two megabytes
+    a trial, a few replacement publishes are a repository nobody wants to clone.
+
+    Driven by the index rather than by the mode, so it needs to know nothing about
+    `--keep`: what an index still names is kept, whichever publish put it there,
+    and a `--keep` publish therefore prunes only the superseded copies of the
+    trials it just rewrote.
+
+    Trial JSON has the same shape of orphan and is left alone. It predates this,
+    it is kilobytes rather than megabytes, and deleting a trial file is how a
+    bookmarked drill-down turns into a 404 -- an image nothing references cannot
+    be reached by a link at all.
+    """
+    shots = benchmark_dir / "screenshots"
+    if not shots.is_dir():
+        return 0
+    keep = {Path(trial["screenshot"]).name
+            for run in index.get("runs", [])
+            for trial in run.get("trials", [])
+            if trial.get("screenshot")}
+    removed = 0
+    for file in sorted(shots.glob("*.png")):
+        if file.name not in keep:
+            file.unlink()
+            removed += 1
+    return removed
+
+
 def write_registry() -> list[dict[str, Any]]:
     """Rebuild `benchmarks.json` from whatever folders are on disk.
 
@@ -1042,6 +1088,12 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "runs": sorted(runs.values(), key=lambda run: run["job"]),
     }
+    # After the index is final and before it is written: what it names is what is
+    # kept, so an interrupted run leaves files nothing points at rather than an
+    # index pointing at files that are gone.
+    orphans = prune_shots(benchmark_dir, index)
+    if orphans:
+        print(f"pruned {orphans} screenshot(s) the index no longer points at")
     index_path.write_text(json.dumps(index, ensure_ascii=False), encoding="utf-8")
     write_registry()
     print(f"\nwrote {args.benchmark}/{index_path.name} and "
