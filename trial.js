@@ -3,7 +3,8 @@
 const KIND_LABELS = {
     prompt: "Prompt", thinking: "Thinking", read: "Reads", search: "Searches",
     edit: "Edits", bash: "Bash", test: "Tests", agent: "Subagents",
-    plan: "Plans", message: "Messages", mixed: "Mixed", other: "Other",
+    mcp: "MCP calls", skill: "Skill calls", plan: "Plans",
+    message: "Messages", mixed: "Mixed", other: "Other",
 };
 
 // The filter reads as an outline rather than a row of chips: what the user said,
@@ -19,6 +20,8 @@ const EVENT_TREE = [
         children: [
             { label: "Reads", kinds: ["read"] },
             { label: "Searches", kinds: ["search"] },
+            { label: "MCP calls", kinds: ["mcp"] },
+            { label: "Skill calls", kinds: ["skill"] },
             { label: "Edits", kinds: ["edit"] },
             { label: "Bash", kinds: ["bash"] },
             { label: "Tests", kinds: ["test"] },
@@ -37,6 +40,18 @@ let activeFile = 0;
 const hiddenKinds = new Set();
 
 const TYPE_LABELS = { prompt: "Prompt", message: "Message", thinking: "Thought" };
+
+// Older published trials called both of these "other". Recognising their
+// stable names in the browser makes the new filters useful for existing data,
+// while publish.py writes the explicit kinds for everything published next.
+function callKind(call) {
+    if (call.kind && call.kind !== "other") return call.kind;
+    const name = (call.name ?? "").toLowerCase();
+    if (name === "skill") return "skill";
+    if (name.startsWith("mcp__")) return "mcp";
+    if (name === "exec" && (call.summary ?? "").startsWith("mcp__")) return "mcp";
+    return "other";
+}
 
 // One entry per thing that happened, not one per step. A step can hold a
 // message, the reasoning behind it and several tool calls at once; rendering
@@ -58,7 +73,7 @@ function buildTrace() {
             entries.push({ ...base, type: "thinking", text: event.reasoning });
         }
         for (const call of event.calls ?? []) {
-            entries.push({ ...base, type: call.kind ?? "other", call });
+            entries.push({ ...base, type: callKind(call), call });
         }
     }
     return entries;
@@ -75,6 +90,8 @@ const TYPE_ICONS = {
     bash: '<path d="M2.6 3.4h10.8v9.2H2.6z"/><path d="M4.9 7.1l1.6 1.5-1.6 1.5M8.4 10.1h2.8"/>',
     test: '<path d="M2.9 8.3l3.3 3.3 6.9-7"/>',
     agent: '<circle cx="5.7" cy="6.1" r="2.3"/><circle cx="10.4" cy="9.5" r="2.3"/>',
+    mcp: '<circle cx="3.4" cy="8" r="1.7"/><circle cx="12.6" cy="4" r="1.7"/><circle cx="12.6" cy="12" r="1.7"/><path d="M5.1 7.3l5.8-2.5M5.1 8.7l5.8 2.5"/>',
+    skill: '<path d="M8 2.1l1.2 3.3 3.3 1.2-3.3 1.2L8 11.1 6.8 7.8 3.5 6.6l3.3-1.2z"/><path d="M12.4 10.3l.5 1.4 1.4.5-1.4.5-.5 1.4-.5-1.4-1.4-.5 1.4-.5z"/>',
     plan: '<path d="M3.2 4.4h9.6M3.2 8h9.6M3.2 11.6h6.4"/>',
     other: '<circle cx="8" cy="8" r="4.2"/>',
 };
