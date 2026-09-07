@@ -4,10 +4,12 @@
     ./publish.py ../vaadin-bench/jobs/new-project-3models
     ./publish.py ../vaadin-bench/jobs/*            # every job in one go
 
-Reads only what Harbor already writes, and writes only JSON:
+Reads only what Harbor already writes, and writes JSON and the one thing that
+cannot be JSON — the screenshot the verifier took of the finished application:
 
-    data/index.json          one row per trial, for the leaderboard
-    data/trials/<id>.json    one file per trial, for the drill-down
+    data/index.json            one row per trial, for the leaderboard
+    data/trials/<id>.json      one file per trial, for the drill-down
+    data/screenshots/<id>.png  what the agent's application looks like
 
 Nothing here talks to a network or a database. The site is those files plus
 four static assets, which is why GitHub Pages can serve the whole thing.
@@ -30,6 +32,7 @@ import base64
 import json
 import re
 import shutil
+import struct
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -63,6 +66,16 @@ MAX_PATCH = 400_000
 # Vaadin build. The end is the part that says what happened, so this bounds a
 # tail rather than a head.
 MAX_VERIFIER_LOG = 40_000
+
+# The screenshot is the one published file that is not text, and the only thing
+# here that grows the repository by megabytes rather than kilobytes. A viewport
+# shot of a Vaadin view is well under a hundred kilobytes; a cap an order of
+# magnitude above that admits every real one and refuses whatever a bug or a
+# full-page capture would otherwise commit forever.
+MAX_SCREENSHOT_BYTES = 2_000_000
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+# Only read when there is no image, where it is the only thing that says why.
+MAX_SCREENSHOT_LOG = 4_000
 
 
 # --------------------------------------------------------------------------- io
@@ -467,6 +480,65 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
     }
 
 
+# ----------------------------------------------------------------- screenshot
+
+
+def png_dimensions(data: bytes) -> tuple[int, int] | None:
+    """The width and height in a PNG's header, or none if that is not what this is.
+
+    The first chunk of a PNG is always IHDR, and its first eight bytes are the
+    two dimensions. Reading them is what lets the page name the resolution it is
+    showing rather than asserting the one the verifier was asked for -- a shot
+    taken at a size the task overrode should say so.
+    """
+    if len(data) < 24 or not data.startswith(PNG_SIGNATURE) or data[12:16] != b"IHDR":
+        return None
+    width, height = struct.unpack(">II", data[16:24])
+    return (width, height) if width and height else None
+
+
+def screenshot(trial_dir: Path, identifier: str, shots: Path) -> dict[str, Any]:
+    """The finished application, as the verifier photographed it after grading.
+
+    The only published file that is not text, so it is the only one copied rather
+    than embedded: a base64 PNG inside the trial JSON would be carried by every
+    reader who opened the trajectory and never looked at the picture. It lands
+    beside the trials under `screenshots/<trial id>.png`, on the same id, so a
+    republish overwrites it exactly as it overwrites the trial file.
+
+    Refused rather than trusted. The verifier writes it, but this is the step that
+    puts bytes on a public page under a name that says PNG, so what is not a PNG
+    is not published, and neither is one large enough to have been a mistake.
+
+    A trial with no image is an ordinary outcome -- the application never rendered,
+    or the run predates the capture -- and the log tail is then the only thing that
+    says which, so it is published in the picture's place and nowhere else.
+    """
+    source = trial_dir / "verifier" / "screenshot.png"
+    try:
+        data = source.read_bytes()
+    except OSError:
+        data = b""
+
+    if data and len(data) <= MAX_SCREENSHOT_BYTES and png_dimensions(data):
+        shots.mkdir(parents=True, exist_ok=True)
+        (shots / f"{identifier}.png").write_bytes(data)
+        width, height = png_dimensions(data)
+        return {
+            "path": f"screenshots/{identifier}.png",
+            "width": width,
+            "height": height,
+            "bytes": len(data),
+        }
+
+    if data:
+        print(f"  not published as a screenshot: {source} "
+              f"({len(data)} bytes, {'not a PNG' if not png_dimensions(data) else 'too large'})",
+              file=sys.stderr)
+    log, _ = tail_text(trial_dir / "verifier" / "screenshot.log", MAX_SCREENSHOT_LOG)
+    return {"path": None, "log": log}
+
+
 # -------------------------------------------------------------- reconstruction
 
 # TEMPORARY, and meant to be deleted. Since the tasks repo split the agent and
@@ -681,7 +753,7 @@ def seconds_between(timing: dict[str, Any] | None) -> float | None:
     return round((b - a).total_seconds(), 1)
 
 
-def collect_trial(trial_dir: Path, job: str, attempt: int,
+def collect_trial(trial_dir: Path, job: str, attempt: int, shots: Path,
                   baselines: Baselines | None = None) -> tuple[dict, dict] | None:
     result = read_json(trial_dir / "result.json")
     if not isinstance(result, dict):
@@ -697,6 +769,7 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
     events, instruction = build_trajectory(trajectory)
     totals = token_totals(result)
     identifier = trial_id(job, task, model, attempt)
+    shot = screenshot(trial_dir, identifier, shots)
 
     row = {
         "id": identifier,
@@ -711,6 +784,10 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
         "duration_s": seconds_between(result.get("agent_execution")),
         "verify_s": seconds_between(result.get("verifier")),
         "error": (result.get("exception_info") or {}).get("exception_type"),
+        # The path only, and only when there is one: the leaderboard reads this
+        # index too, and a run page showing ten thumbnails needs nothing more than
+        # where they are.
+        "screenshot": shot["path"],
         **totals,
     }
 
@@ -739,6 +816,9 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
         "trajectory": events,
         "changes": changes,
         "verifier": verifier_summary(trial_dir),
+        # The whole of it -- the resolution it was taken at, and the log tail when
+        # there is no picture to show. `row` carries the path alone.
+        "screenshot": shot,
     }
     return row, detail
 
@@ -751,7 +831,7 @@ def shortest_task(task: str) -> str:
     return str(task).split("/")[-1]
 
 
-def collect_job(job_dir: Path, trials_dir: Path,
+def collect_job(job_dir: Path, trials_dir: Path, shots_dir: Path,
                 baselines: Baselines | None = None) -> dict[str, Any]:
     job = job_dir.name
     synthetic = (job_dir / "SYNTHETIC").exists()
@@ -773,7 +853,7 @@ def collect_job(job_dir: Path, trials_dir: Path,
             "/".join(p for p in (model_info.get("provider"), model_info.get("name")) if p),
         )
         seen[key] = seen.get(key, 0) + 1
-        collected = collect_trial(trial_dir, job, seen[key], baselines)
+        collected = collect_trial(trial_dir, job, seen[key], shots_dir, baselines)
         if collected is None:
             print(f"  skipped {trial_dir.name}: no readable result.json", file=sys.stderr)
             continue
@@ -782,6 +862,13 @@ def collect_job(job_dir: Path, trials_dir: Path,
         detail["synthetic"] = synthetic
         rows.append(row)
         details.append(detail)
+
+    # One trial without a picture is an application that never rendered; every
+    # trial without one is a run from before the verifier took them, and saying
+    # which is the difference between a blank tab and a blank tab that is expected.
+    unshot = sum(1 for d in details if not d["screenshot"]["path"])
+    if unshot:
+        print(f"  no screenshot for {unshot}/{len(details)} trials", file=sys.stderr)
 
     unpatched = sum(1 for d in details if d["changes"]["patch"] is None)
     rebuilt = sum(1 for d in details if d["changes"].get("reconstructed"))
@@ -937,7 +1024,8 @@ def main() -> int:
             print(f"not a directory: {job_dir}", file=sys.stderr)
             return 1
         print(f"{job_dir.name}")
-        run = collect_job(job_dir, benchmark_dir / "trials", baselines)
+        run = collect_job(job_dir, benchmark_dir / "trials",
+                          benchmark_dir / "screenshots", baselines)
         if not run["trials"]:
             print("  no trials found", file=sys.stderr)
             continue

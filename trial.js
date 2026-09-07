@@ -147,6 +147,7 @@ function renderHeader() {
 function renderTabs() {
     const tabs = [
         ["trajectory", `Trajectory (${trace.length})`],
+        ["screenshot", "Screenshot"],
         ["changes", "Changes"],
         ["verifier", "Verifier"],
         ["instruction", "Instruction"],
@@ -466,6 +467,38 @@ function renderVerifier() {
     return ungraded + failures + suites + structure + log;
 }
 
+// The one view of a trial that is not text: the application the agent built, as
+// the verifier photographed it after grading. A reward says whether the behaviour
+// was right; this is the only place that says what it looked like.
+//
+// Shown at its own aspect ratio rather than stretched, and linked at full size,
+// because a 1280x800 shot scaled into the column is legible as a layout and not
+// as text.
+function renderScreenshot() {
+    const shot = trial.screenshot ?? {};
+    if (!shot.path) {
+        // Two different absences, and the log is what tells them apart: a run from
+        // before the verifier took screenshots carries none, while an application
+        // that would not start carries the reason it did not.
+        const log = shot.log
+            ? `<h2>What the verifier tried</h2><pre class="wrapped">${escapeHtml(shot.log)}</pre>`
+            : "";
+        return `<p class="empty">No screenshot was published for this trial. Either
+            the application never rendered, or the run is older than the
+            verifier's screenshots.</p>${log}`;
+    }
+    const url = dataUrl(shot.path);
+    const size = shot.width && shot.height ? `${shot.width} × ${shot.height}` : "";
+    return `<figure class="shot">
+        <a href="${url}" target="_blank" rel="noopener">
+            <img src="${url}" alt="The application this trial produced, in a browser"
+                 ${shot.width ? `width="${shot.width}" height="${shot.height}"` : ""}>
+        </a>
+        <figcaption>The finished application in Chromium${size ? `, at ${size}` : ""}.
+            <a href="${url}" target="_blank" rel="noopener">Open full size</a></figcaption>
+    </figure>`;
+}
+
 function renderInstruction() {
     return trial.instruction
         ? `<div class="md card">${renderMarkdown(trial.instruction)}</div>`
@@ -482,6 +515,7 @@ function render() {
     }
     const views = {
         trajectory: renderTrajectory,
+        screenshot: renderScreenshot,
         changes: renderChanges,
         verifier: renderVerifier,
         instruction: renderInstruction,

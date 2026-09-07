@@ -17,6 +17,7 @@ data/benchmarks.json                 the registry the list page reads
 data/default/                        the benchmark the site opens on
 data/<slug>/index.json                   one row per trial
 data/<slug>/trials/<id>.json             one file per trial
+data/<slug>/screenshots/<id>.png         what that trial's application looks like
 data/<slug>/benchmark.json               what it is called
 ```
 
@@ -76,12 +77,26 @@ goes out today, per trial:
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
 | The verifier's console output, last 40 KB | `verifier/test-stdout.txt` |
 | Generated-project report | `verifier/structure.txt` |
+| The finished application, photographed after grading | `verifier/screenshot.png` |
 | Diffstat and patch, when a run has them | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
 
 Harbor collects a container's `/logs` verbatim, so everything a task writes to
 `/logs/artifacts` sits at `artifacts/logs/artifacts/` and everything the verifier
 writes to `/logs/verifier` sits at `verifier/` — the paths above are the real
 ones, and reading the shallower `artifacts/` finds nothing.
+
+The screenshot is the one published file that is not text, so it is the one
+copied rather than embedded: a base64 PNG inside the trial file would be carried
+by every reader who opened the trajectory and never looked at the picture. It
+goes to `screenshots/<trial id>.png`, on the same id as the trial file, so a
+republish overwrites it the same way. It is also refused rather than trusted —
+what is not a PNG, or is over two megabytes, is not published at all — because
+this is the step that puts bytes on a public page under a name that says PNG.
+
+A trial with no picture is an ordinary outcome: the application never rendered,
+or the run is older than the verifier's screenshots. The Screenshot tab says so,
+and publishes the tail of `verifier/screenshot.log` in the picture's place, which
+is the only thing that says which of the two it was.
 
 The last row is conditional, and the next section is why.
 
@@ -144,8 +159,8 @@ wrote:
 
 ```text
 index.html          leaderboard: one row per model and configuration, plus a chart
-run.html            one configuration: its trials
-trial.html          one trial: trajectory, changes, verifier, instruction
+run.html            one configuration: its trials, each with its screenshot
+trial.html          one trial: trajectory, screenshot, changes, verifier, instruction
 benchmarks.html     every published benchmark, one card each
 ```
 

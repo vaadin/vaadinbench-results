@@ -17,6 +17,8 @@ from __future__ import annotations
 
 import json
 import shutil
+import struct
+import zlib
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from uuid import uuid4
@@ -227,6 +229,66 @@ def verifier_log(structure: str, *, graded: bool, reward: int) -> str:
     )
 
 
+# --------------------------------------------------------------- screenshot
+
+# The resolution the verifier photographs at. Written down here so the fixture
+# exercises the same aspect ratio the site will really have to lay out.
+SHOT_WIDTH, SHOT_HEIGHT = 1280, 800
+
+
+def png(width: int, height: int, paint) -> bytes:
+    """A PNG of solid rectangles, with no image library in the way.
+
+    Nothing here draws anything a real screenshot would contain; what it has to
+    get right is the file: a real PNG, at the real resolution, so publish.py's
+    refusal of anything that is not one is exercised by data that passes it, and
+    the site lays out a picture of the shape it will really be handed.
+
+    `paint(x, y)` returns the RGB of one pixel, and is called per pixel across
+    fewer than a megapixel — slow enough to notice and fast enough not to matter
+    for a fixture that is written once.
+    """
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)  # filter type 0: this row stands on its own
+        for x in range(width):
+            rows.extend(paint(x, y))
+
+    def chunk(kind: bytes, payload: bytes) -> bytes:
+        return (struct.pack(">I", len(payload)) + kind + payload
+                + struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF))
+
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header)
+            + chunk(b"IDAT", zlib.compress(bytes(rows), 6)) + chunk(b"IEND", b""))
+
+
+def application_screenshot(*, solved: bool) -> bytes:
+    """A stand-in for what the verifier photographs: an app shell and a view.
+
+    Two shapes, because the site shows two: an application that rendered, and one
+    that got as far as a blank page. Neither is a picture of anything real, which
+    is the same promise the SYNTHETIC flag makes about every number beside it.
+    """
+    navbar, drawer = (18, 25, 38), (243, 244, 247)
+    accent = (28, 100, 242) if solved else (200, 202, 208)
+
+    def paint(x: int, y: int) -> tuple[int, int, int]:
+        if y < 56:
+            return navbar
+        if x < 240:
+            return drawer
+        if solved and 96 < y < 132 and 280 < x < 700:
+            return accent          # the view's heading
+        if solved and 170 < y < 640 and 280 < x < 1200:
+            # Banded rows, for something a scaled-down thumbnail can still read as
+            # a list rather than as an empty rectangle.
+            return (249, 250, 252) if (y // 44) % 2 else (255, 255, 255)
+        return (255, 255, 255)
+
+    return png(SHOT_WIDTH, SHOT_HEIGHT, paint)
+
+
 def write_trial(
     name: str,
     model: str,
@@ -312,6 +374,25 @@ def write_trial(
     (trial_dir / "verifier" / "test-stdout.txt").write_text(
         verifier_log(structure, graded=graded, reward=reward), encoding="utf-8"
     )
+
+    # The screenshot the verifier takes after grading -- except for the trial that
+    # never compiled, which is exactly the trial whose application could not be
+    # started either. That one carries the log instead, which is the case the
+    # Screenshot tab has to render without a picture.
+    if graded:
+        (trial_dir / "verifier" / "screenshot.png").write_bytes(
+            application_screenshot(solved=bool(reward))
+        )
+    else:
+        (trial_dir / "verifier" / "screenshot.log").write_text(
+            "[INFO] Scanning for projects...\n"
+            "[ERROR] Failed to execute goal "
+            "org.apache.maven.plugins:maven-surefire-plugin:test: "
+            "there are test failures\n"
+            "[ERROR] ApplicationScreenshotTest.photographTheApplication: "
+            "No @SpringBootApplication class under /app/target/classes\n",
+            encoding="utf-8",
+        )
 
     (trial_dir / "artifacts" / "logs" / "artifacts" / "agent-diff-stat.txt").write_text(
         " src/main/java/com/example/ui/ItemsView.java  | 58 ++++++++++\n"
