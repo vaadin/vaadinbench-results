@@ -38,7 +38,7 @@ A run happens on the machine with Docker and the model credentials. This repo
 turns its output into the site:
 
 ```bash
-./publish.py --baselines ../vaadin-bench/tasks ../vaadin-bench/jobs/new-project-3models
+./publish.py ../vaadinbench/jobs/new-project-3models
 git add data && git commit -m "Publish new-project-3models" && git push
 ```
 
@@ -47,7 +47,7 @@ names the benchmark the first time it is published:
 
 ```bash
 ./publish.py --benchmark mcp-servers --name "MCP servers, head to head" \
-    --baselines ../vaadin-bench/tasks ../vaadin-bench/jobs/mcp-*
+    ../vaadinbench/jobs/mcp-*
 ```
 
 The name and description stick: later publishes into the same benchmark keep
@@ -57,9 +57,10 @@ The push *is* the deploy: GitHub Pages serves `main` from the repository root,
 so there is no workflow and nothing to build. Pass several job directories at
 once, or `--keep` to add a run without republishing the ones already there.
 
-`--baselines` is temporary and is explained under [Rebuilt diffs](#rebuilt-diffs).
-Without it a run from after the container split publishes with an empty Changes
-tab.
+`publish.py` reads nothing but the job directories it is given: no checkout of
+the tasks repository, and no flag that wants one. The `--baselines` flag that did
+is gone, along with what it was for — see
+[Older rebuilt diffs](#older-rebuilt-diffs).
 
 ## What gets published
 
@@ -76,52 +77,40 @@ goes out today, per trial:
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
 | The verifier's console output, last 40 KB | `verifier/test-stdout.txt` |
 | Generated-project report | `verifier/structure.txt` |
-| Diffstat and patch, when a run has them | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
+| Diffstat and patch of what the agent changed | `verifier/agent-diff-stat.txt`, `verifier/agent.patch` |
 
-Harbor collects a container's `/logs` verbatim, so everything a task writes to
-`/logs/artifacts` sits at `artifacts/logs/artifacts/` and everything the verifier
-writes to `/logs/verifier` sits at `verifier/` — the paths above are the real
-ones, and reading the shallower `artifacts/` finds nothing.
+Harbor collects a container's `/logs` verbatim, so everything a container writes
+to `/logs/artifacts` sits at `artifacts/logs/artifacts/` and everything the
+verifier writes to `/logs/verifier` sits at `verifier/` — the paths above are the
+real ones, and reading the shallower `artifacts/` finds nothing.
 
-The last row is conditional, and the next section is why.
+The diff is the verifier's, cut from the tree it is about to grade against the
+baseline its own image ships, before it restores anything of its own
+(`vaadinbench#28`). An empty patch is an answer — the agent changed nothing —
+and it is not the same as no patch at all, which is a diff a run never recorded;
+the trial page says which, and `publish.py` prints a count per job when trials
+arrive without one. Runs older than the container split cut the diff in the
+agent's own container, so the last row is read from `artifacts/logs/artifacts/`
+for those — whichever directory holds the patch supplies the diffstat with it,
+since a new patch beside an old diffstat would describe a different tree.
 
-### Rebuilt diffs
+### Older rebuilt diffs
 
-Since the tasks repo split the agent and verifier into separate containers,
-nothing writes `agent.patch`: the verifier imports the finished `/app` rather
-than diffing it. Runs from before the split have their patches and keep them;
-runs from after arrive with none, and the whole Changes tab goes blank —
-`vaadinbench#27` is the fix, and `#7` is the issue that deletes what this
-section describes once that lands.
+For the runs made between the container split and `vaadinbench#28`, nothing
+recorded a diff at all: the verifier imported the finished `/app` rather than
+diffing it, and 162 published trials arrived with an empty Changes tab. Those
+were filled in at publish time from what a run *does* carry — `artifacts/app`,
+the agent's finished project, against the tree the task's environment starts the
+agent from, read out of a checkout of the tasks repository.
 
-Until then, `--baselines` rebuilds the diff from what a run *does* still carry:
-`artifacts/app`, the agent's finished project. It is compared against the tree
-the task's environment starts the agent from, read from the task's own
-Dockerfile:
-
-| Task | Baseline |
-| --- | --- |
-| `flow-grid-filtering` | `environment/app/`, copied into the image verbatim |
-| `flow-new-view` | the upstream project at the pinned `BASE_SHA`, plus `pom-additions.patch` — cloned once into `.baselines/` |
-| `flow-new-project` | an empty directory, by design: creating the project is the task |
-
-Three things to know before trusting one.
-
-It **fails closed**. Each of those shapes is recognised explicitly, and a task
-whose environment does not match one produces no diff rather than a wrong one. A
-diff against the wrong baseline is worse than an empty tab, because it reads as
-a measurement — which is also why it is only correct while the tasks checkout
-sits at the commit the run used.
-
-It is **not complete**. Harbor's capture of `/app` holds no dotfiles, so
-`.classpath`, `.settings/` and anything else beginning with a dot is outside it.
-They come off the baseline side too, or every trial would appear to have deleted
-them; the cost is that a dotfile the agent really wrote is not in the diff.
-
-It is **never preferred**. A patch a task wrote is the measurement and is used
-whenever there is one. Only a trial with none gets a rebuilt diff, and the trial
-page names the baseline it was rebuilt against rather than letting it pass for a
-captured one.
+That reconstruction is gone: a run records its own diff again, so `publish.py`
+copies one and builds none. What remains is on the site. 261 published trials
+carry a rebuilt diff, and the trial page still names the baseline each was
+rebuilt against rather than letting it pass for a recorded one — a rebuilt diff
+is a comparison against a baseline, not the record of what the agent wrote, and
+Harbor's capture of `/app` drops dotfiles, so a dotfile the agent really wrote
+is outside it. The label goes when those runs are re-run, not before:
+republishing them is not enough, because the diff has to come from the verifier.
 
 `test-stdout.txt` is the verifier script's own stdout and stderr, and it is the
 only place that says *why* a trial scored what it did: a reward of 0 with no
@@ -204,9 +193,16 @@ Harbor's own pydantic models, so it validates against the same schemas a real ru
 produces — and it needs Harbor, which the tasks repo already has installed:
 
 ```bash
-../vaadin-bench/.venv/bin/python fixtures/make_fixture.py
+../vaadinbench/.venv/bin/python fixtures/make_fixture.py
 ./publish.py --benchmark scratch --name Scratch fixtures/jobs/example-3models
 ```
+
+The job it writes puts every file where Harbor really leaves it, nesting and
+all: a fixture that flattens `artifacts/logs/artifacts/` lets `publish.py` read a
+path that exists in no real job, which is how a whole run of empty patches once
+went unnoticed. Its trials record the diff in `verifier/` where the verifier
+writes it, except the ungraded one, which carries it the way a run from before
+`vaadinbench#28` did — so publishing the fixture reads both places.
 
 Into its own benchmark, not over `default`: publishing without `--benchmark`
 replaces the front page with the fixture.

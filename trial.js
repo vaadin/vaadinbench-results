@@ -343,11 +343,15 @@ function fileStat(file) {
         ${file.removed ? `<span class="stat-del">−${file.removed}</span>` : ""}`;
 }
 
-// A diff the run did not carry, rebuilt by publish.py from the finished tree it
-// did. Saying so is the whole point: it is a comparison against the baseline the
-// task starts the agent from, not the record of what the agent wrote, and the
-// dotfiles Harbor's capture drops are outside it. Named rather than implied, so
-// nobody reads a rebuilt patch as a captured one.
+// A diff the run did not carry, rebuilt at publish time from the finished tree
+// it did. Nothing builds one any more -- the verifier records the diff again, so
+// publish.py only ever copies what a run recorded -- but 261 trials published
+// while it did not are still on the site, and their diffs are still rebuilt
+// ones. Saying so is the whole point: a rebuilt diff is a comparison against the
+// baseline the task starts the agent from, not the record of what the agent
+// wrote, and the dotfiles Harbor's capture drops are outside it. This goes when
+// those trials are re-run, not before: dropping it would let a rebuilt patch
+// pass for a captured one.
 function reconstructedNote(changes) {
     if (!changes.reconstructed) return "";
     return `<p class="rebuilt">Rebuilt from the agent's finished project against
@@ -358,8 +362,15 @@ function reconstructedNote(changes) {
 
 function renderChanges() {
     const changes = trial.changes ?? {};
+    // An empty patch and a missing one are different answers, and a run that
+    // records its diff distinguishes them: `""` is a diff that was taken and
+    // found nothing, `null` a diff that was never taken. Trials published
+    // before the verifier recorded one again carry `null` for both, so that
+    // case keeps the wording that does not choose between them.
     if (!changes.patch && !changes.diffstat) {
-        return `<p class="empty">The agent changed nothing, or no patch was captured.</p>`;
+        return `<p class="empty">${changes.patch === ""
+            ? "The agent changed nothing: the diff was recorded and is empty."
+            : "The agent changed nothing, or no patch was recorded."}</p>`;
     }
     const note = reconstructedNote(changes);
     const truncated = changes.patch_truncated
