@@ -235,6 +235,11 @@ function renderChartHead(metric) {
     </div>`;
 }
 
+const last = (values) => values[values.length - 1];
+
+// A pair with nothing graded has no score, so it is a row but not a point.
+const plottable = (rows) => rows.filter((row) => row.rate !== null);
+
 // Round tick steps, so the cost axis reads $0.50 rather than $0.4267.
 function niceTicks(max, target = 5) {
     if (!(max > 0)) return [0, 1];
@@ -249,52 +254,67 @@ function niceTicks(max, target = 5) {
     return ticks;
 }
 
-// Where the good corner is, drawn rather than left to the reader. Both edges
-// are ones the chart already shows: the 50% gridline, and the middle of the x
-// axis. Neither is a median -- a median moves with every filter chip and, in a
-// field where half the models are nearly free, would shrink the good corner to
-// a sliver -- so a point's quadrant means the same thing from one view to the
-// next. One line each way, so the two shaded corners meet and every point is
-// on one side of both: solving more than half the tasks for less than half the
-// axis, or the opposite of that, with the two trade-off corners left plain
-// because a trade-off is exactly what they are.
+// Where the good corner is, drawn rather than left to the reader. One line
+// each way, so the two shaded corners meet and every point is on one side of
+// both: solving more than half the graded trials for less than half of what the
+// heaviest run in the benchmark spends, or the opposite of that, with the two
+// trade-off corners left plain because a trade-off is exactly what they are.
+// Neither line is a median: a median in a field where half the models are
+// nearly free would shrink the good corner to a sliver.
+//
+// The x line is half of the *whole* field, not half of what is on screen,
+// so hiding an unrelated model cannot move a result from one quadrant to the
+// other -- which is the point of shading them at all. That does mean a filter
+// can leave the line off the right of a rescaled axis; there it is clamped to
+// the edge, which is the truth of that view: everything still shown is on the
+// cheap side of it.
 const QUADRANT = { score: 0.5 };
 
-function renderQuadrants(metric, xMax, px, py, box) {
-    const x = px(xMax / 2), y = py(QUADRANT.score);
-    if (!(x > box.left + 1 && x < box.right - 1)) return { bands: "", legend: "", note: "" };
+function renderQuadrants(metric, xCut, px, py, box) {
+    const x = Math.min(px(xCut), box.right), y = py(QUADRANT.score);
+    if (!(x > box.left + 1)) return { bands: "", legend: "", note: "" };
     const band = (kind, x1, y1, x2, y2) => `<rect class="band band-${kind}"
         x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"/>`;
-    const half = metric.format(xMax / 2);
+    // With the line off the right edge, nothing on screen is on the dear side
+    // of it: there is no unattractive corner, so neither the band nor its
+    // legend entry claims one.
+    const poor = x < box.right - 1;
+    const swatch = (kind, label) =>
+        `<span><i class="band-swatch band-${kind}"></i>${label}</span>`;
     return {
         bands: band("good", box.left, box.top, x, y)
-            + band("poor", x, y, box.right, box.bottom),
+            + (poor ? band("poor", x, y, box.right, box.bottom) : ""),
         legend: `<div class="legend legend-bands">
-            <span><i class="band-swatch band-good"></i>Most attractive quadrant</span>
-            <span><i class="band-swatch band-poor"></i>Least attractive</span>
+            ${swatch("good", "Most attractive quadrant")}
+            ${poor ? swatch("poor", "Least attractive") : ""}
         </div>`,
         note: `<p class="chart-note">Green: more than ${percent(QUADRANT.score)} of the
-            tasks solved, for under ${escapeHtml(half)} a trial. Grey: less than that,
-            for more than that. The other two corners are the trade-off.</p>`,
+            graded trials solved, for under ${escapeHtml(metric.format(xCut))} a trial.${
+            poor ? ` Grey: less than that, for more than that. The other two corners
+            are the trade-off.` : " Nothing left on screen is above that."}</p>`,
     };
 }
 
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
-function renderChart(rows, hues, shapes, configHues) {
+function renderChart(rows, hues, shapes, configHues, field) {
     const metric = METRICS[state.x] ?? METRICS.cost;
     const head = renderChartHead(metric);
-    const points = rows.filter((row) => row.rate !== null);
+    const points = plottable(rows);
     if (!points.length) return `${head}<p class="empty">Nothing to plot.</p>`;
 
     const W = 900, H = 380, L = 52, R = 28, T = 34, B = 44;
     const plotW = W - L - R, plotH = H - T - B;
     const xTicks = niceTicks(Math.max(...points.map(metric.value)));
-    const xMax = xTicks[xTicks.length - 1];
+    const xMax = last(xTicks);
     const px = (value) => L + (xMax ? (value / xMax) * plotW : 0);
     const py = (rate) => T + plotH - rate * plotH;
 
-    const bands = renderQuadrants(metric, xMax, px, py,
+    // Half of the whole field's axis, which is the visible one only when
+    // nothing is filtered out. niceTicks() twice over so a filtered view keeps
+    // the round number the unfiltered one showed.
+    const xCut = last(niceTicks(Math.max(...field.map(metric.value)))) / 2;
+    const bands = renderQuadrants(metric, xCut, px, py,
         { left: L, right: W - R, top: T, bottom: T + plotH });
 
     const grid = [0, 25, 50, 75, 100].map((value) => `<line class="gridline"
@@ -366,7 +386,10 @@ function render() {
         renderTabs(),
         renderFilters(hues, configHues, shapes),
         state.tab === "chart"
-            ? renderChart(rows, hues, shapes, configHues)
+            // The chart is drawn from the filtered rows but shades its quadrants
+            // against the whole field, so the same result keeps the same verdict
+            // however the chips are set.
+            ? renderChart(rows, hues, shapes, configHues, plottable(summarize(trials)))
             : renderLeaderboard(rows, hues, configHues, shapes),
     ].join("");
     const content = document.getElementById("content");
