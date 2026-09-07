@@ -27,12 +27,23 @@ function renderHeader(rows) {
         <h2>Trials</h2>`;
 }
 
+// What each trial built, at the size of a row. The picture is the fastest way to
+// tell three attempts apart -- two that pass can still look nothing alike -- and
+// it opens the trial the same way every other cell in the row does. Loaded
+// lazily, since a run of thirty trials is thirty screenshots.
+function thumbnail(trial) {
+    if (!trial.screenshot) return `<span class="shot-none" aria-hidden="true"></span>`;
+    return `<img class="shot-thumb" loading="lazy" src="${dataUrl(trial.screenshot)}"
+        alt="What ${escapeHtml(shortTask(trial.task))} looked like in this trial">`;
+}
+
 function renderTrials(rows) {
     const body = [...rows]
         .sort((a, b) => a.task.localeCompare(b.task)
             || a.job.localeCompare(b.job)
             || a.attempt - b.attempt)
         .map((trial) => `<tr class="pick" data-href="${trialUrl(trial.id, trial.job)}">
+            <td class="shot-cell">${thumbnail(trial)}</td>
             <td class="name"><a href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
                 <span class="sub">${escapeHtml(trial.job)}</span></td>
             <td class="num">${trial.attempt}</td>
@@ -45,6 +56,7 @@ function renderTrials(rows) {
 
     return `<div class="wrap"><table>
         <thead><tr>
+            <th><span class="sr-only">Screenshot</span></th>
             <th>Task</th><th class="num">Attempt</th><th>Outcome</th>
             <th class="num">Time</th><th class="num">Steps</th>
             <th class="num">Out. tokens</th><th class="num">Cost</th>

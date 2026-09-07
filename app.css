@@ -772,3 +772,39 @@ footer {
     border-top: 1px solid var(--hairline);
     color: var(--faint); font-size: .8rem;
 }
+
+/* --- Screenshots -----------------------------------------------------------
+   The one thing on the site that is not text: what the agent's application
+   actually looks like. It carries its own frame rather than sitting on the page
+   bare, because a screenshot of a white app on a white page has no edges. */
+.shot { margin: 0; }
+.shot img {
+    display: block; width: 100%; height: auto; max-width: 100%;
+    border: 1px solid var(--card-border);
+    border-radius: var(--radius-l);
+    box-shadow: var(--shadow-xs);
+    background: #fff; /* the browser's own canvas, not the page's theme */
+}
+.shot figcaption {
+    margin-top: .6rem; color: var(--faint); font-size: .8rem;
+}
+
+/* A row's thumbnail on the run page. Fixed width so the column does not move
+   between rows, cropped from the top so what shows is the part of a view that
+   distinguishes it, and never the target of a click of its own -- the whole row
+   already opens the trial. */
+.shot-cell { width: 132px; padding-right: 0; }
+.shot-thumb, .shot-none {
+    display: block; width: 116px; height: 72px;
+    border: 1px solid var(--card-border); border-radius: var(--radius-s);
+    background: var(--container);
+    object-fit: cover; object-position: top left;
+    pointer-events: none;
+}
+.shot-none { border-style: dashed; }
+
+/* A heading a screen reader needs and the layout does not. */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; overflow: hidden;
+    clip-path: inset(50%); white-space: nowrap;
+}
