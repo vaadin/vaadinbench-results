@@ -249,6 +249,37 @@ function niceTicks(max, target = 5) {
     return ticks;
 }
 
+// Where the good corner is, drawn rather than left to the reader. Both edges
+// are ones the chart already shows: the 75% gridline, which is the score bar a
+// run has to clear to be worth using at all, and the middle of the x axis.
+// Neither is a median -- a median moves with every filter chip and, in a field
+// where half the models are nearly free, would shrink the good corner to a
+// sliver -- so a point's quadrant means the same thing from one view to the
+// next. Between the two bands is the trade-off, left unshaded because that is
+// exactly what it is and the chart should not pretend to price it.
+const QUADRANT = { good: 0.75, poor: 0.5 };
+
+function renderQuadrants(metric, xMax, px, py, box) {
+    const x = px(xMax / 2);
+    const good = py(QUADRANT.good), poor = py(QUADRANT.poor);
+    if (!(x > box.left + 1 && x < box.right - 1)) return { bands: "", legend: "", note: "" };
+    const band = (kind, x1, y1, x2, y2) => `<rect class="band band-${kind}"
+        x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"/>`;
+    const half = metric.format(xMax / 2);
+    return {
+        bands: band("good", box.left, box.top, x, good)
+            + band("poor", x, poor, box.right, box.bottom),
+        legend: `<div class="legend legend-bands">
+            <span><i class="band-swatch band-good"></i>Most attractive quadrant</span>
+            <span><i class="band-swatch band-poor"></i>Least attractive</span>
+        </div>`,
+        note: `<p class="chart-note">Green: ${percent(QUADRANT.good)} of the tasks
+            solved or better, for under ${escapeHtml(half)} a trial. Grey: under
+            ${percent(QUADRANT.poor)} solved, for more than that. Between the two
+            is the trade-off.</p>`,
+    };
+}
+
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
 function renderChart(rows, hues, shapes, configHues) {
@@ -263,6 +294,9 @@ function renderChart(rows, hues, shapes, configHues) {
     const xMax = xTicks[xTicks.length - 1];
     const px = (value) => L + (xMax ? (value / xMax) * plotW : 0);
     const py = (rate) => T + plotH - rate * plotH;
+
+    const bands = renderQuadrants(metric, xMax, px, py,
+        { left: L, right: W - R, top: T, bottom: T + plotH });
 
     const grid = [0, 25, 50, 75, 100].map((value) => `<line class="gridline"
         x1="${L}" x2="${W - R}" y1="${py(value / 100)}" y2="${py(value / 100)}"/>
@@ -305,6 +339,7 @@ function renderChart(rows, hues, shapes, configHues) {
     return `${head}<div class="chart-wrap"><div class="tip" hidden></div>
     <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
         aria-label="Score against cost per trial">
+        ${bands.bands}
         ${grid}
         <line class="axis" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
         <line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
@@ -314,8 +349,10 @@ function renderChart(rows, hues, shapes, configHues) {
             text-anchor="end">${escapeHtml(metric.axis)}</text>
         ${dots}
     </svg></div>
+    ${bands.legend}
     <div class="legend">${models}</div>
-    <div class="legend">${configs}</div>`;
+    <div class="legend">${configs}</div>
+    ${bands.note}`;
 }
 
 function render() {

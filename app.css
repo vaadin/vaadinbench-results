@@ -54,6 +54,7 @@
     --pass: oklch(.45 .18 155);
     --fail: oklch(.45 .18 25);
     --diff-mix: 10%;
+    --band-mix: 9%;
 
     --shadow-xs: 0 1px 2px oklch(.15 .004 248 / .06);
     --shadow-s: 0 2px 8px oklch(.15 .004 248 / .07);
@@ -86,6 +87,10 @@
         --pass: oklch(.8 .18 155);
         --fail: oklch(.8 .18 25);
         --diff-mix: 22%;
+        /* A wash that reads on a light surface disappears on a dark one: the
+           same 9% of green over oklch(.23) is a smaller step in lightness than
+           over oklch(.98), so the quadrant mix is taken up here. */
+        --band-mix: 15%;
         --shadow-xs: 0 1px 2px oklch(0 0 0 / .4);
         --shadow-s: 0 2px 8px oklch(0 0 0 / .45);
     }
@@ -108,6 +113,11 @@
        Aura mixes in oklab and srgb for the same reason. */
     --pass-bg: color-mix(in oklab, var(--aura-green) 14%, var(--surface));
     --fail-bg: color-mix(in oklab, var(--aura-red) 14%, var(--surface));
+    /* The chart's quadrant wash. Weaker than --pass-bg: this sits under points
+       and their labels rather than behind a line of text, and it has to stay
+       readable as a background for both. */
+    --band-good: color-mix(in oklab, var(--aura-green) var(--band-mix), var(--surface));
+    --band-poor: color-mix(in oklab, var(--aura-neutral) var(--band-mix), var(--surface));
     --add: var(--pass);
     --add-bg: color-mix(in oklab, var(--aura-green) var(--diff-mix), var(--surface));
     --add-gutter: color-mix(in oklab, var(--aura-green) 45%, var(--surface));
@@ -466,6 +476,21 @@ td.bar { width: 38%; min-width: 130px; }
 .chart .axis-title { fill: var(--faint); font: 500 10px var(--font); text-transform: uppercase; letter-spacing: .07em; }
 .chart .dot { stroke: var(--surface); stroke-width: 1.5; fill-opacity: .9; }
 .chart .dot-label { font: 500 11px var(--font); }
+/* Named for what each band means, not for which corner it sits in: the good
+   corner is at the left only because cheaper is better on that axis. */
+.chart .band { stroke: none; }
+.band-good { fill: var(--band-good); }
+.band-poor { fill: var(--band-poor); }
+.legend-bands { margin-bottom: -.2rem; }
+.legend .band-swatch {
+    width: 14px; height: 10px; border-radius: 2px;
+    /* The wash is faint by design, which leaves the swatch invisible against
+       the page unless it is given an edge of its own. */
+    box-shadow: inset 0 0 0 1px var(--rule);
+}
+.band-swatch.band-good { background: var(--band-good); }
+.band-swatch.band-poor { background: var(--band-poor); }
+.chart-note { margin: .6rem 0 0; font-size: .78rem; color: var(--faint); }
 .legend { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: .9rem; font-size: .8rem; color: var(--meta); }
 .legend span { display: inline-flex; align-items: center; gap: .35rem; }
 .legend i { width: 8px; height: 8px; border-radius: 999px; }
