@@ -41,16 +41,20 @@ const hiddenKinds = new Set();
 
 const TYPE_LABELS = { prompt: "Prompt", message: "Message", thinking: "Thought" };
 
-// Older published trials called both of these "other". Recognising their
-// stable names in the browser makes the new filters useful for existing data,
-// while publish.py writes the explicit kinds for everything published next.
+// Older published trials used "other", or another operation's kind when an
+// exec snippet combined calls. Recover stable names from their summaries while
+// preserving explicit new kinds and the publisher's higher priority for edits.
 function callKind(call) {
-    if (call.kind && call.kind !== "other") return call.kind;
+    if (["edit", "mcp", "skill"].includes(call.kind)) return call.kind;
     const name = (call.name ?? "").toLowerCase();
     if (name === "skill") return "skill";
     if (name.startsWith("mcp__")) return "mcp";
-    if (name === "exec" && (call.summary ?? "").startsWith("mcp__")) return "mcp";
-    return "other";
+    if (name === "exec") {
+        const summary = call.summary ?? "";
+        if (summary.startsWith("mcp__")) return "mcp";
+        if (/^skill(?:\s|$)/.test(summary)) return "skill";
+    }
+    return call.kind || "other";
 }
 
 // One entry per thing that happened, not one per step. A step can hold a
