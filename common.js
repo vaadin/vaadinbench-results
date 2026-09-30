@@ -158,8 +158,7 @@ function leaderboardUrl() {
 // One hue per model, from Aura's palette, so a row's bar and its dot in the
 // chart are the same colour. Assigned by position in the sorted model list
 // rather than by name, so a new model picks up the next hue on its own.
-// Yellow is out for the same reason it is out of CONFIG_HUES: its text variant
-// is the one in the palette that cannot be read at chip size, and a sixth model
+// Yellow is out: its text variant cannot be read at chip size, and a sixth model
 // -- which is what a second agent brings -- is what first reaches that far.
 const HUES = ["blue", "purple", "orange", "green", "red", "teal"];
 
@@ -189,30 +188,18 @@ function shapeMap(configs) {
     return new Map(sorted.map((config, i) => [config, SHAPES[i % SHAPES.length]]));
 }
 
-// Away from the chart there is room to tint a configuration as well, so it gets
-// a hue of its own -- from the far end of the palette, so the greens and reds a
-// config is drawn in do not read as one of the models' blues and purples. The
-// shape stays the primary code: it is what the two axes are told apart by.
-// Yellow is out: it is the one palette entry with no readable text variant at
-// this size. The baseline configuration is out of the rotation altogether -- it
-// is the absence of a setup rather than one of them, and neutral ink says that
-// better than a colour, as well as leaving one more colour for the real ones.
-const CONFIG_HUES = ["green", "red", "teal", "orange", "purple", "blue"];
-const BASELINE_CONFIGS = new Set(["vanilla", "baseline", "none"]);
-
+// Configuration is encoded by shape, while colour is reserved for models.
+// Use the same neutral palette in filters, table rows and the chart legend.
 function configHueMap(configs) {
-    const sorted = [...new Set(configs)].sort();
-    let next = 0;
-    return new Map(sorted.map((config) => [config, BASELINE_CONFIGS.has(config)
-        ? "neutral"
-        : CONFIG_HUES[next++ % CONFIG_HUES.length]]));
+    return new Map([...new Set(configs)].sort().map((config) => [config, "neutral"]));
 }
 
 // The chart's marker at text size, so a configuration carries the same shape in
-// a chip, a table row and a legend as it does in the scatter.
+// a chip, a table row and a legend as it does in the scatter. Use the text
+// palette for these small glyphs so they stay readable in both themes.
 function shapeGlyph(shape, hue) {
     return `<svg class="glyph" viewBox="0 0 14 14" aria-hidden="true">${
-        marker(shape, 7, 7, `fill:${hueFill(hue)}`, "dot", 5)}</svg>`;
+        marker(shape, 7, 7, `fill:${hueText(hue)}`, "dot", 5)}</svg>`;
 }
 
 const SHAPE_TAGS = { circle: "circle", square: "rect", triangle: "polygon", diamond: "polygon" };

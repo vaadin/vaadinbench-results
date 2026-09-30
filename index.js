@@ -349,8 +349,8 @@ function renderChart(rows, hues, shapes, configHues, field) {
     const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
         .map(([model, hue]) => `<span><i style="background:${hueFill(hue)}"></i>
             ${escapeHtml(shortModel(model))}</span>`).join("");
-    // In the plot a shape is filled by model, but in its own legend it carries
-    // the configuration's hue -- the same pairing the chips and the rows use.
+    // Neutral legend markers explain configuration shapes without implying
+    // another colour mapping alongside the model colours.
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
         .map(([config, shape]) => `<span style="color:${hueText(configHues.get(config))}">${
             shapeGlyph(shape, configHues.get(config))}${escapeHtml(config)}</span>`).join("");
@@ -369,6 +369,7 @@ function renderChart(rows, hues, shapes, configHues, field) {
         ${dots}
     </svg></div>
     ${bands.legend}
+    <p class="chart-note">Color = model · Shape = configuration</p>
     <div class="legend">${models}</div>
     <div class="legend">${configs}</div>
     ${bands.note}`;
