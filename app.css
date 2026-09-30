@@ -27,9 +27,8 @@
     --aura-blue-text: oklch(.45 .18 264);
     --aura-purple-text: oklch(.465 .198 290);
 
-    /* Two additions to Aura's six: a teal for when the palette runs out before
-       the axis does, and a neutral for a baseline -- a value that means "none of
-       the above" reads better in ink than in a colour of its own. */
+    /* Two additions to Aura's six: teal for extra models and neutral ink for
+       configuration markers, whose shapes carry their meaning. */
     --aura-teal: oklch(.62 .13 200);
     --aura-teal-text: oklch(.4 .117 200);
     --aura-neutral: oklch(.55 .01 248);
