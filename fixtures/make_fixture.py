@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Write a synthetic Harbor job directory, for developing the site without a run.
 
-    /path/to/vaadin-bench/.venv/bin/python fixtures/make_fixture.py
+    /path/to/vaadinbench/.venv/bin/python fixtures/make_fixture.py
 
 Harbor's own pydantic models do the writing, so the output validates against the
 same schemas a real run produces — `TrialResult` for `result.json` and ATIF for
@@ -235,14 +235,23 @@ def write_trial(
     cost: float,
     minutes: float,
     graded: bool = True,
+    legacy_artifacts: bool = False,
 ) -> None:
     trial_dir = JOB / name
     (trial_dir / "agent").mkdir(parents=True, exist_ok=True)
     (trial_dir / "verifier").mkdir(parents=True, exist_ok=True)
-    # The same nesting Harbor produces: everything a task writes to
+    # The same nesting Harbor produces: everything a container writes to
     # `/logs/artifacts` is collected under `artifacts/logs/`. A fixture that
     # flattens it lets publish.py read a path that exists nowhere in a real job.
     (trial_dir / "artifacts" / "logs" / "artifacts").mkdir(parents=True, exist_ok=True)
+
+    # The verifier writes its own log directory, so a current run leaves the
+    # structure report and the agent's diff in `verifier/`. `legacy_artifacts`
+    # is the shape of a run from before vaadinbench#28, when the diff was cut in
+    # the agent's container and collected from its `/logs/artifacts` -- trials
+    # already published came from there, and publish.py still reads it.
+    recorded = (trial_dir / "artifacts" / "logs" / "artifacts") if legacy_artifacts \
+        else (trial_dir / "verifier")
 
     finished = START + timedelta(minutes=minutes)
     result = {
@@ -299,7 +308,7 @@ def write_trial(
             "  MODIFIED pom.xml\n"
         )
         report = SUITE.format(failures=1, cases=FAILING_CASES)
-    (trial_dir / "artifacts" / "logs" / "artifacts" / "structure.txt").write_text(structure, encoding="utf-8")
+    (recorded / "structure.txt").write_text(structure, encoding="utf-8")
     # A report is written whenever the suites ran, pass or fail: Harbor writes one
     # per graded suite and the reward is read from it, so a fixture that emits one
     # only on failure leaves the passing trials looking ungraded. `graded=False` is
@@ -313,13 +322,13 @@ def write_trial(
         verifier_log(structure, graded=graded, reward=reward), encoding="utf-8"
     )
 
-    (trial_dir / "artifacts" / "logs" / "artifacts" / "agent-diff-stat.txt").write_text(
+    (recorded / "agent-diff-stat.txt").write_text(
         " src/main/java/com/example/ui/ItemsView.java  | 58 ++++++++++\n"
         " src/main/java/com/example/ui/MainLayout.java | 14 +++\n"
         " 2 files changed, 72 insertions(+)\n",
         encoding="utf-8",
     )
-    (trial_dir / "artifacts" / "logs" / "artifacts" / "agent.patch").write_text(
+    (recorded / "agent.patch").write_text(
         "diff --git a/src/main/java/com/example/ui/MainLayout.java "
         "b/src/main/java/com/example/ui/MainLayout.java\n"
         "new file mode 100644\n"
@@ -374,7 +383,9 @@ def main() -> None:
     )
     # A second sonnet attempt, for the outcome that is neither a pass nor a failed
     # test: the project was not the generated one, the verifier would not compile
-    # against it, and nothing behavioural was ever measured.
+    # against it, and nothing behavioural was ever measured. It also carries its
+    # diff where a run from before vaadinbench#28 left it, so publishing this job
+    # reads both of the places publish.py looks.
     write_trial(
         "flow-new-project__claude-code__sonnet-ungraded",
         "anthropic/claude-sonnet-5",
@@ -383,6 +394,7 @@ def main() -> None:
         cost=0.31,
         minutes=3.0,
         graded=False,
+        legacy_artifacts=True,
     )
     print(f"wrote {JOB}")
 

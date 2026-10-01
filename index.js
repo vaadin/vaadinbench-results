@@ -97,16 +97,25 @@ function visible() {
 
 // What a configuration actually gave the agent. The chips name the runs; a
 // name alone does not say what was switched on, and that is the whole variable
-// the benchmark is measuring. Read from the configs the tasks repo runs --
-// `vaadin-bench/configs/*.yaml` -- so this stays a description of them rather
-// than a guess. A configuration with no entry here simply goes unglossed.
+// the benchmark is measuring. Read from the conditions the tasks repo runs --
+// `vaadinbench/conditions/<name>/`, one directory per condition since it stopped
+// generating job configs -- so this stays a description of them rather than a
+// guess. A configuration with no entry here simply goes unglossed.
+//
+// A name that was reused has to say so. `vaadin-skills` carried the /docs MCP
+// server as well as the skills until conditions/ split every ingredient into its
+// own condition, and the runs published under the old meaning are still on the
+// site; `vaadin-skills-tools` is the name `vaadin-skills-mcp-tools` ran under.
+// Both are kept here for those runs, not because a run can use them today.
 const CONFIG_NOTES = {
     "vanilla": "Nothing but the model: each agent as it ships, with every Vaadin plugin, skill and server switched off.",
-    "vaadin-skills": "Three Vaadin skills and the documentation MCP server at /docs — a plugin for Claude Code, a skills directory and the same server for Codex.",
-    "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit. Claude Code only, since the hook is a Claude Code hook.",
+    "vaadin-skills": "The Vaadin skills, at a pinned commit, and nothing else. Runs published before the conditions split also had the documentation MCP server at /docs, which is now vaadin-skills-mcp.",
     "vaadin-mcp": "The documentation MCP server at /docs on its own, with no skills — the control the two server URLs are compared against.",
     "vaadin-mcp-java": "The newer /docs-java documentation server on its own. Identical to vaadin-mcp but for the URL, so the difference between them is the difference between the servers.",
-    "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
+    "vaadin-skills-mcp": "The Vaadin skills and the /docs documentation server together, so the pair of them is the control for the combination.",
+    "vaadin-skills-mcp-java": "The vaadin-skills-mcp setup with the newer /docs-java server in place of /docs.",
+    "vaadin-skills-mcp-tools": "Those skills and that server, plus vaadin-agent-tools: a bundled CLI its skills reach through the plugin root. Claude Code only, since the plugin is a Claude Code plugin.",
+    "vaadin-skills-tools": "The name vaadin-skills-mcp-tools ran under: the same skills, server and agent-tools plugin, on Claude Code only.",
 };
 
 // One line per configuration, under its chips. Short on purpose: the point is

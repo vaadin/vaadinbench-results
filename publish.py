@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Turn Harbor job directories into the static data this site serves.
 
-    ./publish.py ../vaadin-bench/jobs/new-project-3models
-    ./publish.py ../vaadin-bench/jobs/*            # every job in one go
+    ./publish.py ../vaadinbench/jobs/new-project-3models
+    ./publish.py ../vaadinbench/jobs/*            # every job in one go
 
 Reads only what Harbor already writes, and writes only JSON:
 
@@ -29,8 +29,6 @@ import argparse
 import base64
 import json
 import re
-import shutil
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -85,8 +83,8 @@ def read_text(path: Path, limit: int | None = None) -> str | None:
     return text
 
 
-def artifact(trial_dir: Path, name: str) -> Path:
-    """A file the task wrote to `/logs/artifacts`, where Harbor leaves it.
+def artifacts_dir(trial_dir: Path) -> Path:
+    """Where a file the agent's container wrote to `/logs/artifacts` ends up.
 
     Harbor collects the container's whole `/logs` verbatim into `artifacts/logs`,
     so `/logs/artifacts/agent.patch` lands at `artifacts/logs/artifacts/` — two
@@ -94,7 +92,11 @@ def artifact(trial_dir: Path, name: str) -> Path:
     nothing, which is how every real patch came out empty while the fixture,
     written with the shallow path, kept looking fine.
     """
-    return trial_dir / "artifacts" / "logs" / "artifacts" / name
+    return trial_dir / "artifacts" / "logs" / "artifacts"
+
+
+def artifact(trial_dir: Path, name: str) -> Path:
+    return artifacts_dir(trial_dir) / name
 
 
 def tail_text(path: Path, limit: int) -> tuple[str | None, bool]:
@@ -467,164 +469,34 @@ def verifier_summary(trial_dir: Path) -> dict[str, Any]:
     }
 
 
-# -------------------------------------------------------------- reconstruction
+def agent_diff(trial_dir: Path) -> dict[str, Any]:
+    """What the agent changed, as the run itself recorded it.
 
-# TEMPORARY, and meant to be deleted. Since the tasks repo split the agent and
-# verifier into separate containers, nothing writes `agent.patch`: the verifier
-# imports the finished `/app` rather than diffing it, so a run arrives with no
-# changes to show. What it does still carry is that finished tree, at
-# `artifacts/app`, and every task starts the agent from a baseline this can
-# reach -- so the diff is rebuilt here instead of being lost.
-#
-# It is the one thing in this file that reads something outside the job
-# directory, which is a rule worth breaking only for as long as it takes to fix
-# the run: vaadinbench#27 restores the patch upstream, and #7 deletes everything
-# below once a run carries one again.
-#
-# It fails closed. Each baseline shape is recognised explicitly from the task's
-# own environment Dockerfile, and an environment this does not recognise
-# produces no diff at all rather than a wrong one: a diff against the wrong
-# baseline is worse than an empty tab, because it reads as a measurement.
-COPIED_APP = re.compile(r"^COPY\s+app/\s+/app/", re.M)
-EMPTY_APP = re.compile(r"^RUN\s+rm -rf /app\s*&&\s*mkdir -p /app", re.M)
-CLONED_APP = re.compile(r"git clone (\S+) /app", re.M)
-PINNED_SHA = re.compile(r"^ARG BASE_SHA=(\S+)", re.M)
+    The verifier writes `agent.patch` and `agent-diff-stat.txt` to `$LOG_DIR`
+    before it grades anything, from the tree it is about to grade against the
+    baseline its own image ships — so they land in `verifier/`. Runs from before
+    that (`vaadinbench#28`) wrote them in the agent's container instead, which
+    Harbor collected to `artifacts/logs/artifacts/`, and a republish of one of
+    those should not lose its diff. Whichever directory holds the patch supplies
+    the diffstat too: a new patch beside an old diffstat would describe a
+    different tree.
 
-# Harbor's capture of `/app` holds no dotfiles -- no `.classpath`, no
-# `.settings/`, no `.git`. Diffing it against a baseline that has them reports
-# the agent deleting files it never touched, so they come off both sides. The
-# cost is that a dotfile the agent really did write is outside the diff, which
-# is why the page calls the result reconstructed rather than captured.
-def visible_files(root: Path) -> list[Path]:
-    return [
-        path for path in sorted(root.rglob("*"))
-        if path.is_file()
-        and not any(part.startswith(".") or part == "target" for part in
-                    path.relative_to(root).parts)
-    ]
-
-
-def copy_visible(src: Path, dst: Path) -> None:
-    for path in visible_files(src):
-        target = dst / path.relative_to(src)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(path.read_bytes())
-
-
-def git(*args: str, cwd: Path) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git", "-c", "user.name=VaadinBench", "-c", "user.email=bench@vaadin.invalid",
-         *args],
-        cwd=cwd, capture_output=True, text=True, check=False,
-    )
-
-
-class Baselines:
-    """The tree each task starts the agent from, and the diff against it.
-
-    One git repository per task, built once and reused: the baseline is its only
-    commit, and each trial's captured tree is laid over it, diffed, and rolled
-    back. That is the same shape `agent.patch` had when a task still wrote one,
-    so the page renders it without knowing the difference.
+    An empty patch is an answer -- the agent changed nothing -- and is kept
+    apart from no patch at all, which is a diff the run never took. So `patch`
+    is `""` for the first and `None` for the second, and both the count below
+    and the page read it that way.
     """
-
-    def __init__(self, tasks_dir: Path, cache: Path) -> None:
-        self.tasks_dir = tasks_dir
-        self.cache = cache
-        self.repos: dict[str, tuple[Path, str] | None] = {}
-
-    def source(self, task: str) -> tuple[Path | None, str] | None:
-        """Where the baseline comes from, or None if the environment is unknown."""
-        environment = self.tasks_dir / task / "environment"
-        dockerfile = read_text(environment / "Dockerfile")
-        if dockerfile is None:
-            return None
-        if EMPTY_APP.search(dockerfile):
-            return None, "an empty directory"
-        if COPIED_APP.search(dockerfile) and (environment / "app").is_dir():
-            return environment / "app", f"tasks/{task}/environment/app"
-        clone, sha = CLONED_APP.search(dockerfile), PINNED_SHA.search(dockerfile)
-        if clone and sha:
-            return self.clone(task, clone.group(1), sha.group(1), environment)
-        return None
-
-    def clone(self, task: str, url: str, sha: str, environment: Path):
-        """The upstream project at its pinned commit, plus the task's pom patch.
-
-        Cloned once into a cache outside the repository. The image applies
-        `pom-additions.patch` before the baseline commit, so the agent starts from
-        the patched tree and the patch is not part of what it changed.
-        """
-        target = self.cache / task
-        name = f"{url.rstrip('/').split('/')[-1]}@{sha[:7]}"
-        if not target.exists():
-            target.parent.mkdir(parents=True, exist_ok=True)
-            print(f"  cloning baseline {name}", file=sys.stderr)
-            clone = subprocess.run(["git", "clone", "--quiet", url, str(target)],
-                                   capture_output=True, text=True, check=False)
-            if clone.returncode:
-                print(f"  baseline clone failed: {clone.stderr.strip()}", file=sys.stderr)
-                return None
-            if git("checkout", "-q", sha, cwd=target).returncode:
-                print(f"  baseline commit {sha} not found", file=sys.stderr)
-                return None
-            additions = environment / "pom-additions.patch"
-            if additions.exists():
-                patched = subprocess.run(
-                    ["patch", "-p1", "-d", str(target), "-i", str(additions)],
-                    capture_output=True, text=True, check=False)
-                if patched.returncode:
-                    print(f"  baseline patch failed: {patched.stdout.strip()}",
-                          file=sys.stderr)
-                    return None
-                name += " + pom-additions.patch"
-        return target, name
-
-    def repo(self, task: str) -> tuple[Path, str] | None:
-        """A git repository holding the baseline as its only commit."""
-        if task in self.repos:
-            return self.repos[task]
-        self.repos[task] = None
-        source = self.source(task)
-        if source is not None:
-            tree, described = source
-            work = self.cache / "repos" / task
-            work.mkdir(parents=True, exist_ok=True)
-            if git("init", "-q", "-b", "baseline", ".", cwd=work).returncode == 0:
-                if tree is not None:
-                    copy_visible(tree, work)
-                git("add", "-A", cwd=work)
-                git("commit", "-q", "--allow-empty", "-m", "baseline", cwd=work)
-                self.repos[task] = (work, described)
-        if self.repos[task] is None:
-            print(f"  no baseline for {task}: publishing it without a diff",
-                  file=sys.stderr)
-        return self.repos[task]
-
-    def diff(self, task: str, app: Path) -> dict[str, Any] | None:
-        """The captured tree as a patch against the task's baseline."""
-        prepared = self.repo(task)
-        if prepared is None:
-            return None
-        work, described = prepared
-        for path in work.iterdir():
-            if path.name != ".git":
-                shutil.rmtree(path) if path.is_dir() else path.unlink()
-        copy_visible(app, work)
-        git("add", "-A", cwd=work)
-        patch = git("diff", "--cached", "--no-color", cwd=work).stdout
-        diffstat = git("diff", "--cached", "--no-color", "--stat", cwd=work).stdout
-        git("reset", "-q", "--hard", cwd=work)
-        git("clean", "-qfd", cwd=work)
-        if not patch.strip():
-            return None
-        clipped, truncated = clip(patch, MAX_PATCH)
+    for source in (trial_dir / "verifier", artifacts_dir(trial_dir)):
+        raw = read_text(source / "agent.patch")
+        if raw is None:
+            continue
+        patch, truncated = clip(raw, MAX_PATCH)
         return {
-            "diffstat": diffstat or None,
-            "patch": clipped,
+            "diffstat": read_text(source / "agent-diff-stat.txt", 20_000),
+            "patch": patch,
             "patch_truncated": truncated,
-            "reconstructed": described,
         }
+    return {"diffstat": None, "patch": None, "patch_truncated": False}
 
 
 # ----------------------------------------------------------------------- trial
@@ -681,8 +553,7 @@ def seconds_between(timing: dict[str, Any] | None) -> float | None:
     return round((b - a).total_seconds(), 1)
 
 
-def collect_trial(trial_dir: Path, job: str, attempt: int,
-                  baselines: Baselines | None = None) -> tuple[dict, dict] | None:
+def collect_trial(trial_dir: Path, job: str, attempt: int) -> tuple[dict, dict] | None:
     result = read_json(trial_dir / "result.json")
     if not isinstance(result, dict):
         return None
@@ -714,25 +585,10 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
         **totals,
     }
 
-    # `agent.patch` and its diffstat are whatever the task wrote to
-    # `/logs/artifacts`, and since the container split nothing writes them: the
-    # verifier imports the finished `/app` instead of diffing it. So a run can
-    # arrive with no changes to publish at all. The Changes tab already says so,
-    # and collect_job counts how many trials it happened to, because one trial
+    # The diff is whatever the run recorded, and nothing here reconstructs one:
+    # collect_job counts the trials that carry none instead, because one trial
     # missing a patch is a lost file and every trial missing one is the run.
-    patch, patch_truncated = clip(
-        read_text(artifact(trial_dir, "agent.patch")), MAX_PATCH
-    )
-    changes = {
-        "diffstat": read_text(artifact(trial_dir, "agent-diff-stat.txt"), 20_000),
-        "patch": patch,
-        "patch_truncated": patch_truncated,
-    }
-    # Only when the run carries none of its own: a patch a task wrote is the
-    # measurement, and is never replaced by one rebuilt here.
-    app = trial_dir / "artifacts" / "app"
-    if patch is None and baselines is not None and app.is_dir():
-        changes = baselines.diff(shortest_task(task), app) or changes
+    changes = agent_diff(trial_dir)
     detail = {
         **row,
         "instruction": instruction,
@@ -746,13 +602,7 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
 # ------------------------------------------------------------------------- job
 
 
-def shortest_task(task: str) -> str:
-    """`vaadin/flow-new-view` is `tasks/flow-new-view` on disk."""
-    return str(task).split("/")[-1]
-
-
-def collect_job(job_dir: Path, trials_dir: Path,
-                baselines: Baselines | None = None) -> dict[str, Any]:
+def collect_job(job_dir: Path, trials_dir: Path) -> dict[str, Any]:
     job = job_dir.name
     synthetic = (job_dir / "SYNTHETIC").exists()
     trial_dirs = sorted(
@@ -773,7 +623,7 @@ def collect_job(job_dir: Path, trials_dir: Path,
             "/".join(p for p in (model_info.get("provider"), model_info.get("name")) if p),
         )
         seen[key] = seen.get(key, 0) + 1
-        collected = collect_trial(trial_dir, job, seen[key], baselines)
+        collected = collect_trial(trial_dir, job, seen[key])
         if collected is None:
             print(f"  skipped {trial_dir.name}: no readable result.json", file=sys.stderr)
             continue
@@ -783,13 +633,12 @@ def collect_job(job_dir: Path, trials_dir: Path,
         rows.append(row)
         details.append(detail)
 
+    # A trial whose patch is `None` recorded no diff at all; one whose patch is
+    # empty recorded that the agent changed nothing, which is not a loss.
     unpatched = sum(1 for d in details if d["changes"]["patch"] is None)
-    rebuilt = sum(1 for d in details if d["changes"].get("reconstructed"))
     if unpatched:
-        print(f"  no patch captured for {unpatched}/{len(details)} trials",
+        print(f"  no patch recorded for {unpatched}/{len(details)} trials",
               file=sys.stderr)
-    if rebuilt:
-        print(f"  rebuilt the diff for {rebuilt}/{len(details)} trials")
 
     for detail in details:
         (trials_dir / f"{detail['id']}.json").write_text(
@@ -870,14 +719,6 @@ def main() -> int:
         help="Add to the published set instead of replacing it",
     )
     parser.add_argument(
-        "--baselines",
-        type=Path,
-        metavar="TASKS_DIR",
-        help="Rebuild the diff for trials that carry none, against the baseline "
-             "each task's environment starts the agent from. Temporary: see the "
-             "reconstruction section above.",
-    )
-    parser.add_argument(
         "--benchmark",
         default=DEFAULT_BENCHMARK,
         metavar="SLUG",
@@ -908,13 +749,6 @@ def main() -> int:
     if not args.job_dirs:
         parser.error("give at least one job directory, or --registry")
 
-    baselines = None
-    if args.baselines:
-        if not args.baselines.is_dir():
-            print(f"not a directory: {args.baselines}", file=sys.stderr)
-            return 1
-        baselines = Baselines(args.baselines, SITE / ".baselines")
-
     benchmark_dir = DATA / args.benchmark
     (benchmark_dir / "trials").mkdir(parents=True, exist_ok=True)
     index_path = benchmark_dir / "index.json"
@@ -937,7 +771,7 @@ def main() -> int:
             print(f"not a directory: {job_dir}", file=sys.stderr)
             return 1
         print(f"{job_dir.name}")
-        run = collect_job(job_dir, benchmark_dir / "trials", baselines)
+        run = collect_job(job_dir, benchmark_dir / "trials")
         if not run["trials"]:
             print("  no trials found", file=sys.stderr)
             continue
