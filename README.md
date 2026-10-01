@@ -17,6 +17,7 @@ data/benchmarks.json                 the registry the list page reads
 data/default/                        the benchmark the site opens on
 data/<slug>/index.json                   one row per trial
 data/<slug>/trials/<id>.json             one file per trial
+data/<slug>/screenshots/<id>-<digest>.png    what that application looks like
 data/<slug>/benchmark.json               what it is called
 ```
 
@@ -76,12 +77,40 @@ goes out today, per trial:
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
 | The verifier's console output, last 40 KB | `verifier/test-stdout.txt` |
 | Generated-project report | `verifier/structure.txt` |
+| The finished application, photographed after grading | `verifier/screenshot.png` |
 | Diffstat and patch, when a run has them | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
 
 Harbor collects a container's `/logs` verbatim, so everything a task writes to
 `/logs/artifacts` sits at `artifacts/logs/artifacts/` and everything the verifier
 writes to `/logs/verifier` sits at `verifier/` — the paths above are the real
 ones, and reading the shallower `artifacts/` finds nothing.
+
+The screenshot is the one published file that is not text, so it is the one
+copied rather than embedded: a base64 PNG inside the trial file would be carried
+by every reader who opened the trajectory and never looked at the picture. It
+goes to `screenshots/<trial id>-<digest>.png`: the id so the files sort per
+trial, and a digest of the bytes so that a trial republished with a *different*
+picture is a different URL. Pages serves an image with `max-age=600` and no way
+to override it, and only `fetchJson` opts into revalidation — a stable name would
+have shown a reader the old picture beside the new JSON for ten minutes, which is
+the trap the JSON itself was already caught in.
+
+Every publish then deletes the screenshots its own index no longer points at:
+the superseded copies of the trials it just wrote, and the files of any job that
+a publish without `--keep` dropped from the index. Driven by the index rather
+than by the mode, so `--keep` needs no exception — what an index still names is
+kept, whichever publish put it there. Trial JSON is left alone: it is kilobytes
+rather than megabytes, and deleting one turns a bookmarked drill-down into a 404,
+while an image nothing references cannot be reached by a link at all.
+
+A screenshot is also refused rather than trusted — what is not a PNG, or is over
+two megabytes, is not published at all — because this is the step that puts bytes
+on a public page under a name that says PNG.
+
+A trial with no picture is an ordinary outcome: the application never rendered,
+or the run is older than the verifier's screenshots. The Screenshot tab says so,
+and publishes the tail of `verifier/screenshot.log` in the picture's place, which
+is the only thing that says which of the two it was.
 
 The last row is conditional, and the next section is why.
 
@@ -144,8 +173,8 @@ wrote:
 
 ```text
 index.html          leaderboard: one row per model and configuration, plus a chart
-run.html            one configuration: its trials
-trial.html          one trial: trajectory, changes, verifier, instruction
+run.html            one configuration: its trials, each with its screenshot
+trial.html          one trial: trajectory, screenshot, changes, verifier, instruction
 benchmarks.html     every published benchmark, one card each
 ```
 
