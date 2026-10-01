@@ -28,7 +28,7 @@
     --aura-purple-text: oklch(.465 .198 290);
 
     /* Two additions to Aura's six: teal for extra models and neutral ink for
-       configuration markers, whose shapes carry their meaning. */
+       non-Vaadin configuration indicators. Shapes distinguish configurations. */
     --aura-teal: oklch(.62 .13 200);
     --aura-teal-text: oklch(.4 .117 200);
     --aura-neutral: oklch(.55 .01 248);
