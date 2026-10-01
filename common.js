@@ -188,10 +188,13 @@ function shapeMap(configs) {
     return new Map(sorted.map((config, i) => [config, SHAPES[i % SHAPES.length]]));
 }
 
-// Configuration is encoded by shape, while colour is reserved for models.
-// Use the same neutral palette in filters, table rows and the chart legend.
+// Chart points encode configuration by shape and model by colour. Outside the
+// plot, Vaadin configurations share Aura blue; other configurations stay neutral.
+// Keep this mapping consistent in filters, table rows and the config legend.
 function configHueMap(configs) {
-    return new Map([...new Set(configs)].sort().map((config) => [config, "neutral"]));
+    return new Map([...new Set(configs)].sort().map((config) => [
+        config, config === "vaadin-skills" || config === "vaadin-skills-tools" ? "blue" : "neutral",
+    ]));
 }
 
 // The chart's marker at text size, so a configuration carries the same shape in

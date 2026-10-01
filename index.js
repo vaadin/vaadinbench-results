@@ -349,8 +349,8 @@ function renderChart(rows, hues, shapes, configHues, field) {
     const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
         .map(([model, hue]) => `<span><i style="background:${hueFill(hue)}"></i>
             ${escapeHtml(shortModel(model))}</span>`).join("");
-    // Neutral legend markers explain configuration shapes without implying
-    // another colour mapping alongside the model colours.
+    // Config legend colours identify Vaadin setups; chart points still use model
+    // colours, with the same configuration shapes as the filters and table.
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
         .map(([config, shape]) => `<span style="color:${hueText(configHues.get(config))}">${
             shapeGlyph(shape, configHues.get(config))}${escapeHtml(config)}</span>`).join("");
@@ -369,8 +369,9 @@ function renderChart(rows, hues, shapes, configHues, field) {
         ${dots}
     </svg></div>
     ${bands.legend}
-    <p class="chart-note">Color = model · Shape = configuration</p>
+    <p class="chart-note">Chart points: color = model · shape = configuration</p>
     <div class="legend">${models}</div>
+    <p class="chart-note">Configuration indicators: blue = Vaadin skills (with or without tools) · gray = other configurations, including vanilla.</p>
     <div class="legend">${configs}</div>
     ${bands.note}`;
 }
