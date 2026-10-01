@@ -169,6 +169,7 @@ TOOL_KINDS: dict[str, str] = {
     "bashoutput": "bash",
     "task": "agent",
     "agent": "agent",
+    "skill": "skill",
     "todowrite": "plan",
     "exitplanmode": "plan",
 }
@@ -198,6 +199,8 @@ CODEX_CALL = re.compile(r"tools\.([A-Za-z_0-9]+)")
 # by another name.
 CODEX_KINDS = [
     ("apply_patch", "edit"),
+    ("mcp__", "mcp"),
+    ("skill", "skill"),
     ("exec_command", "bash"),
     ("write_stdin", "bash"),
     ("web__run", "search"),
@@ -238,7 +241,12 @@ def classify_codex(arguments: dict[str, Any]) -> str:
 
 
 def classify(function_name: str, arguments: dict[str, Any]) -> str:
-    name = function_name.lower().replace("_", "")
+    raw_name = function_name.lower()
+    # Claude-style MCP tools carry their provenance in the function name. Keep
+    # this check before normalising underscores, which would erase that marker.
+    if raw_name.startswith("mcp__"):
+        return "mcp"
+    name = raw_name.replace("_", "")
     if name == "exec":
         return classify_codex(arguments)
     kind = TOOL_KINDS.get(name, "other")

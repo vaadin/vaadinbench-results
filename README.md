@@ -182,9 +182,9 @@ set of clicks to describe.
 Harbor writes the trajectory as **ATIF** (Agent Trajectory Interchange Format), a
 versioned schema whose steps carry `source`, `message`, `reasoning_content` and
 `tool_calls[]`. `publish.py` flattens that into events and sorts tool calls into
-the buckets the page offers as filters — reads, searches, edits, bash, tests. It
-is the one place that guesses: an unknown tool name becomes "other" rather than
-being forced into a bucket it does not belong in.
+the buckets the page offers as filters — reads, searches, MCP calls, skill calls,
+edits, bash, tests. It is the one place that guesses: an unknown tool name
+becomes "other" rather than being forced into a bucket it does not belong in.
 
 Codex needs one step more, because it has a single tool. Reading a file, running
 Maven and writing a class all arrive as `exec`, carrying a snippet of JavaScript
