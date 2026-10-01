@@ -371,7 +371,7 @@ function renderChart(rows, hues, shapes, configHues, field) {
     ${bands.legend}
     <p class="chart-note">Chart points: color = model · shape = configuration</p>
     <div class="legend">${models}</div>
-    <p class="chart-note">Configuration indicators: blue = Vaadin skills (with or without tools) · gray = other configurations, including vanilla.</p>
+    <p class="chart-note">Configuration indicators: blue = Vaadin skills · green = Vaadin skills + tools · gray = other configurations, including vanilla.</p>
     <div class="legend">${configs}</div>
     ${bands.note}`;
 }

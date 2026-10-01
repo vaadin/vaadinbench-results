@@ -189,11 +189,12 @@ function shapeMap(configs) {
 }
 
 // Chart points encode configuration by shape and model by colour. Outside the
-// plot, Vaadin configurations share Aura blue; other configurations stay neutral.
+// plot, skills use Aura blue, skills with tools use green, and others stay neutral.
 // Keep this mapping consistent in filters, table rows and the config legend.
 function configHueMap(configs) {
     return new Map([...new Set(configs)].sort().map((config) => [
-        config, config === "vaadin-skills" || config === "vaadin-skills-tools" ? "blue" : "neutral",
+        config, config === "vaadin-skills-tools" ? "green"
+            : config === "vaadin-skills" ? "blue" : "neutral",
     ]));
 }
 
