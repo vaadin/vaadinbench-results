@@ -2,7 +2,11 @@
 // the trials behind it.
 
 const query = new URLSearchParams(location.search);
-const wanted = { model: query.get("model"), config: query.get("config") };
+const wanted = {
+    model: query.get("model"),
+    config: query.get("config") ? configOf(query.get("config")) : null,
+    effort: query.get("effort") || "",
+};
 
 function renderHeader(rows) {
     const graded = rows.filter((t) => t.reward !== null && t.reward !== undefined);
@@ -12,7 +16,7 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `<h2 class="title">${escapeHtml(shortModel(wanted.model))} ·
+    return `<h2 class="title">${escapeHtml(modelWithEffort(wanted.model, wanted.effort))} ·
             ${escapeHtml(wanted.config)}</h2>
         ${metricsTable([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
@@ -71,7 +75,8 @@ if (!wanted.model || !wanted.config) {
     fetchJson(dataUrl("index.json")).then((index) => {
         const runs = index.runs ?? [];
         const rows = runs.flatMap((run) => run.trials ?? []).filter((trial) =>
-            trial.model === wanted.model && configOf(trial.job) === wanted.config);
+            trial.model === wanted.model && configOf(trial.job) === wanted.config
+            && (!wanted.effort || effortOf(trial) === wanted.effort));
 
         if (!rows.length) {
             content.innerHTML = `<p class="empty">No trials for
@@ -81,7 +86,7 @@ if (!wanted.model || !wanted.config) {
             content.innerHTML = syntheticBanner(rows.some((t) => t.synthetic))
                 + renderHeader(rows) + renderTrials(rows);
             document.title =
-                `${shortModel(wanted.model)} · ${wanted.config} · VaadinBench`;
+                `${modelWithEffort(wanted.model, wanted.effort)} · ${wanted.config} · VaadinBench`;
         }
         renderFooter(index.generated_at);
     }).catch(showError);

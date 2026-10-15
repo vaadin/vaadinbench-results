@@ -705,6 +705,8 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
         "agent": agent_info.get("name"),
         "agent_version": agent_info.get("version"),
         "model": model,
+        "reasoning_effort": (((result.get("config") or {}).get("agent") or {})
+                             .get("kwargs") or {}).get("reasoning_effort"),
         "attempt": attempt,
         "reward": reward_of(result),
         "steps": len(events),
@@ -838,6 +840,9 @@ def describe(benchmark_dir: Path) -> dict[str, Any] | None:
 
 def configuration_of(job: str) -> str:
     """A job name without its timestamp — the same rule common.js applies."""
+    codex = re.search(r"(?:^|-)(vaadin-skills-codex|vanilla-codex)-\d{8}-\d{6}$", str(job))
+    if codex:
+        return codex.group(1)
     return re.sub(r"-\d{8}-\d{6}$", "", str(job)) or "unknown"
 
 

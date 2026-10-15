@@ -397,12 +397,12 @@ tr.pick { cursor: pointer; }
 tr.pick:hover { background: var(--container-strong); }
 tr.pick td.name a { color: inherit; text-decoration: none; }
 tr.pick:hover td.name a { text-decoration: underline; text-underline-offset: 2px; }
-/* The row carries its model colour in --row and its config colour in --cfg, so
-   the name cell can label both without either being read off the bar alone. */
+/* Model names use --row. Configuration labels share neutral ink and use shapes. */
 td .sub {
     display: flex; align-items: center; gap: .3rem;
-    color: var(--cfg, var(--faint)); font-size: .76rem; font-weight: 500; margin-top: .15rem;
+    color: var(--faint); font-size: .76rem; font-weight: 500; margin-top: .15rem;
 }
+td .sub.config-label, .legend.config-legend { color: var(--aura-neutral-text); }
 td .sub .glyph { width: 11px; height: 11px; flex: none; overflow: visible; }
 td.name .who { display: flex; align-items: center; gap: .4rem; }
 td.name .swatch {

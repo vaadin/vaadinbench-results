@@ -94,7 +94,7 @@ function renderCrumb(config = configOf(trial.job)) {
     document.getElementById("crumb").innerHTML =
         `<a href="${leaderboardUrl()}">Leaderboard</a>
          <span class="crumb-sep" aria-hidden="true">›</span>
-         <a href="${runUrl(trial.model, config)}">${escapeHtml(shortModel(trial.model))}
+         <a href="${runUrl(trial.model, config, effortOf(trial))}">${escapeHtml(modelWithEffort(trial.model, effortOf(trial)))}
             <span class="crumb-dot">·</span> ${escapeHtml(config)}</a>`;
 }
 

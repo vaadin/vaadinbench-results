@@ -32,6 +32,60 @@ Everything on a card is counted from the benchmark's own index, so the list
 cannot disagree with the page it links to — the one thing a scan cannot infer is
 the name, which is why each folder carries a `benchmark.json`.
 
+### October 15, 2026 snapshot
+
+The October jobs are published separately from the existing August and September
+benchmarks. Only jobs with a non-null `finished_at` and all expected trial
+results are included. The earlier setup diagnostics report has been removed.
+
+| Benchmark folder | Completed jobs | Trials | Solved / graded |
+| --- | --- | --- | --- |
+| `codex-202610` | Luna/Sol suites and Astra Orders runs | 150 | 81 / 150 |
+
+The medium suite uses GPT-6 Luna and GPT-6.1 Sol at medium reasoning effort;
+the xhigh suite uses GPT-6 Luna at xhigh effort. Both use Codex 0.162.1, eight
+Flow tasks and three attempts per task/model/configuration. The medium suite
+scores 25/48 with skills and 22/48 with vanilla. The xhigh suite is now complete
+and scores 14/24 with skills and 14/24 with vanilla. All three
+model/effort sets appear on the same `codex-202610` leaderboard. The `suite-*`
+jobs are medium effort and the `luna-xhigh-*` job is xhigh. Configurations are
+named `vanilla-codex` and `vaadin-skills-codex`; reasoning effort is shown beside
+the model and remains part of the aggregation and drill-down key. Configuration
+markers use a uniform neutral color and distinct symbols.
+`publish.py` writes configuration data to JSON; `index.js`, `common.js` and
+`app.css` render it. All generated reports use the same fixed neutral styling
+for configuration labels and glyphs, with no per-configuration color map.
+The page also includes six completed GPT-6 Astra Orders trials at medium effort,
+three with skills and three vanilla, all passing. These cover only one task,
+so their coverage differs from the Luna/Sol
+suites. The data was regenerated from the current job artifacts, including the
+trajectory and verifier output; publishing does not rerun grading.
+The broader `astra-remaining-*` suite is still running and excluded until its
+jobs finish.
+
+Sources are under `/home/orca/code/vaadinbench/vaadinbench/jobs/`:
+
+- `suite-20261014-191912-{vaadin-skills,vanilla}-codex-20261014-191912`
+- `luna-xhigh-20261015-023824-{vaadin-skills,vanilla}-codex-20261015-023824`
+- `orders-astra-20261015-054815-vanilla-codex-20261015-054815`
+- `orders-astra-skills-20261015-064238-vaadin-skills-codex-20261015-064238`
+- `orders-astra-extra-20261015-081235-{vaadin-skills,vanilla}-codex-20261015-081235`
+
+Diffs were rebuilt using the unchanged task environments from checkout
+`d515b87` (skills pinned to `641ff1ecfce9d8065b940a84ca5044af83d472b5`).
+The `--baselines` directory was an absolute path to
+`.baselines/tasks-20261015`, containing symlinks to only `flow-grid-filtering`,
+`flow-new-project`, `flow-new-view` and `flow-polymer-to-lit` in that checkout.
+This reconstructs 72 trial diffs. The four `*-lenient` UI tasks also copy design
+files into the starting project; the publisher does not reproduce that step,
+so their 78 trials deliberately have no reconstructed diff. Trajectories and
+verifier output are still included.
+
+To refresh a benchmark, pass its source job directories to `publish.py` with
+the same `--benchmark` slug and the curated absolute `--baselines` path above.
+For `codex-202610`, pass all eight completed job directories together,
+or use `--keep` to refresh individual jobs while retaining the other runs.
+
 ## Publishing a run
 
 A run happens on the machine with Docker and the model credentials. This repo
