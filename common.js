@@ -6,20 +6,88 @@ const NBSP = " ";
 
 // The Vaadin reindeer, from Font Awesome's brand set (CC BY 4.0). Two subpaths:
 // the antlers and the muzzle. It lives here rather than in each page's markup
-// so there is one copy of it, and app.css does the drawing.
+// so there is one copy of it. The attributes are its resting state; the draw-in
+// is `animate-draw`, which starts from a bare outline and fills it.
 const REINDEER = "M224.5 140.7c1.5-17.6 4.9-52.7 49.8-52.7h98.6c20.7 0 32.1-7.8 32.1-21.6V54.1c0-12.2 9.3-22.1 21.5-22.1S448 41.9 448 54.1v36.5c0 42.9-21.5 62-66.8 62H280.7c-30.1 0-33 14.7-33 27.1 0 1.3-.1 2.5-.2 3.7-.7 12.3-10.9 22.2-23.4 22.2s-22.7-9.8-23.4-22.2c-.1-1.2-.2-2.4-.2-3.7 0-12.3-3-27.1-33-27.1H66.8c-45.3 0-66.8-19.1-66.8-62V54.1C0 41.9 9.4 32 21.6 32s21.5 9.9 21.5 22.1v12.3C43.1 80.2 54.5 88 75.2 88h98.6c44.8 0 48.3 35.1 49.8 52.7h.9zM224 456c11.5 0 21.4-7 25.7-16.3 1.1-1.8 97.1-169.6 98.2-171.4 11.9-19.6-3.2-44.3-27.2-44.3-13.9 0-23.3 6.4-29.8 20.3L224 362l-66.9-117.7c-6.4-13.9-15.9-20.3-29.8-20.3-24 0-39.1 24.6-27.2 44.3 1.1 1.9 97.1 169.6 98.2 171.4 4.3 9.3 14.2 16.3 25.7 16.3z";
 
 function renderMark() {
     const slot = document.getElementById("mark");
     if (!slot) return;
-    slot.innerHTML = `<svg class="mark" viewBox="0 0 448 512" role="img"
-        aria-label="Vaadin"><path pathLength="1" d="${REINDEER}"/></svg>`;
+    slot.innerHTML = `<svg class="block h-7.5 overflow-visible shrink-0 text-blue-9 w-6.5"
+        viewBox="0 0 448 512" role="img" aria-label="Vaadin"><path
+        class="animate-draw motion-reduce:animate-none" fill="currentColor"
+        stroke="currentColor" stroke-dasharray="1" stroke-linecap="round"
+        stroke-linejoin="round" stroke-opacity="0" stroke-width="14"
+        pathLength="1" d="${REINDEER}"/></svg>`;
 }
 
 function escapeHtml(value) {
     return String(value ?? "").replace(/[&<>"']/g, (ch) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
     })[ch]);
+}
+
+// Class lists used by more than one page. Utilities only (see utilities.css);
+// these just save restating the same cell or label in every template.
+const LINK = "no-underline text-blue-11 hover:underline";
+const EYEBROW = "-tracking-4 font-mono font-normal leading-tight m-0 text-2xs text-gray-11 uppercase";
+const SECTION = `${EYEBROW} mb-3 mt-8`;
+const EMPTY = "m-0 text-gray-11";
+const CODE = "bg-gray-3 font-mono px-0.75 py-1 rounded text-gray-12 text-xs tracking-0";
+const PRE = "bg-gray-3 font-mono leading-snug m-0 overflow-x-auto px-4 py-3 rounded-lg text-xs tracking-0";
+const NOTE = "m-0 text-2xs text-gray-11";
+
+// Tables share one frame and one set of cells. Rows are divided by the body
+// (`divide-y`), so the last row needs no override.
+const TABLE_WRAP = "border border-gray-3 mb-5 overflow-x-auto overscroll-x-contain rounded-lg";
+const TH = "-tracking-4 border-b border-gray-3 font-mono font-normal leading-tight px-4 py-3 text-2xs text-gray-11 text-left uppercase whitespace-nowrap";
+const TH_NUM = "-tracking-4 border-b border-gray-3 font-mono font-normal leading-tight px-4 py-3 tabular-nums text-2xs text-gray-11 text-right uppercase whitespace-nowrap";
+const TBODY = "divide-gray-3 divide-y";
+const TD = "px-4 py-3 text-left whitespace-nowrap";
+const TD_NUM = "px-4 py-3 tabular-nums text-right whitespace-nowrap";
+
+const BADGE = {
+    pass: "-tracking-4 bg-green-3 font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-green-11 uppercase",
+    fail: "-tracking-4 bg-red-3 font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-red-11 uppercase",
+    // Outlined rather than filled, so it reads on a grey tile as well as a white table.
+    tag: "-tracking-4 border border-gray-5 box-border font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-gray-11 uppercase",
+};
+
+// Icons: Lucide (https://lucide.dev), ISC License, Copyright (c) Lucide Contributors.
+// Inner markup only; lucide() adds the attributes every Lucide icon carries.
+const ICONS = {
+    x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+    "chevron-right": '<path d="m9 18 6-6-6-6"/>',
+    user: '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    "message-square": '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+    brain: '<path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z"/><path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z"/><path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4"/><path d="M17.599 6.5a3 3 0 0 0 .399-1.375"/><path d="M6.003 5.125A3 3 0 0 0 6.401 6.5"/><path d="M3.477 10.896a4 4 0 0 1 .585-.396"/><path d="M19.938 10.5a4 4 0 0 1 .585.396"/><path d="M6 18a4 4 0 0 1-1.967-.516"/><path d="M19.967 17.484A4 4 0 0 1 18 18"/>',
+    "file-text": '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    pencil: '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
+    "square-terminal": '<path d="m7 11 2-2-2-2"/><path d="M11 13h4"/><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>',
+    "flask-conical": '<path d="M10 2v7.527a2 2 0 0 1-.211.896L4.72 20.55a1 1 0 0 0 .9 1.45h12.76a1 1 0 0 0 .9-1.45l-5.069-10.127A2 2 0 0 1 14 9.527V2"/><path d="M8.5 2h7"/><path d="M7 16h10"/>',
+    bot: '<path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/>',
+    "list-checks": '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
+    ellipsis: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+    "circle-dot": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/>',
+};
+
+function lucide(name, klass = "h-4 shrink-0 w-4") {
+    return `<svg class="${klass}" aria-hidden="true" fill="none" stroke="currentColor"
+        stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        viewBox="0 0 24 24">${ICONS[name]}</svg>`;
+}
+
+// Tabs are actions: 13 Mono uppercase, the label in its own trimmed span. The
+// selected one is told apart by its underline as well as its colour.
+const TAB = "-mb-px bg-transparent border-0 border-b-2 border-transparent cursor-pointer font-mono leading-tight p-0 pb-3 text-gray-11 text-xs tracking-0 uppercase hover:text-gray-12";
+const TAB_SELECTED = "-mb-px bg-transparent border-0 border-b-2 border-blue-9 cursor-pointer font-mono leading-tight p-0 pb-3 text-gray-12 text-xs tracking-0 uppercase";
+
+function tabBar(tabs, active) {
+    return `<div class="border-b border-gray-3 flex flex-wrap gap-x-6 gap-y-2 mb-6" role="tablist">${
+        tabs.map(([id, label]) => `<button class="${id === active ? TAB_SELECTED : TAB}"
+            data-tab="${id}" role="tab" aria-selected="${id === active}"><span
+            class="box-trim-end">${label}</span></button>`).join("")}</div>`;
 }
 
 // Pages serves everything with `max-age=600` and no way to override it, so a
@@ -141,14 +209,15 @@ function percent(rate) {
 function outcome(trial) {
     if (trial.reward === null || trial.reward === undefined) {
         return trial.error
-            ? `<span class="badge fail">error</span>`
-            : `<span class="badge tag">no reward</span>`;
+            ? `<span class="${BADGE.fail}">error</span>`
+            : `<span class="${BADGE.tag}">no reward</span>`;
     }
     const badge = trial.reward >= 1
-        ? `<span class="badge pass">pass</span>`
-        : `<span class="badge fail">fail</span>`;
+        ? `<span class="${BADGE.pass}">pass</span>`
+        : `<span class="${BADGE.fail}">fail</span>`;
     if (!trial.error) return badge;
-    return `${badge} <span class="note" title="${escapeHtml(trial.error)}">error</span>`;
+    return `${badge} <span class="text-2xs text-gray-11 whitespace-nowrap"
+        title="${escapeHtml(trial.error)}">error</span>`;
 }
 
 // The job rides along so the trial page can check that the file it loaded is
@@ -166,27 +235,32 @@ function leaderboardUrl() {
     return pageUrl("index.html");
 }
 
-// One hue per model, from Aura's palette, so a row's bar and its dot in the
-// chart are the same colour. Assigned by position in the sorted model list
-// rather than by name, so a new model picks up the next hue on its own.
-// Yellow is out: its text variant cannot be read at chip size, and a sixth model
-// -- which is what a second agent brings -- is what first reaches that far.
-const HUES = ["blue", "purple", "orange", "green", "red", "teal"];
+// One hue per model, so a row's bar and its dot in the chart are the same
+// colour. Assigned by position in the sorted model list rather than by name, so
+// a new model picks up the next hue on its own. Yellow is out: its text step
+// cannot be read at chip size.
+const HUES = ["blue", "violet", "orange", "green", "red", "teal"];
+
+// Each hue's classes, spelled out rather than built from the name, so every
+// utility the pages use appears in the source and the unused-utility check can
+// see it. Step 9 for anything filled, 11 for anything set as type, 3 and 7 for a
+// selected chip's tint and edge.
+const HUE_CLASSES = {
+    blue: { fill: "bg-blue-9", tint: "bg-blue-3", edge: "border-blue-7", text: "text-blue-11", dot: "fill-blue-9", label: "fill-blue-11" },
+    violet: { fill: "bg-violet-9", tint: "bg-violet-3", edge: "border-violet-7", text: "text-violet-11", dot: "fill-violet-9", label: "fill-violet-11" },
+    orange: { fill: "bg-orange-9", tint: "bg-orange-3", edge: "border-orange-7", text: "text-orange-11", dot: "fill-orange-9", label: "fill-orange-11" },
+    green: { fill: "bg-green-9", tint: "bg-green-3", edge: "border-green-7", text: "text-green-11", dot: "fill-green-9", label: "fill-green-11" },
+    red: { fill: "bg-red-9", tint: "bg-red-3", edge: "border-red-7", text: "text-red-11", dot: "fill-red-9", label: "fill-red-11" },
+    teal: { fill: "bg-teal-9", tint: "bg-teal-3", edge: "border-teal-7", text: "text-teal-11", dot: "fill-teal-9", label: "fill-teal-11" },
+};
 
 function hueMap(models) {
     const sorted = [...new Set(models)].sort();
     return new Map(sorted.map((model, i) => [model, HUES[i % HUES.length]]));
 }
 
-// The saturated palette colour for anything filled, its `-text` variant for
-// anything set as type: Aura computes the second precisely because the first
-// does not have the contrast for small text.
-function hueFill(hue) {
-    return `var(--aura-${hue})`;
-}
-
-function hueText(hue) {
-    return `var(--aura-${hue}-text)`;
+function hueClasses(hue) {
+    return HUE_CLASSES[hue] ?? HUE_CLASSES.blue;
 }
 
 // Configurations are the other axis of comparison, and colour is already spent
@@ -200,16 +274,17 @@ function shapeMap(configs) {
 }
 
 // The chart's marker at text size, so a configuration carries the same shape in
-// a chip, a table row and a legend as it does in the scatter. Inherit the shared
-// neutral text color; configuration glyphs have no independent color mapping.
+// a chip, a table row and a legend as it does in the scatter. It takes the text
+// colour around it; configuration glyphs have no colour mapping of their own.
 function shapeGlyph(shape) {
-    return `<svg class="glyph" viewBox="0 0 14 14" aria-hidden="true">${
-        marker(shape, 7, 7, "fill:currentColor", "dot", 5)}</svg>`;
+    return `<svg class="h-3 overflow-visible shrink-0 w-3" viewBox="0 0 14 14" aria-hidden="true">${
+        marker(shape, 7, 7, "fill-current", 5)}</svg>`;
 }
 
 const SHAPE_TAGS = { circle: "circle", square: "rect", triangle: "polygon", diamond: "polygon" };
 
-function marker(shape, x, y, style, klass = "dot", r = 6) {
+// `data-dot` marks it as an obstacle for layoutChartLabels().
+function marker(shape, x, y, klass, r = 6) {
     const kind = SHAPE_TAGS[shape] ? shape : "circle";
     const body = {
         circle: `<circle cx="${x}" cy="${y}" r="${r}"`,
@@ -220,7 +295,7 @@ function marker(shape, x, y, style, klass = "dot", r = 6) {
         diamond: `<polygon points="${x},${y - r * 1.25} ${x + r * 1.05},${y}
             ${x},${y + r * 1.25} ${x - r * 1.05},${y}"`,
     }[kind];
-    return `${body} class="${klass}" style="${style}"/>`;
+    return `${body} class="${klass}" data-dot/>`;
 }
 
 // Candidate positions for a label, in preference order: beside the point first,
@@ -238,7 +313,7 @@ const LABEL_SLOTS = (() => {
 
 function layoutChartLabels(svg) {
     if (!svg) return;
-    const labels = [...svg.querySelectorAll(".dot-label")];
+    const labels = [...svg.querySelectorAll("[data-label]")];
     if (!labels.length) return;
     const width = svg.viewBox.baseVal.width;
     const pad = 2;
@@ -249,7 +324,7 @@ function layoutChartLabels(svg) {
     // Markers and the axis text are obstacles from the start; each label becomes
     // one as it lands. Including the ticks is what keeps a label from settling on
     // top of "100%" or "$2.00".
-    const taken = [...svg.querySelectorAll(".dot, .tick, .axis-title")]
+    const taken = [...svg.querySelectorAll("[data-dot], [data-tick]")]
         .map((node) => grow(node.getBBox()));
 
     // Overlap by area, not yes/no: when a point is boxed in on every side, the
@@ -283,7 +358,7 @@ function layoutChartLabels(svg) {
 // about a second and then lets the window manager put it wherever it likes --
 // far from the point it describes, which reads as a bug.
 function bindTips(root) {
-    const tip = root.querySelector(".tip");
+    const tip = root.querySelector("[data-tooltip]");
     if (!tip) return;
     const show = (target) => {
         const box = target.getBoundingClientRect();
@@ -341,22 +416,35 @@ function mdInline(text) {
         .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, "$1")
         .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (whole, label, href) => {
             const url = mdUrl(href);
-            return url ? `<a href="${url}">${label}</a>` : label;
+            return url ? `<a class="text-blue-11 underline" href="${url}">${label}</a>` : label;
         })
-        .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-        .replace(/__([^_]+)__/g, "<strong>$1</strong>")
+        // Regular weight only, so strong text is set apart by full-contrast ink.
+        .replace(/\*\*([^*]+)\*\*/g, '<strong class="font-normal text-gray-12">$1</strong>')
+        .replace(/__([^_]+)__/g, '<strong class="font-normal text-gray-12">$1</strong>')
         .replace(/(^|[\s(])\*([^*\n]+)\*/g, "$1<em>$2</em>")
         .replace(/(^|[\s(])_([^_\n]+)_/g, "$1<em>$2</em>")
         .replace(/~~([^~]+)~~/g, "<del>$1</del>");
 
-    return out.replace(/\u0000(\d+)\u0000/g, (_, i) => `<code>${code[Number(i)]}</code>`);
+    return out.replace(/\u0000(\d+)\u0000/g,
+        (_, i) => `<code class="${CODE}">${code[Number(i)]}</code>`);
 }
+
+// Rendered blocks sit in a `flex flex-col gap-3` container, which spaces them,
+// so each one clears its own margins. Headings take extra room above, and step
+// down in size because they cannot step down in weight.
+const MD_HEADING = {
+    1: "font-normal leading-snug m-0 mt-3 text-xl tracking-1",
+    2: "font-normal leading-snug m-0 mt-3 text-lg tracking-1",
+    3: "font-normal leading-snug m-0 mt-3 text-base tracking-1",
+};
+const MD_HEADING_MINOR = "-tracking-4 font-mono font-normal leading-tight m-0 mt-3 text-2xs text-gray-11 uppercase";
+const MD_BLOCK = "flex flex-col gap-3 leading-snug text-gray-12 wrap-anywhere";
 
 // Lists nest by indent, so they are built depth-first: an item deeper than the
 // level being built starts a sublist inside the item before it.
 function mdList(items, start, indent) {
     const tag = items[start].ordered ? "ol" : "ul";
-    let html = `<${tag}>`;
+    let html = `<${tag} class="m-0 pl-5">`;
     let i = start;
     while (i < items.length && items[i].indent >= indent) {
         if (items[i].indent > indent) {
@@ -365,7 +453,7 @@ function mdList(items, start, indent) {
             i = next;
             continue;
         }
-        html += `<li>${mdInline(items[i].text)}`;
+        html += `<li class="mt-1">${mdInline(items[i].text)}`;
         if (i + 1 < items.length && items[i + 1].indent > indent) {
             const [sub, next] = mdList(items, i + 1, items[i + 1].indent);
             html += sub;
@@ -399,14 +487,14 @@ function renderMarkdown(text) {
                 i += 1;
             }
             i += 1;
-            out.push(`<pre><code>${body.join("\n")}</code></pre>`);
+            out.push(`<pre class="${PRE}"><code class="font-mono">${body.join("\n")}</code></pre>`);
             continue;
         }
 
         if (!line.trim()) { i += 1; continue; }
 
         if (/^\s*([-*_])(\s*\1){2,}\s*$/.test(line)) {
-            out.push("<hr>");
+            out.push('<hr class="border-0 border-gray-3 border-t m-0 w-full">');
             i += 1;
             continue;
         }
@@ -414,7 +502,8 @@ function renderMarkdown(text) {
         const heading = line.match(/^(#{1,6})\s+(.*)$/);
         if (heading) {
             const level = heading[1].length;
-            out.push(`<h${level}>${mdInline(heading[2].trim())}</h${level}>`);
+            out.push(`<h${level} class="${MD_HEADING[level] ?? MD_HEADING_MINOR}">${
+                mdInline(heading[2].trim())}</h${level}>`);
             i += 1;
             continue;
         }
@@ -425,7 +514,8 @@ function renderMarkdown(text) {
                 body.push(lines[i].replace(/^\s*&gt;\s?/, ""));
                 i += 1;
             }
-            out.push(`<blockquote>${renderMarkdown(unescapeHtml(body.join("\n")))}</blockquote>`);
+            out.push(`<blockquote class="border-0 border-gray-5 border-l-2 flex flex-col gap-3 m-0 pl-4 text-gray-11">${
+                renderMarkdown(unescapeHtml(body.join("\n")))}</blockquote>`);
             continue;
         }
 
@@ -461,7 +551,7 @@ function renderMarkdown(text) {
             paragraph.push(lines[i]);
             i += 1;
         }
-        out.push(`<p>${mdInline(paragraph.join("\n"))}</p>`);
+        out.push(`<p class="m-0">${mdInline(paragraph.join("\n"))}</p>`);
     }
 
     return out.join("");
@@ -477,26 +567,33 @@ function unescapeHtml(value) {
 }
 
 // Summary figures as a one-row table rather than a flat run of label/value
-// pairs: it puts them on a card like every other block of content, lines the
-// numbers up under their names, and needs no styling of its own.
+// pairs: it puts them in a frame like every other block of content and lines
+// the numbers up under their names. The values are set larger than the labels,
+// since they are what the row is for.
 function metricsTable(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
-    return `<div class="wrap"><table class="summary">
+    return `<div class="${TABLE_WRAP}"><table class="border-collapse w-full">
         <thead><tr>${cells.map(([label]) =>
-            `<th>${escapeHtml(label)}</th>`).join("")}</tr></thead>
+            `<th class="${TH}">${escapeHtml(label)}</th>`).join("")}</tr></thead>
         <tbody><tr>${cells.map(([, value]) =>
-            `<td>${value}</td>`).join("")}</tr></tbody>
+            `<td class="leading-snug px-4 py-3 tabular-nums text-left text-lg tracking-1 whitespace-nowrap">${value}</td>`).join("")}</tr></tbody>
     </table></div>`;
+}
+
+// A warning that has to survive a glance: a red edge on a tile.
+function banner(title, body) {
+    return `<div class="bg-gray-3 border-0 border-l-4 border-red-9 mb-5 px-4 py-3 rounded text-gray-11"><strong
+        class="font-normal text-gray-12">${title}</strong> ${body}</div>`;
 }
 
 // Invented data must never be mistaken for a measurement, so it is called out on
 // every page that shows any, not only where it was generated.
 function syntheticBanner(isSynthetic) {
     if (!isSynthetic) return "";
-    return `<div class="banner"><strong>Synthetic data.</strong> These numbers
-        were invented to develop this site, not measured. They disappear the
-        first time real results are published.</div>`;
+    return banner("Synthetic data.", `These numbers were invented to develop this
+        site, not measured. They disappear the first time real results are
+        published.`);
 }
 
 function renderFooter(generatedAt) {
@@ -508,8 +605,8 @@ function renderFooter(generatedAt) {
         ? `Generated ${escapeHtml(new Date(generatedAt).toISOString().slice(0, 16).replace("T", " "))} UTC · `
         : "";
     footer.innerHTML = `${stamp}
-        <a href="https://github.com/vaadin/vaadinbench-results">source</a> ·
-        <a href="https://github.com/vaadin/vaadinbench">tasks</a>`;
+        <a class="${LINK}" href="https://github.com/vaadin/vaadinbench-results">source</a> ·
+        <a class="${LINK}" href="https://github.com/vaadin/vaadinbench">tasks</a>`;
 }
 
 // The way to the other benchmarks. Just the way there: which benchmark this is
@@ -534,8 +631,10 @@ function renderBenchmarkBar() {
     if (!slot) return;
     fetchJson("data/benchmarks.json").then((registry) => {
         if ((registry.benchmarks ?? []).length < 2) return;
-        slot.innerHTML =
-            `<a class="bench-switch" href="benchmarks.html">All benchmarks</a>`;
+        slot.innerHTML = `<a class="border border-gray-3 box-border flex font-mono h-8
+            items-center leading-tight no-underline px-3 rounded text-gray-12 text-xs
+            tracking-0 uppercase whitespace-nowrap hover:bg-gray-3"
+            href="benchmarks.html"><span class="box-trim-end">All benchmarks</span></a>`;
     }).catch(() => {
         // No registry is the state this site was in before benchmarks existed.
         // The page below it works either way, so it says nothing.
@@ -547,9 +646,9 @@ function showError(error) {
     // nobody typed. Offer the list rather than leaving the reader to guess a
     // slug back.
     const elsewhere = benchmark === DEFAULT_BENCHMARK ? ""
-        : ` <a href="benchmarks.html">See the benchmarks that are published.</a>`;
+        : ` <a class="${LINK}" href="benchmarks.html">See the benchmarks that are published.</a>`;
     document.getElementById("content").innerHTML =
-        `<p class="empty">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`;
+        `<p class="${EMPTY}">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`;
 }
 
 renderMark();
