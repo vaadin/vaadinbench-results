@@ -40,7 +40,7 @@ function fetchJson(path) {
 // which one it is on. The default is the one the site opens on, and it is left
 // out of the query string entirely -- so the URLs that existed before there was
 // more than one benchmark still resolve to it.
-const DEFAULT_BENCHMARK = "default";
+const DEFAULT_BENCHMARK = "release-20261021";
 const benchmark = new URLSearchParams(location.search).get("benchmark")
     || DEFAULT_BENCHMARK;
 
@@ -94,8 +94,8 @@ function shortSuite(name) {
 // of one configuration on different days land in the same row. Suite prefixes
 // identify a batch of jobs, not the configuration supplied to Codex.
 function configOf(job) {
-    const codex = String(job ?? "").match(/(?:^|-)(vaadin-skills-codex|vanilla-codex)-\d{8}-\d{6}$/);
-    if (codex) return codex[1];
+    const agentConfig = String(job ?? "").match(/(?:^|-)(vaadin-skills-mcp|vaadin-mcp|vaadin-skills|vanilla)-(?:codex|claude-code)(?:-\d{8}-\d{6})?$/);
+    if (agentConfig) return agentConfig[1];
     return String(job ?? "").replace(/-\d{8}-\d{6}$/, "") || "unknown";
 }
 

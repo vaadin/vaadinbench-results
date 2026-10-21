@@ -14,7 +14,8 @@ The site holds more than one benchmark, and each is a folder under `data/`:
 
 ```text
 data/benchmarks.json                 the registry the list page reads
-data/default/                        the benchmark the site opens on
+data/release-20261021/                the benchmark the site opens on
+data/default/                        the original August results, retained
 data/<slug>/index.json                   one row per trial
 data/<slug>/trials/<id>.json             one file per trial
 data/<slug>/benchmark.json               what it is called
@@ -23,8 +24,9 @@ data/<slug>/benchmark.json               what it is called
 A benchmark is a set of runs asking one question, and **nothing is compared
 across them** — different models, different tasks, different months. The pages
 show one at a time: `?benchmark=<slug>` selects it, `benchmarks.html` lists them
-all, and the default is left out of the query string entirely, so every URL that
-worked before there was more than one benchmark still resolves to it.
+all, and the current default is left out of the query string entirely. Historical
+results remain available through their benchmark cards and explicit slugs,
+including `?benchmark=default` for the original August results.
 
 `benchmarks.json` is rebuilt by scanning `data/`, never edited. Deleting a
 folder unpublishes it; `./publish.py --registry` rebuilds the list after one.
@@ -32,36 +34,81 @@ Everything on a card is counted from the benchmark's own index, so the list
 cannot disagree with the page it links to — the one thing a scan cannot infer is
 the name, which is why each folder carries a `benchmark.json`.
 
-### October 15, 2026 snapshot
+### Current default: October 21, 2026 release
+
+`release-20261021` contains 648 accepted trials: nine Flow tasks, three attempts
+for each model/effort/configuration pairing, and three configurations (`vanilla`,
+`vaadin-skills`, `vaadin-mcp`). The eight model/effort settings are Astra medium,
+Luna medium/xhigh and Sol medium on Codex, plus Haiku 5.5 medium/xhigh,
+Sonnet 5.5 medium and Opus 5.5 medium on Claude Code.
+
+The exact selection is frozen in `releases/2026-10-21/selection.json`, copied
+from the completed suite's accepted-results list. The adjacent `manifest.json`
+records the planned slot, source result hash and reward for every trial.
+It contains one accepted source result per planned slot. Thirty-two externally
+interrupted attempts were excluded and replaced under the suite's quality policy;
+ordinary task, compiler and test failures remain included. The publisher rejects
+duplicate, incomplete, ungraded or errored selected results before writing data.
+
+Rebuild the release with:
+
+```bash
+python3 publish.py --selection releases/2026-10-21/selection.json
+```
+
+The manifest points to source jobs in
+`/home/orca/code/vaadinbench/vaadinbench/jobs/`. Only those selected trials are
+imported, even when a source job also contains excluded attempts. Original
+within-job attempt numbers are retained so trial links remain stable.
+All 648 trials carry captured `verifier/agent.patch` files, which are published
+without baseline reconstruction. The benchmark metadata records selection hashes,
+quality policy and agent versions: 190 reused Codex trials on 0.162.1, 134 on
+0.163.0, and 324 Claude Code trials on 2.1.303. Original costs and timings are kept.
+
+The original August results (`default`), September results (`all` and
+`vaadin-mcp-vs-java-mcp`) and the earlier October Codex set (`codex-202610`)
+remain on the benchmarks page. The root URL now opens `release-20261021`.
+
+### October 15, 2026 snapshot (retained)
 
 The October jobs are published separately from the existing August and September
 benchmarks. Only jobs with a non-null `finished_at` and all expected trial
 results are included. The earlier setup diagnostics report has been removed.
 
+Release grading review (October 19): all 24 published Orders submissions were
+replayed against the grading code at `df7a933` using their saved patches. Scores
+remain 19/24 and no individual test pass/fail outcomes changed. The replay used
+the original pinned runtime with verifier image
+`sha256:5fe465c0f4e72c10a00d2fa2515019edd5eb916cd1ec6c161d293d483cb60a56`;
+all grading files match that checkout. Original results and verifier reports are
+backed up under
+`/home/orca/code/vaadinbench/regrades/orders-release-20261019-182018/originals`.
+The adjacent `comparison.json` records the replay outcomes. No model calls were
+made; all other trial results, agent timings, token counts and costs are retained.
+The benchmark metadata records the verifier revision and replay summary.
+
 | Benchmark folder | Completed jobs | Trials | Solved / graded |
 | --- | --- | --- | --- |
-| `codex-202610` | Luna/Sol suites and Astra Orders runs | 150 | 81 / 150 |
+| `codex-202610` | Complete Luna, Sol and Astra suites | 192 | 106 / 192 |
 
-The medium suite uses GPT-6 Luna and GPT-6.1 Sol at medium reasoning effort;
-the xhigh suite uses GPT-6 Luna at xhigh effort. Both use Codex 0.162.1, eight
+The medium suites use GPT-6 Luna, GPT-6.1 Sol and GPT-6 Astra;
+the xhigh suite uses GPT-6 Luna at xhigh effort. All use Codex 0.162.1, eight
 Flow tasks and three attempts per task/model/configuration. The medium suite
 scores 25/48 with skills and 22/48 with vanilla. The xhigh suite is now complete
-and scores 14/24 with skills and 14/24 with vanilla. All three
+and scores 14/24 with skills and 14/24 with vanilla. All four
 model/effort sets appear on the same `codex-202610` leaderboard. The `suite-*`
 jobs are medium effort and the `luna-xhigh-*` job is xhigh. Configurations are
-named `vanilla-codex` and `vaadin-skills-codex`; reasoning effort is shown beside
+named `vanilla` and `vaadin-skills`; reasoning effort is shown beside
 the model and remains part of the aggregation and drill-down key. Configuration
 markers use a uniform neutral color and distinct symbols.
 `publish.py` writes configuration data to JSON; `index.js`, `common.js` and
 `app.css` render it. All generated reports use the same fixed neutral styling
 for configuration labels and glyphs, with no per-configuration color map.
-The page also includes six completed GPT-6 Astra Orders trials at medium effort,
-three with skills and three vanilla, all passing. These cover only one task,
-so their coverage differs from the Luna/Sol
-suites. The data was regenerated from the current job artifacts, including the
-trajectory and verifier output; publishing does not rerun grading.
-The broader `astra-remaining-*` suite is still running and excluded until its
-jobs finish.
+The Astra suite is complete: its six passing Orders trials and 42 remaining-task
+trials now cover all eight tasks with three attempts each per configuration.
+Astra scores 16/24 with skills and 15/24 with vanilla. The data was regenerated
+from the current job artifacts, including the trajectory and verifier output;
+publishing does not rerun grading.
 
 Sources are under `/home/orca/code/vaadinbench/vaadinbench/jobs/`:
 
@@ -70,20 +117,21 @@ Sources are under `/home/orca/code/vaadinbench/vaadinbench/jobs/`:
 - `orders-astra-20261015-054815-vanilla-codex-20261015-054815`
 - `orders-astra-skills-20261015-064238-vaadin-skills-codex-20261015-064238`
 - `orders-astra-extra-20261015-081235-{vaadin-skills,vanilla}-codex-20261015-081235`
+- `astra-remaining-20261015-082920-{vaadin-skills,vanilla}-codex-20261015-083120`
 
 Diffs were rebuilt using the unchanged task environments from checkout
 `d515b87` (skills pinned to `641ff1ecfce9d8065b940a84ca5044af83d472b5`).
 The `--baselines` directory was an absolute path to
 `.baselines/tasks-20261015`, containing symlinks to only `flow-grid-filtering`,
 `flow-new-project`, `flow-new-view` and `flow-polymer-to-lit` in that checkout.
-This reconstructs 72 trial diffs. The four `*-lenient` UI tasks also copy design
+This reconstructs 96 trial diffs. The four `*-lenient` UI tasks also copy design
 files into the starting project; the publisher does not reproduce that step,
-so their 78 trials deliberately have no reconstructed diff. Trajectories and
+so their 96 trials deliberately have no reconstructed diff. Trajectories and
 verifier output are still included.
 
 To refresh a benchmark, pass its source job directories to `publish.py` with
 the same `--benchmark` slug and the curated absolute `--baselines` path above.
-For `codex-202610`, pass all eight completed job directories together,
+For `codex-202610`, pass all ten completed job directories together,
 or use `--keep` to refresh individual jobs while retaining the other runs.
 
 ## Publishing a run
@@ -96,7 +144,7 @@ turns its output into the site:
 git add data && git commit -m "Publish new-project-3models" && git push
 ```
 
-That publishes into `default`. A run that belongs somewhere else names it, and
+That publishes into the current default, `release-20261021`. A run that belongs somewhere else names it, and
 names the benchmark the first time it is published:
 
 ```bash
@@ -130,7 +178,7 @@ goes out today, per trial:
 | Reward, graded suites, failed test names | `verifier/reward.txt`, `verifier/TEST-*.xml` |
 | The verifier's console output, last 40 KB | `verifier/test-stdout.txt` |
 | Generated-project report | `verifier/structure.txt` |
-| Diffstat and patch, when a run has them | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch` |
+| Diffstat and patch, when a run has them | `artifacts/logs/artifacts/agent-diff-stat.txt`, `agent.patch`; otherwise `verifier/agent-diff-stat.txt`, `verifier/agent.patch` |
 
 Harbor collects a container's `/logs` verbatim, so everything a task writes to
 `/logs/artifacts` sits at `artifacts/logs/artifacts/` and everything the verifier
@@ -262,7 +310,7 @@ produces — and it needs Harbor, which the tasks repo already has installed:
 ./publish.py --benchmark scratch --name Scratch fixtures/jobs/example-3models
 ```
 
-Into its own benchmark, not over `default`: publishing without `--benchmark`
+Into its own benchmark, not over `release-20261021`: publishing without `--benchmark`
 replaces the front page with the fixture.
 
 That job carries a `SYNTHETIC` marker. `publish.py` copies the flag into the data

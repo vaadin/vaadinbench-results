@@ -102,12 +102,10 @@ function visible() {
 // `vaadin-bench/configs/*.yaml` -- so this stays a description of them rather
 // than a guess. A configuration with no entry here simply goes unglossed.
 const CONFIG_NOTES = {
-    "vanilla-codex": "Codex without additional Vaadin skills.",
-    "vaadin-skills-codex": "Codex with Vaadin skills.",
-    "vanilla": "Nothing but the model: each agent as it ships, with every Vaadin plugin, skill and server switched off.",
-    "vaadin-skills": "Three Vaadin skills and the documentation MCP server at /docs — a plugin for Claude Code, a skills directory and the same server for Codex.",
+    "vanilla": "The agent without additional Vaadin skills or documentation MCP servers.",
+    "vaadin-skills": "The Vaadin skills configured for this benchmark.",
     "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit. Claude Code only, since the hook is a Claude Code hook.",
-    "vaadin-mcp": "The documentation MCP server at /docs on its own, with no skills — the control the two server URLs are compared against.",
+    "vaadin-mcp": "The Vaadin documentation MCP server, without additional Vaadin skills.",
     "vaadin-mcp-java": "The newer /docs-java documentation server on its own. Identical to vaadin-mcp but for the URL, so the difference between them is the difference between the servers.",
     "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
@@ -115,10 +113,15 @@ const CONFIG_NOTES = {
 // One line per configuration, under its chips. Short on purpose: the point is
 // to say what the agent had, not to document the plugins.
 function renderConfigNotes(configs) {
-    const described = configs.filter((config) => CONFIG_NOTES[config]);
+    const notes = trials.length && trials.every((trial) => trial.agent === "codex")
+        ? { ...CONFIG_NOTES,
+            vanilla: "Codex without additional Vaadin skills.",
+            "vaadin-skills": "Codex with Vaadin skills." }
+        : CONFIG_NOTES;
+    const described = configs.filter((config) => notes[config]);
     if (!described.length) return "";
     return `<dl class="config-notes">${described.map((config) => `
-        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(CONFIG_NOTES[config])}</dd>`
+        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(notes[config])}</dd>`
     ).join("")}</dl>`;
 }
 

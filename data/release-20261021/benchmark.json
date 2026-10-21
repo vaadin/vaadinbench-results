@@ -1,0 +1,56 @@
+{
+  "name": "Codex and Claude Code — October 2026",
+  "description": "648 accepted trials: nine Flow tasks, three attempts per task, vanilla / vaadin-skills / vaadin-mcp. Astra, Luna and Sol on Codex; Haiku 5.5, Sonnet 5.5 and Opus 5.5 on Claude Code. Luna and Haiku include medium and xhigh effort; other models use medium.",
+  "release": {
+    "selection": "releases/2026-10-21/selection.json",
+    "selection_sha256": "91d0390d08afac974a741924f1175564c12fb7c426ec5d1a8a823b3f91ba9638",
+    "plan_sha256": "e8d291825744c14d3178dea252358f03c5de97fb9ad8454c0ea6b01d582e2732",
+    "selected_trials": 648,
+    "model_effort_settings": 8,
+    "attempts_per_task": 3,
+    "excluded_attempts": 32,
+    "quality_policy": {
+      "exclude": [
+        "framework exceptions",
+        "provider error/retry events",
+        "blocked quota events",
+        "explicit provider reconnect/backoff messages"
+      ],
+      "retain": [
+        "reward 0 without an external interruption",
+        "compiler and test failures",
+        "long-running tools",
+        "normal model reasoning",
+        "quota waits before session launch"
+      ],
+      "replacement_attempts_per_slot": 3
+    },
+    "tasks": [
+      "flow-employee-list-lenient",
+      "flow-grid-filtering",
+      "flow-new-project",
+      "flow-new-view",
+      "flow-orders-lenient",
+      "flow-payroll-lenient",
+      "flow-petclinic-vets-simple",
+      "flow-polymer-to-lit",
+      "flow-reports-lenient"
+    ],
+    "agent_versions": {
+      "codex": {
+        "0.162.1": 190,
+        "0.163.0": 134
+      },
+      "claude-code": {
+        "2.1.303": 324
+      }
+    },
+    "notes": [
+      "Selection follows the completed suite manifest, retaining task failures and excluding externally interrupted attempts.",
+      "Earlier accepted Codex results are reused; recorded agent versions and original costs/timings are preserved.",
+      "All Changes tabs use captured verifier patches; no baseline reconstruction is used."
+    ],
+    "manifest": "releases/2026-10-21/manifest.json",
+    "manifest_sha256": "b7fe435abcdc90bd88c1924137f21dfe48ecfb4669808ca3fe0bba8e47c04381"
+  }
+}

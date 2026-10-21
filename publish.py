@@ -49,7 +49,7 @@ DATA = SITE / "data"
 # it is rebuilt by scanning, never edited, so it cannot drift from what is on
 # disk. Each folder's `benchmark.json` is the one thing a scan cannot infer --
 # what the benchmark is called.
-DEFAULT_BENCHMARK = "default"
+DEFAULT_BENCHMARK = "release-20261021"
 REGISTRY = DATA / "benchmarks.json"
 
 # Caps. A trajectory can carry a whole file's contents in one tool result, and a
@@ -722,11 +722,12 @@ def collect_trial(trial_dir: Path, job: str, attempt: int,
     # arrive with no changes to publish at all. The Changes tab already says so,
     # and collect_job counts how many trials it happened to, because one trial
     # missing a patch is a lost file and every trial missing one is the run.
-    patch, patch_truncated = clip(
-        read_text(artifact(trial_dir, "agent.patch")), MAX_PATCH
-    )
+    patch_path = artifact(trial_dir, "agent.patch")
+    if not patch_path.is_file():
+        patch_path = trial_dir / "verifier" / "agent.patch"
+    patch, patch_truncated = clip(read_text(patch_path), MAX_PATCH)
     changes = {
-        "diffstat": read_text(artifact(trial_dir, "agent-diff-stat.txt"), 20_000),
+        "diffstat": read_text(patch_path.with_name("agent-diff-stat.txt"), 20_000),
         "patch": patch,
         "patch_truncated": patch_truncated,
     }
@@ -754,7 +755,8 @@ def shortest_task(task: str) -> str:
 
 
 def collect_job(job_dir: Path, trials_dir: Path,
-                baselines: Baselines | None = None) -> dict[str, Any]:
+                baselines: Baselines | None = None,
+                selected_results: set[Path] | None = None) -> dict[str, Any]:
     job = job_dir.name
     synthetic = (job_dir / "SYNTHETIC").exists()
     trial_dirs = sorted(
@@ -775,6 +777,10 @@ def collect_job(job_dir: Path, trials_dir: Path,
             "/".join(p for p in (model_info.get("provider"), model_info.get("name")) if p),
         )
         seen[key] = seen.get(key, 0) + 1
+        # Count all source attempts before filtering, keeping existing trial IDs
+        # stable when an interrupted attempt is excluded from a curated release.
+        if selected_results is not None and (trial_dir / "result.json").resolve() not in selected_results:
+            continue
         collected = collect_trial(trial_dir, job, seen[key], baselines)
         if collected is None:
             print(f"  skipped {trial_dir.name}: no readable result.json", file=sys.stderr)
@@ -840,9 +846,11 @@ def describe(benchmark_dir: Path) -> dict[str, Any] | None:
 
 def configuration_of(job: str) -> str:
     """A job name without its timestamp — the same rule common.js applies."""
-    codex = re.search(r"(?:^|-)(vaadin-skills-codex|vanilla-codex)-\d{8}-\d{6}$", str(job))
-    if codex:
-        return codex.group(1)
+    agent_config = re.search(
+        r"(?:^|-)(vaadin-skills-mcp|vaadin-mcp|vaadin-skills|vanilla)"
+        r"-(?:codex|claude-code)(?:-\d{8}-\d{6})?$", str(job))
+    if agent_config:
+        return agent_config.group(1)
     return re.sub(r"-\d{8}-\d{6}$", "", str(job)) or "unknown"
 
 
@@ -869,6 +877,11 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("job_dirs", nargs="*", type=Path,
                         help="Harbor job directories")
+    parser.add_argument(
+        "--selection", type=Path, metavar="JSON",
+        help="Publish only the result.json paths in an accepted-results manifest "
+             "with a results_by_row mapping; use instead of job directories",
+    )
     parser.add_argument(
         "--keep",
         action="store_true",
@@ -910,8 +923,29 @@ def main() -> int:
             print(f"{row['slug']:28} {row['name']}")
         return 0
 
-    if not args.job_dirs:
-        parser.error("give at least one job directory, or --registry")
+    selected_results = None
+    if args.selection:
+        if args.job_dirs:
+            parser.error("use --selection or job directories, not both")
+        selection = read_json(args.selection)
+        mapping = selection.get("results_by_row") if isinstance(selection, dict) else None
+        if not isinstance(mapping, dict) or not mapping:
+            parser.error("--selection needs a non-empty results_by_row mapping")
+        if not all(isinstance(value, str) for value in mapping.values()):
+            parser.error("each selected result must be a file path")
+        paths = [Path(value).resolve() for value in mapping.values()]
+        selected_results = set(paths)
+        if len(paths) != len(selected_results):
+            parser.error("--selection contains duplicate result paths")
+        for path in paths:
+            result = read_json(path)
+            if (path.name != "result.json" or not isinstance(result, dict)
+                    or not result.get("finished_at") or result.get("exception_info")
+                    or reward_of(result) is None):
+                parser.error(f"selected result is incomplete, ungraded or errored: {path}")
+        args.job_dirs = sorted({path.parent.parent for path in paths})
+    elif not args.job_dirs:
+        parser.error("give job directories, --selection, or --registry")
 
     baselines = None
     if args.baselines:
@@ -942,7 +976,7 @@ def main() -> int:
             print(f"not a directory: {job_dir}", file=sys.stderr)
             return 1
         print(f"{job_dir.name}")
-        run = collect_job(job_dir, benchmark_dir / "trials", baselines)
+        run = collect_job(job_dir, benchmark_dir / "trials", baselines, selected_results)
         if not run["trials"]:
             print("  no trials found", file=sys.stderr)
             continue
