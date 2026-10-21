@@ -6,7 +6,7 @@ let runs = [];
 const params = new URLSearchParams(location.search);
 const COLUMNS = [
     { key: "model", label: "Model", dir: "asc",
-        value: (row) => `${shortModel(row.model)} ${row.config}`.toLowerCase() },
+        value: (row) => `${modelWithEffort(row.model, row.effort)} ${row.config}`.toLowerCase() },
     { key: "score", label: "Score", num: true, dir: "desc",
         value: (row) => row.rate ?? -1 },
     { key: "solved", label: "Solved", num: true, dir: "desc", value: (row) => row.solved },
@@ -32,7 +32,7 @@ const state = {
     // Every configuration now has a full set of runs, so none of them is
     // missing data that a comparison would misread. The filter opens empty,
     // which shows all of them.
-    configs: new Set((params.get("configs") ?? "").split(",").filter(Boolean)),
+    configs: new Set((params.get("configs") ?? "").split(",").filter(Boolean).map(configOf)),
     x: params.get("x") === "tokens" ? "tokens" : "cost",
 };
 
@@ -58,9 +58,10 @@ function summarize(rows) {
     const byPair = new Map();
     for (const trial of rows) {
         const config = configOf(trial.job);
-        const key = `${trial.model} ${config}`;
+        const effort = effortOf(trial);
+        const key = JSON.stringify([trial.model, config, effort]);
         const row = byPair.get(key) ?? {
-            model: trial.model, config, attempts: 0, solved: 0, graded: 0,
+            model: trial.model, config, effort, attempts: 0, solved: 0, graded: 0,
             cost: 0, out: 0, duration: 0, tasks: new Set(),
         };
         row.attempts += 1;
@@ -101,10 +102,10 @@ function visible() {
 // `vaadin-bench/configs/*.yaml` -- so this stays a description of them rather
 // than a guess. A configuration with no entry here simply goes unglossed.
 const CONFIG_NOTES = {
-    "vanilla": "Nothing but the model: each agent as it ships, with every Vaadin plugin, skill and server switched off.",
-    "vaadin-skills": "Three Vaadin skills and the documentation MCP server at /docs — a plugin for Claude Code, a skills directory and the same server for Codex.",
+    "vanilla": "The agent without additional Vaadin skills or documentation MCP servers.",
+    "vaadin-skills": "The Vaadin skills configured for this benchmark.",
     "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit. Claude Code only, since the hook is a Claude Code hook.",
-    "vaadin-mcp": "The documentation MCP server at /docs on its own, with no skills — the control the two server URLs are compared against.",
+    "vaadin-mcp": "The Vaadin documentation MCP server, without additional Vaadin skills.",
     "vaadin-mcp-java": "The newer /docs-java documentation server on its own. Identical to vaadin-mcp but for the URL, so the difference between them is the difference between the servers.",
     "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
@@ -112,10 +113,15 @@ const CONFIG_NOTES = {
 // One line per configuration, under its chips. Short on purpose: the point is
 // to say what the agent had, not to document the plugins.
 function renderConfigNotes(configs) {
-    const described = configs.filter((config) => CONFIG_NOTES[config]);
+    const notes = trials.length && trials.every((trial) => trial.agent === "codex")
+        ? { ...CONFIG_NOTES,
+            vanilla: "Codex without additional Vaadin skills.",
+            "vaadin-skills": "Codex with Vaadin skills." }
+        : CONFIG_NOTES;
+    const described = configs.filter((config) => notes[config]);
     if (!described.length) return "";
     return `<dl class="config-notes">${described.map((config) => `
-        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(CONFIG_NOTES[config])}</dd>`
+        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(notes[config])}</dd>`
     ).join("")}</dl>`;
 }
 
@@ -125,7 +131,7 @@ function renderConfigNotes(configs) {
 // Each chip wears the colour its value is drawn in below -- a swatch for a
 // model, its shape for a configuration -- so the legend and the filter are the
 // same control, and picking a chip needs no cross-referencing.
-function renderFilters(hues, configHues, shapes) {
+function renderFilters(hues, shapes) {
     const models = [...new Set(trials.map((t) => t.model))].sort();
     const configs = [...new Set(trials.map((t) => configOf(t.job)))].sort();
     const chip = (key, value, hue, mark, label) => `<button class="chip"
@@ -157,8 +163,8 @@ function renderFilters(hues, configHues, shapes) {
         </div>
         <div class="filter">
             <span class="key">Config</span>
-            ${configs.map((config) => chip("configs", config, configHues.get(config),
-                shapeGlyph(shapes.get(config), configHues.get(config)), config)).join("")}
+            ${configs.map((config) => chip("configs", config, "neutral",
+                shapeGlyph(shapes.get(config)), config)).join("")}
             ${clear("configs")}
         </div>
         ${renderConfigNotes(configs)}
@@ -189,7 +195,7 @@ function renderHead() {
     </tr></thead>`;
 }
 
-function renderLeaderboard(rows, hues, configHues, shapes) {
+function renderLeaderboard(rows, hues, shapes) {
     if (!rows.length) return `<p class="empty">Nothing matches this filter.</p>`;
     const body = sortRows(rows).map((row, i) => {
         // No fill at all at zero: a minimum width keeps a 1% score visible, but
@@ -198,14 +204,14 @@ function renderLeaderboard(rows, hues, configHues, shapes) {
             ? `<span class="bar-fill" style="width:${row.rate * 100}%;background:${
                 hueFill(hues.get(row.model))}"></span>`
             : "";
-        const configHue = configHues.get(row.config);
         return `<tr class="pick" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
-            style="--row:${hueFill(hues.get(row.model))};--cfg:${hueText(configHue)}">
+            data-effort="${escapeHtml(row.effort)}"
+            style="--row:${hueFill(hues.get(row.model))}">
             <td class="rank">${i + 1}</td>
             <td class="name"><span class="who"><i class="swatch"></i>${
-                escapeHtml(shortModel(row.model))}</span>
-                <span class="sub">${shapeGlyph(shapes.get(row.config), configHue)}${
+                escapeHtml(modelWithEffort(row.model, row.effort))}</span>
+                <span class="sub config-label">${shapeGlyph(shapes.get(row.config))}${
                     escapeHtml(row.config)}</span></td>
             <td class="bar"><span class="bar-track">${fill}</span></td>
             <td class="num">${percent(row.rate)}</td>
@@ -297,7 +303,7 @@ function renderQuadrants(metric, xCut, px, py, box) {
 
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
-function renderChart(rows, hues, shapes, configHues, field) {
+function renderChart(rows, hues, shapes, field) {
     const metric = METRICS[state.x] ?? METRICS.cost;
     const head = renderChartHead(metric);
     const points = plottable(rows);
@@ -335,8 +341,8 @@ function renderChart(rows, hues, shapes, configHues, field) {
         const x = px(metric.value(row)), y = py(row.rate);
         // With one model in the plot trimCommonPrefix leaves nothing useful of
         // its name, and the chip above already says which model this is.
-        const name = names.size > 1 ? `${names.get(row.model)} · ${row.config}` : row.config;
-        const tip = `${shortModel(row.model)} · ${row.config} — ${percent(row.rate)}`
+        const name = [names.size > 1 ? names.get(row.model) : "", row.effort, row.config].filter(Boolean).join(" · ");
+        const tip = `${modelWithEffort(row.model, row.effort)} · ${row.config} — ${percent(row.rate)}`
             + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
         return `<g data-tip="${escapeHtml(tip)}">
             <circle class="hit" cx="${x}" cy="${y}" r="13"/>
@@ -352,8 +358,8 @@ function renderChart(rows, hues, shapes, configHues, field) {
     // Neutral legend markers explain configuration shapes without implying
     // another colour mapping alongside the model colours.
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
-        .map(([config, shape]) => `<span style="color:${hueText(configHues.get(config))}">${
-            shapeGlyph(shape, configHues.get(config))}${escapeHtml(config)}</span>`).join("");
+        .map(([config, shape]) => `<span>${
+            shapeGlyph(shape)}${escapeHtml(config)}</span>`).join("");
 
     return `${head}<div class="chart-wrap"><div class="tip" hidden></div>
     <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
@@ -371,7 +377,7 @@ function renderChart(rows, hues, shapes, configHues, field) {
     ${bands.legend}
     <p class="chart-note">Color = model · Shape = configuration</p>
     <div class="legend">${models}</div>
-    <div class="legend">${configs}</div>
+    <div class="legend config-legend">${configs}</div>
     ${bands.note}`;
 }
 
@@ -381,17 +387,16 @@ function render() {
     // keeps its colour and a configuration its shape as chips are toggled.
     const hues = hueMap(trials.map((trial) => trial.model));
     const shapes = shapeMap(trials.map((trial) => configOf(trial.job)));
-    const configHues = configHueMap(trials.map((trial) => configOf(trial.job)));
     document.getElementById("content").innerHTML = [
         syntheticBanner(runs.some((run) => run.synthetic)),
         renderTabs(),
-        renderFilters(hues, configHues, shapes),
+        renderFilters(hues, shapes),
         state.tab === "chart"
             // The chart is drawn from the filtered rows but shades its quadrants
             // against the whole field, so the same result keeps the same verdict
             // however the chips are set.
-            ? renderChart(rows, hues, shapes, configHues, plottable(summarize(trials)))
-            : renderLeaderboard(rows, hues, configHues, shapes),
+            ? renderChart(rows, hues, shapes, plottable(summarize(trials)))
+            : renderLeaderboard(rows, hues, shapes),
     ].join("");
     const content = document.getElementById("content");
     bindTips(content);
@@ -462,7 +467,7 @@ document.getElementById("content").addEventListener("click", (event) => {
         return;
     }
     const row = event.target.closest("tr.pick");
-    if (row) location.href = runUrl(row.dataset.model, row.dataset.config);
+    if (row) location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
 });
 
 fetchJson(dataUrl("index.json")).then((index) => {

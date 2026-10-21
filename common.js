@@ -40,7 +40,7 @@ function fetchJson(path) {
 // which one it is on. The default is the one the site opens on, and it is left
 // out of the query string entirely -- so the URLs that existed before there was
 // more than one benchmark still resolve to it.
-const DEFAULT_BENCHMARK = "default";
+const DEFAULT_BENCHMARK = "release-20261021";
 const benchmark = new URLSearchParams(location.search).get("benchmark")
     || DEFAULT_BENCHMARK;
 
@@ -91,9 +91,20 @@ function shortSuite(name) {
 // A job directory is named `<configuration>-<date>-<time>`. The timestamp makes
 // each run unique; the prefix is the thing being compared -- which skills and
 // tools the agent was given. The leaderboard groups by that prefix, so two runs
-// of one configuration on different days land in the same row.
+// of one configuration on different days land in the same row. Suite prefixes
+// identify a batch of jobs, not the configuration supplied to Codex.
 function configOf(job) {
+    const agentConfig = String(job ?? "").match(/(?:^|-)(vaadin-skills-mcp|vaadin-mcp|vaadin-skills|vanilla)-(?:codex|claude-code)(?:-\d{8}-\d{6})?$/);
+    if (agentConfig) return agentConfig[1];
     return String(job ?? "").replace(/-\d{8}-\d{6}$/, "") || "unknown";
+}
+
+function effortOf(trial) {
+    return trial.reasoning_effort || "";
+}
+
+function modelWithEffort(model, effort) {
+    return `${shortModel(model)}${effort ? ` · ${effort}` : ""}`;
 }
 
 // Round to whole seconds first, then split. Rounding the remainder instead let
@@ -147,8 +158,8 @@ function trialUrl(id, job) {
     return pageUrl("trial.html", job ? { id, job } : { id });
 }
 
-function runUrl(model, config) {
-    return pageUrl("run.html", { model, config });
+function runUrl(model, config, effort = "") {
+    return pageUrl("run.html", { model, config, ...(effort ? { effort } : {}) });
 }
 
 function leaderboardUrl() {
@@ -188,18 +199,12 @@ function shapeMap(configs) {
     return new Map(sorted.map((config, i) => [config, SHAPES[i % SHAPES.length]]));
 }
 
-// Configuration is encoded by shape, while colour is reserved for models.
-// Use the same neutral palette in filters, table rows and the chart legend.
-function configHueMap(configs) {
-    return new Map([...new Set(configs)].sort().map((config) => [config, "neutral"]));
-}
-
 // The chart's marker at text size, so a configuration carries the same shape in
-// a chip, a table row and a legend as it does in the scatter. Use the text
-// palette for these small glyphs so they stay readable in both themes.
-function shapeGlyph(shape, hue) {
+// a chip, a table row and a legend as it does in the scatter. Inherit the shared
+// neutral text color; configuration glyphs have no independent color mapping.
+function shapeGlyph(shape) {
     return `<svg class="glyph" viewBox="0 0 14 14" aria-hidden="true">${
-        marker(shape, 7, 7, `fill:${hueText(hue)}`, "dot", 5)}</svg>`;
+        marker(shape, 7, 7, "fill:currentColor", "dot", 5)}</svg>`;
 }
 
 const SHAPE_TAGS = { circle: "circle", square: "rect", triangle: "polygon", diamond: "polygon" };

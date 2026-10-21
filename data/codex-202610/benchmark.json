@@ -1,0 +1,15 @@
+{
+  "name": "Codex Luna, Sol and Astra — October 2026",
+  "description": "Complete 192-trial comparison: Codex 0.162.1 on eight Flow tasks, three attempts per task and configuration. GPT-6 Luna at medium and xhigh effort, GPT-6.1 Sol and GPT-6 Astra at medium effort, each with vanilla and vaadin-skills. Effort is shown beside the model; scores remain separate by effort.",
+  "orders_regrade": {
+    "verifier_commit": "df7a933f079412cf43547a712a41bc3d15d4452c",
+    "regraded_at": "2026-10-19T18:28:38.186888+00:00",
+    "verifier_image": "sha256:5fe465c0f4e72c10a00d2fa2515019edd5eb916cd1ec6c161d293d483cb60a56",
+    "runtime_base_image": "ghcr.io/vaadin/vaadinbench-base@sha256:ae9b5e0cf2ad39aaf83b393b7fe00cc2fd4e99d6444aa946fc8c59a874338ffb",
+    "n_trials": 24,
+    "n_score_changes": 0,
+    "n_check_outcome_changes": 0,
+    "old_passes": 19,
+    "new_passes": 19
+  }
+}
