@@ -106,6 +106,7 @@ const CONFIG_NOTES = {
     "vaadin-skills": "The Vaadin skills configured for this benchmark.",
     "vaadin-skills-tools": "Those skills, plus vaadin-agent-tools: a bundled CLI and a theme check that runs after every edit. Claude Code only, since the hook is a Claude Code hook.",
     "vaadin-mcp": "The Vaadin documentation MCP server, without additional Vaadin skills.",
+    "vaadin-skills-mcp": "The Vaadin skills and the Vaadin documentation MCP server together.",
     "vaadin-mcp-java": "The newer /docs-java documentation server on its own. Identical to vaadin-mcp but for the URL, so the difference between them is the difference between the servers.",
     "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
