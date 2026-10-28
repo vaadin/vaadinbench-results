@@ -884,6 +884,10 @@ html {
     padding-inline: 2rem; /* 32px */
 }
 
+.py-0\.5 {
+    padding-block: 0.125rem; /* 2px */
+}
+
 .py-1 {
     padding-block: 0.25rem; /* 4px */
 }
@@ -946,24 +950,6 @@ html {
 
 .text-right {
     text-align: right;
-}
-
-
-/* Text box edge — Chrome 133+, Safari 18.2+; ignored elsewhere */
-
-.box-edge-cap-alphabetic {
-    text-box-edge: cap alphabetic;
-}
-
-
-/* Text box trim — Chrome 133+, Safari 18.2+; ignored elsewhere */
-
-.box-trim-both {
-    text-box-trim: trim-both;
-}
-
-.box-trim-end {
-    text-box-trim: trim-end;
 }
 
 
