@@ -6,8 +6,6 @@
 // folders. Nothing here counts anything: the numbers on a card come from the
 // same index the benchmark's own leaderboard reads, so the two cannot disagree.
 
-const content = document.getElementById("content");
-
 // What a benchmark is, in the units a reader is choosing between: how much was
 // run, and how it went. The score is the same one the leaderboard totals -- the
 // share of graded trials that reached reward 1 -- so a card previews the page it
@@ -47,16 +45,16 @@ function renderCard(entry, isDefault) {
 fetchJson("data/benchmarks.json").then((registry) => {
     const all = registry.benchmarks ?? [];
     if (!all.length) {
-        content.innerHTML = `<p class="${EMPTY}">No benchmarks published yet.</p>`;
+        showContent(`<p class="${EMPTY}">No benchmarks published yet.</p>`);
         return;
     }
-    content.innerHTML = `<h1 class="-tracking-1 font-bold leading-tight m-0 text-3xl mb-2">Benchmarks</h1>
+    showContent(`<h1 class="-tracking-1 font-bold leading-tight m-0 text-3xl mb-2">Benchmarks</h1>
         <p class="leading-snug m-0 max-w-2xl mb-6 text-base text-gray-11 tracking-1">Each one is
         a separate set of runs, with its own leaderboard and its own trials. Nothing
         is compared across them: a different benchmark is a different question.</p>
         <ul class="flex flex-col gap-4 list-none m-0 p-0" role="list">${all.map((entry) =>
             renderCard(entry, entry.slug === (registry.default ?? DEFAULT_BENCHMARK))
-        ).join("")}</ul>`;
+        ).join("")}</ul>`);
     // The registry carries no stamp of its own -- each benchmark is published on
     // its own day, and the cards say when.
     renderFooter(null);

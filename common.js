@@ -642,14 +642,36 @@ function renderBenchmarkBar() {
     });
 }
 
+// Every write to #content goes through here. Content lands after a fetch, so it
+// fades in as it arrives: each top-level block one 40ms step after the one
+// before, following the header (0) and the breadcrumb (40), as on the Vaadin MCP
+// landing page, and the footer one step after the last block (it stays hidden
+// until then, or its rule would show over an empty page). Only the first
+// write: a filter or tab click redraws the view, and replaying the entrance on
+// every click would read as lag. The steps are listed whole so the
+// unused-utility check can see them; anything past the last shares it.
+const ENTER_STEPS = ["delay-80", "delay-120", "delay-160", "delay-200", "delay-240", "delay-280"];
+let entered = false;
+
+function showContent(html) {
+    const content = document.getElementById("content");
+    content.innerHTML = html;
+    if (entered) return;
+    entered = true;
+    const footer = document.querySelector("footer");
+    if (footer) footer.hidden = false;
+    [...content.children, footer].filter(Boolean).forEach((block, i) => block.classList.add("animate-fade-in",
+        ENTER_STEPS[Math.min(i, ENTER_STEPS.length - 1)], "motion-reduce:animate-none"));
+}
+
 function showError(error) {
     // A benchmark in the URL that has no folder fails here, as a 404 on a path
     // nobody typed. Offer the list rather than leaving the reader to guess a
     // slug back.
     const elsewhere = benchmark === DEFAULT_BENCHMARK ? ""
         : ` <a class="${LINK}" href="benchmarks.html">See the benchmarks that are published.</a>`;
-    document.getElementById("content").innerHTML =
-        `<p class="${EMPTY}">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`;
+    showContent(
+        `<p class="${EMPTY}">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`);
 }
 
 renderMark();
