@@ -34,7 +34,7 @@ const EYEBROW = "-tracking-4 font-mono font-normal leading-tight m-0 text-2xs te
 const SECTION = `${EYEBROW} mb-3 mt-8`;
 const EMPTY = "m-0 text-gray-11";
 const CODE = "bg-gray-3 font-mono px-0.75 py-1 rounded text-gray-12 text-xs tracking-0";
-const PRE = "bg-gray-3 font-mono leading-snug m-0 overflow-x-auto px-4 py-3 rounded-lg text-xs tracking-0";
+const PRE = "bg-gray-3 font-mono leading-tight m-0 overflow-x-auto px-4 py-3 rounded-lg text-xs tracking-0";
 const NOTE = "m-0 text-2xs text-gray-11";
 
 // Tables share one frame and one set of cells. Rows are divided by the body

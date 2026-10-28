@@ -16,7 +16,7 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `<h2 class="font-normal leading-tight m-0 mb-6 text-2xl tracking-0">${
+    return `<h2 class="font-bold leading-tight m-0 mb-6 text-2xl tracking-0">${
             escapeHtml(modelWithEffort(wanted.model, wanted.effort))} · ${escapeHtml(wanted.config)}</h2>
         ${metricsTable([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
