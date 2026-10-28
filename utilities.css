@@ -696,6 +696,10 @@ html {
     height: 100%;
 }
 
+.h-\[1em\] {
+    height: 1em;
+}
+
 
 /* Justify content */
 
@@ -1085,6 +1089,13 @@ html {
 }
 
 
+/* Vertical align */
+
+.align-\[-0\.125em\] {
+    vertical-align: -0.125em;
+}
+
+
 /* Whitespace */
 
 .whitespace-nowrap {
@@ -1152,6 +1163,10 @@ html {
 
 .w-6xl {
     width: 72rem; /* 1152px */
+}
+
+.w-\[1em\] {
+    width: 1em;
 }
 
 

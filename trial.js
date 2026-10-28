@@ -95,7 +95,7 @@ function renderCrumb(config = configOf(trial.job)) {
     document.getElementById("crumb").innerHTML =
         `<a class="${LINK}" href="${leaderboardUrl()}">Leaderboard</a>
          <span class="flex self-center text-gray-11">${lucide("chevron-right")}</span>
-         <a class="${LINK}" href="${runUrl(trial.model, config, effortOf(trial))}">${escapeHtml(modelWithEffort(trial.model, effortOf(trial)))}
+         <a class="${LINK}" href="${runUrl(trial.model, config, effortOf(trial))}">${modelLabel(trial.model, effortOf(trial))}
             <span class="text-gray-11">·</span> ${escapeHtml(config)}</a>`;
 }
 
@@ -120,9 +120,9 @@ function renderWrongJob(wanted) {
         unaffected &mdash; they are stored per run &mdash; and re-publishing that
         job separates them again.`)}
         <h2 class="${TITLE} mb-4">${escapeHtml(shortTask(trial.task))} ·
-            ${escapeHtml(shortModel(trial.model))}</h2>
+            ${modelLabel(trial.model)}</h2>
         <p class="${EMPTY}"><a class="${LINK}" href="${runUrl(trial.model, config)}">Back to
-            ${escapeHtml(shortModel(trial.model))} ·
+            ${modelLabel(trial.model)} ·
             ${escapeHtml(config)}</a></p>`;
 }
 
@@ -131,7 +131,7 @@ const TITLE = "font-bold leading-tight m-0 text-2xl tracking-0";
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
         <h2 class="${TITLE} mb-2">${escapeHtml(shortTask(trial.task))} ·
-            ${escapeHtml(shortModel(trial.model))}</h2>
+            ${modelLabel(trial.model)}</h2>
         <p class="m-0 mb-6 text-gray-11 wrap-anywhere">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
@@ -537,7 +537,7 @@ function render() {
     const view = views[activeTab] ?? views.trajectory;
     showContent(renderHeader() + renderTabs() + view());
     renderCrumb();
-    document.title = `${shortTask(trial.task)} · ${shortModel(trial.model)} · VaadinBench`;
+    document.title = `${shortTask(trial.task)} · ${modelText(trial.model)} · VaadinBench`;
 }
 
 // One listener on the container, so re-rendering never leaves listeners behind.
