@@ -153,11 +153,12 @@ function chipClasses(pressed, hue) {
 function renderFilters(hues, shapes) {
     const models = [...new Set(trials.map((t) => t.model))].sort();
     const configs = [...new Set(trials.map((t) => configOf(t.job)))].sort();
+    // `label` is markup: a model's carries its vendor's mark.
     const chip = (key, value, hue, mark, label) => `<button
         class="${chipClasses(state[key].has(value), hue)}"
         data-facet="${key}" data-value="${escapeHtml(value)}"
         aria-pressed="${state[key].has(value)}">${mark}<span
-        class="box-trim-end">${escapeHtml(label)}</span></button>`;
+        class="box-trim-end">${label}</span></button>`;
     // Turning a filter off means unpressing every chip you pressed. One button
     // per row, because the two rows filter independently and clearing both when
     // only one is in the way is its own annoyance. It appears only with
@@ -178,13 +179,13 @@ function renderFilters(hues, shapes) {
             ${key("Model")}
             ${models.map((model) => chip("models", model, hues.get(model),
                 `<span class="${hueClasses(hues.get(model)).fill} h-2 rounded-full shrink-0 w-2"></span>`,
-                shortModel(model))).join("")}
+                modelLabel(model))).join("")}
             ${clear("models")}
         </div>
         <div class="flex flex-wrap gap-1 items-center">
             ${key("Config")}
             ${configs.map((config) => chip("configs", config, null,
-                shapeGlyph(shapes.get(config)), config)).join("")}
+                shapeGlyph(shapes.get(config)), escapeHtml(config))).join("")}
             ${clear("configs")}
         </div>
         ${renderConfigNotes(configs)}
@@ -232,8 +233,8 @@ function renderLeaderboard(rows, hues, shapes) {
             data-effort="${escapeHtml(row.effort)}">
             <td class="${TD_NUM} text-gray-11 w-6">${i + 1}</td>
             <td class="${TD}"><span class="flex gap-2 items-center"><span
-                class="${hue.fill} h-2 rounded-full shrink-0 w-2"></span>${
-                escapeHtml(modelWithEffort(row.model, row.effort))}</span>
+                class="${hue.fill} h-2 rounded-full shrink-0 w-2"></span><span>${
+                modelLabel(row.model, row.effort)}</span></span>
                 <span class="flex gap-1 items-center mt-0.5 text-2xs text-gray-11">${
                     shapeGlyph(shapes.get(row.config))}${escapeHtml(row.config)}</span></td>
             <td class="${TD} min-w-32 w-2/5"><span
@@ -373,16 +374,18 @@ function renderChart(rows, hues, shapes, field) {
         y="${T + plotH + 18}" text-anchor="middle">${escapeHtml(metric.tick(value))}</text>`)
         .join("");
 
-    const names = trimCommonPrefix([...new Set(points.map((p) => p.model))]);
+    const modelCount = new Set(points.map((p) => p.model)).size;
 
-    // Every point keeps its name, coloured to its model. Where they land is
-    // settled after the fact by layoutChartLabels(), which can measure the text.
+    // Every point keeps its name, coloured to its model. A label is SVG text and
+    // cannot hold a vendor mark, so it is the bare model name; the colour and the
+    // legend below tie it to its vendor. Where labels land is settled after the
+    // fact by layoutChartLabels(), which can measure the text.
     // Each marker also gets an invisible disc, so a 6px shape is not a 6px target.
     const dots = points.map((row) => {
         const x = px(metric.value(row)), y = py(row.rate);
-        // With one model in the plot trimCommonPrefix leaves nothing useful of
-        // its name, and the chip above already says which model this is.
-        const name = [names.size > 1 ? names.get(row.model) : "", row.effort, row.config].filter(Boolean).join(" · ");
+        // With one model in the plot its name says nothing the chip above does not.
+        const name = [modelCount > 1 ? modelParts(row.model).name : "", row.effort, row.config]
+            .filter(Boolean).join(" · ");
         const tip = `${modelWithEffort(row.model, row.effort)} · ${row.config} — ${percent(row.rate)}`
             + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
         const hue = hueClasses(hues.get(row.model));
@@ -396,8 +399,8 @@ function renderChart(rows, hues, shapes, field) {
 
     const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
         .map(([model, hue]) => `<span class="flex gap-2 items-center"><span
-            class="${hueClasses(hue).fill} h-2 rounded-full shrink-0 w-2"></span>${
-            escapeHtml(shortModel(model))}</span>`).join("");
+            class="${hueClasses(hue).fill} h-2 rounded-full shrink-0 w-2"></span><span>${
+            modelLabel(model)}</span></span>`).join("");
     // Neutral legend markers explain configuration shapes without implying
     // another colour mapping alongside the model colours.
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
