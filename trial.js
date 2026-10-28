@@ -119,20 +119,19 @@ function renderWrongJob(wanted) {
         and only the last one kept its trajectory. The leaderboard's numbers are
         unaffected &mdash; they are stored per run &mdash; and re-publishing that
         job separates them again.`)}
-        <h1 class="${TITLE} mb-4">${escapeHtml(shortTask(trial.task))} ·
-            ${escapeHtml(shortModel(trial.model))}</h1>
+        <h2 class="${TITLE} mb-4">${escapeHtml(shortTask(trial.task))} ·
+            ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="${EMPTY}"><a class="${LINK}" href="${runUrl(trial.model, config)}">Back to
             ${escapeHtml(shortModel(trial.model))} ·
             ${escapeHtml(config)}</a></p>`;
 }
 
-// The page title: the trial is the page, so it is the one h1.
-const TITLE = "-tracking-1 font-bold leading-tight m-0 text-3xl";
+const TITLE = "font-bold leading-tight m-0 text-2xl tracking-0";
 
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
-        <h1 class="${TITLE} mb-2">${escapeHtml(shortTask(trial.task))} ·
-            ${escapeHtml(shortModel(trial.model))}</h1>
+        <h2 class="${TITLE} mb-2">${escapeHtml(shortTask(trial.task))} ·
+            ${escapeHtml(shortModel(trial.model))}</h2>
         <p class="m-0 mb-6 text-gray-11 wrap-anywhere">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
