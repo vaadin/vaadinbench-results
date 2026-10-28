@@ -631,8 +631,8 @@ function renderBenchmarkBar() {
     if (!slot) return;
     fetchJson("data/benchmarks.json").then((registry) => {
         if ((registry.benchmarks ?? []).length < 2) return;
-        slot.innerHTML = `<a class="border border-gray-3 box-border flex font-mono h-8
-            items-center leading-tight no-underline px-3 rounded text-gray-12 text-xs
+        slot.innerHTML = `<a class="border border-gray-3 box-border flex font-mono h-12
+            items-center leading-tight no-underline px-8 rounded text-gray-12 text-xs
             tracking-0 uppercase whitespace-nowrap hover:bg-gray-3"
             href="benchmarks.html"><span class="box-trim-end">All benchmarks</span></a>`;
     }).catch(() => {
