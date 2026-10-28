@@ -132,30 +132,23 @@ function renderConfigNotes(configs) {
 // An empty set means no filter rather than nothing selected: a page that opens
 // showing everything is the useful default, and clearing the last chip should
 // go back to that instead of emptying the table.
-// Each chip wears the colour its value is drawn in below -- a swatch for a
-// model, its shape for a configuration -- so the legend and the filter are the
-// same control, and picking a chip needs no cross-referencing. A selected chip
-// takes its hue's tint and edge; a configuration has no hue, so it goes grey.
+// Each chip wears what its value is drawn with below -- a model its vendor's
+// mark, a configuration its shape -- so the legend and the filter are the same
+// control. A selected chip goes grey.
 const CHIP = "border box-border cursor-pointer flex font-mono gap-2 h-7 items-center leading-tight pl-2 pr-3 rounded-full text-xs tracking-0 uppercase";
 
-function chipClasses(pressed, hue) {
-    if (!hue) {
-        return pressed
-            ? `${CHIP} bg-gray-3 border-gray-5 text-gray-12`
-            : `${CHIP} bg-transparent border-gray-3 text-gray-11 hover:border-gray-5`;
-    }
-    const { tint, edge, text } = hueClasses(hue);
+function chipClasses(pressed) {
     return pressed
-        ? `${CHIP} ${tint} ${edge} ${text}`
-        : `${CHIP} bg-transparent border-gray-3 ${text} hover:border-gray-5`;
+        ? `${CHIP} bg-gray-3 border-gray-5 text-gray-12`
+        : `${CHIP} bg-transparent border-gray-3 text-gray-11 hover:border-gray-5`;
 }
 
-function renderFilters(hues, shapes) {
+function renderFilters(shapes) {
     const models = [...new Set(trials.map((t) => t.model))].sort();
     const configs = [...new Set(trials.map((t) => configOf(t.job)))].sort();
     // `label` is markup: a model's carries its vendor's mark.
-    const chip = (key, value, hue, mark, label) => `<button
-        class="${chipClasses(state[key].has(value), hue)}"
+    const chip = (key, value, mark, label) => `<button
+        class="${chipClasses(state[key].has(value))}"
         data-facet="${key}" data-value="${escapeHtml(value)}"
         aria-pressed="${state[key].has(value)}">${mark}<span
         class="box-trim-end">${label}</span></button>`;
@@ -177,14 +170,12 @@ function renderFilters(hues, shapes) {
     return `<div class="flex flex-col gap-2 mb-6">
         <div class="flex flex-wrap gap-1 items-center">
             ${key("Model")}
-            ${models.map((model) => chip("models", model, hues.get(model),
-                `<span class="${hueClasses(hues.get(model)).fill} h-2 rounded-full shrink-0 w-2"></span>`,
-                modelLabel(model))).join("")}
+            ${models.map((model) => chip("models", model, "", modelLabel(model))).join("")}
             ${clear("models")}
         </div>
         <div class="flex flex-wrap gap-1 items-center">
             ${key("Config")}
-            ${configs.map((config) => chip("configs", config, null,
+            ${configs.map((config) => chip("configs", config,
                 shapeGlyph(shapes.get(config)), escapeHtml(config))).join("")}
             ${clear("configs")}
         </div>
@@ -216,15 +207,14 @@ function renderHead() {
     </tr></thead>`;
 }
 
-function renderLeaderboard(rows, hues, shapes) {
+function renderLeaderboard(rows, shapes) {
     if (!rows.length) return `<p class="${EMPTY}">Nothing matches this filter.</p>`;
     const body = sortRows(rows).map((row, i) => {
-        const hue = hueClasses(hues.get(row.model));
         // No fill at all at zero: a minimum width keeps a 1% score visible, but
         // it would also draw a coloured nub on a row that solved nothing. The
         // width is data, so it is the one inline style.
         const fill = row.rate
-            ? `<span class="${hue.fill} block h-full min-w-1 rounded-full"
+            ? `<span class="bg-claude-orange block h-full min-w-1 rounded-full"
                 style="width:${row.rate * 100}%"></span>`
             : "";
         // The whole row is the target, so it takes the hover tint.
@@ -232,9 +222,7 @@ function renderLeaderboard(rows, hues, shapes) {
             data-config="${escapeHtml(row.config)}"
             data-effort="${escapeHtml(row.effort)}">
             <td class="${TD_NUM} text-gray-11 w-6">${i + 1}</td>
-            <td class="${TD}"><span class="flex gap-2 items-center"><span
-                class="${hue.fill} h-2 rounded-full shrink-0 w-2"></span><span>${
-                modelLabel(row.model, row.effort)}</span></span>
+            <td class="${TD}"><span class="block">${modelLabel(row.model, row.effort)}</span>
                 <span class="flex gap-1 items-center mt-0.5 text-2xs text-gray-11">${
                     shapeGlyph(shapes.get(row.config))}${escapeHtml(row.config)}</span></td>
             <td class="${TD} min-w-32 w-2/5"><span
@@ -342,7 +330,7 @@ const LEGEND = "flex flex-wrap gap-x-4 gap-y-2 mt-4 text-gray-11";
 
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
-function renderChart(rows, hues, shapes, field) {
+function renderChart(rows, shapes, field) {
     const metric = METRICS[state.x] ?? METRICS.cost;
     const head = renderChartHead(metric);
     const points = plottable(rows);
@@ -376,9 +364,8 @@ function renderChart(rows, hues, shapes, field) {
 
     const modelCount = new Set(points.map((p) => p.model)).size;
 
-    // Every point keeps its name, coloured to its model. A label is SVG text and
-    // cannot hold a vendor mark, so it is the bare model name; the colour and the
-    // legend below tie it to its vendor. Where labels land is settled after the
+    // Every point keeps its name. A label is SVG text and cannot hold a vendor
+    // mark, so it is the bare model name. Where labels land is settled after the
     // fact by layoutChartLabels(), which can measure the text.
     // Each marker also gets an invisible disc, so a 6px shape is not a 6px target.
     const dots = points.map((row) => {
@@ -388,21 +375,14 @@ function renderChart(rows, hues, shapes, field) {
             .filter(Boolean).join(" · ");
         const tip = `${modelWithEffort(row.model, row.effort)} · ${row.config} — ${percent(row.rate)}`
             + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
-        const hue = hueClasses(hues.get(row.model));
         return `<g data-tip="${escapeHtml(tip)}">
             <circle class="fill-transparent" cx="${x}" cy="${y}" r="13"/>
-            ${marker(shapes.get(row.config), x, y, hue.dot)}
-            <text class="${hue.label} text-2xs" data-label data-cx="${x}" data-cy="${y}"
+            ${marker(shapes.get(row.config), x, y, "fill-gray-12")}
+            <text class="fill-gray-11 text-2xs" data-label data-cx="${x}" data-cy="${y}"
                 x="${x + 11}" y="${y + 4}">${escapeHtml(name)}</text>
         </g>`;
     }).join("");
 
-    const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
-        .map(([model, hue]) => `<span class="flex gap-2 items-center"><span
-            class="${hueClasses(hue).fill} h-2 rounded-full shrink-0 w-2"></span><span>${
-            modelLabel(model)}</span></span>`).join("");
-    // Neutral legend markers explain configuration shapes without implying
-    // another colour mapping alongside the model colours.
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
         .map(([config, shape]) => `<span class="flex gap-2 items-center">${
             shapeGlyph(shape)}${escapeHtml(config)}</span>`).join("");
@@ -424,28 +404,26 @@ function renderChart(rows, hues, shapes, field) {
         ${dots}
     </svg></div>
     ${bands.legend}
-    <p class="${NOTE} mt-3">Color = model · Shape = configuration</p>
-    <div class="${LEGEND}">${models}</div>
+    <p class="${NOTE} mt-3">Shape = configuration</p>
     <div class="${LEGEND}">${configs}</div>
     ${bands.note}`;
 }
 
 function render() {
     const rows = summarize(visible());
-    // Both maps are built from every trial, not the filtered set, so a model
-    // keeps its colour and a configuration its shape as chips are toggled.
-    const hues = hueMap(trials.map((trial) => trial.model));
+    // Built from every trial, not the filtered set, so a configuration keeps its
+    // shape as chips are toggled.
     const shapes = shapeMap(trials.map((trial) => configOf(trial.job)));
     showContent([
         syntheticBanner(runs.some((run) => run.synthetic)),
         renderTabs(),
-        renderFilters(hues, shapes),
+        renderFilters(shapes),
         state.tab === "chart"
             // The chart is drawn from the filtered rows but shades its quadrants
             // against the whole field, so the same result keeps the same verdict
             // however the chips are set.
-            ? renderChart(rows, hues, shapes, plottable(summarize(trials)))
-            : renderLeaderboard(rows, hues, shapes),
+            ? renderChart(rows, shapes, plottable(summarize(trials)))
+            : renderLeaderboard(rows, shapes),
     ].join(""));
     const content = document.getElementById("content");
     bindTips(content);
