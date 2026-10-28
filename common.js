@@ -29,13 +29,11 @@ const TBODY = "divide-gray-3 divide-y";
 const TD = "px-4 py-3 text-left whitespace-nowrap";
 const TD_NUM = "px-4 py-3 tabular-nums text-right whitespace-nowrap";
 
-// A badge's label is trimmed to its capitals on both sides, so it sits centred
-// in the badge rather than riding high over the space kept for descenders.
 const BADGE = {
-    pass: "-tracking-4 bg-green-3 box-edge-cap-alphabetic box-trim-both font-mono inline-block leading-tight px-1.5 py-1 rounded text-2xs text-green-11 uppercase",
-    fail: "-tracking-4 bg-red-3 box-edge-cap-alphabetic box-trim-both font-mono inline-block leading-tight px-1.5 py-1 rounded text-2xs text-red-11 uppercase",
+    pass: "-tracking-4 bg-green-3 font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-green-11 uppercase",
+    fail: "-tracking-4 bg-red-3 font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-red-11 uppercase",
     // Outlined rather than filled, so it reads on a grey tile as well as a white table.
-    tag: "-tracking-4 border border-gray-5 box-border box-edge-cap-alphabetic box-trim-both font-mono inline-block leading-tight px-1.5 py-1 rounded text-2xs text-gray-11 uppercase",
+    tag: "-tracking-4 border border-gray-5 box-border font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-gray-11 uppercase",
 };
 
 // Icons: Lucide (https://lucide.dev), ISC License, Copyright (c) Lucide Contributors.
@@ -63,17 +61,15 @@ function lucide(name, klass = "h-4 shrink-0 w-4") {
         viewBox="0 0 24 24">${ICONS[name]}</svg>`;
 }
 
-// Tabs are as tall as the header's button, in Regular 16, the label in its own
-// trimmed span. The selected one is told apart by its full-contrast underline as
-// well as its colour.
+// Tabs are as tall as the header's button, in Regular 16. The selected one is
+// told apart by its full-contrast underline as well as its colour.
 const TAB = "-mb-px bg-transparent border-0 border-b-2 border-transparent box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-11 tracking-1 hover:text-gray-12";
 const TAB_SELECTED = "-mb-px bg-transparent border-0 border-b-2 border-gray-12 box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-12 tracking-1";
 
 function tabBar(tabs, active) {
     return `<div class="border-b border-gray-3 flex flex-wrap gap-x-6 gap-y-2 mb-6" role="tablist">${
         tabs.map(([id, label]) => `<button class="${id === active ? TAB_SELECTED : TAB}"
-            data-tab="${id}" role="tab" aria-selected="${id === active}"><span
-            class="box-trim-end">${label}</span></button>`).join("")}</div>`;
+            data-tab="${id}" role="tab" aria-selected="${id === active}">${label}</button>`).join("")}</div>`;
 }
 
 // Pages serves everything with `max-age=600` and no way to override it, so a
@@ -645,7 +641,7 @@ function renderBenchmarkBar() {
         slot.innerHTML = `<a class="border border-gray-3 box-border flex font-mono h-12
             items-center leading-tight no-underline px-8 rounded text-gray-12 text-xs
             tracking-0 uppercase whitespace-nowrap hover:bg-gray-3"
-            href="benchmarks.html"><span class="box-trim-end">All benchmarks</span></a>`;
+            href="benchmarks.html">All benchmarks</a>`;
     }).catch(() => {
         // No registry is the state this site was in before benchmarks existed.
         // The page below it works either way, so it says nothing.

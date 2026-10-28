@@ -147,12 +147,11 @@ function chipClasses(pressed) {
 function renderFilters(shapes) {
     const models = [...new Set(trials.map((t) => t.model))].sort();
     const configs = [...new Set(trials.map((t) => configOf(t.job)))].sort();
-    // `label` is markup: a model's carries its vendor's mark.
+    // `mark` is the value's icon and `label` its name, both already markup.
     const chip = (key, value, mark, label) => `<button
         class="${chipClasses(state[key].has(value))}"
         data-facet="${key}" data-value="${escapeHtml(value)}"
-        aria-pressed="${state[key].has(value)}">${mark}<span
-        class="box-trim-end">${label}</span></button>`;
+        aria-pressed="${state[key].has(value)}">${mark}${label}</button>`;
     // Turning a filter off means unpressing every chip you pressed. One button
     // per row, because the two rows filter independently and clearing both when
     // only one is in the way is its own annoyance. It appears only with
@@ -255,7 +254,7 @@ function renderChartHead(metric) {
             <div class="bg-gray-3 box-border flex h-10 p-1 rounded-lg w-fit">
                 ${options.map(([id, label]) => `<label class="cursor-pointer flex font-mono items-center leading-tight px-4 rounded text-gray-11 text-xs tracking-0 uppercase has-checked:bg-white has-checked:text-gray-12 has-focus-visible:outline-2 has-focus-visible:outline-gray-12 dark:has-checked:bg-gray-1"><input
                     class="sr-only" type="radio" name="x" value="${id}"${
-                    state.x === id ? " checked" : ""}><span class="box-trim-end">${label}</span></label>`).join("")}
+                    state.x === id ? " checked" : ""}>${label}</label>`).join("")}
             </div>
         </fieldset>
     </div>`;
