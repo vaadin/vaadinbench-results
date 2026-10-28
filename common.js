@@ -29,12 +29,21 @@ const TBODY = "divide-gray-3 divide-y";
 const TD = "px-4 py-3 text-left whitespace-nowrap";
 const TD_NUM = "px-4 py-3 tabular-nums text-right whitespace-nowrap";
 
+// Badges are 24px high and centre their label, which sits in its own span
+// trimmed to cap height on both sides -- so it is the capitals that are centred,
+// not a line box with room for descenders below them.
 const BADGE = {
-    pass: "-tracking-4 bg-green-3 font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-green-11 uppercase",
-    fail: "-tracking-4 bg-red-3 font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-red-11 uppercase",
+    pass: "-tracking-4 bg-green-3 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-green-11 uppercase",
+    fail: "-tracking-4 bg-red-3 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-red-11 uppercase",
     // Outlined rather than filled, so it reads on a grey tile as well as a white table.
-    tag: "-tracking-4 border border-gray-5 box-border font-mono inline-block leading-tight px-1.5 py-0.5 rounded text-2xs text-gray-11 uppercase",
+    tag: "-tracking-4 border border-gray-5 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-gray-11 uppercase",
 };
+
+// `text` is plain text; it is escaped here.
+function badge(kind, text) {
+    return `<span class="${BADGE[kind]}"><span class="box-edge-cap-alphabetic box-trim-both">${
+        escapeHtml(text)}</span></span>`;
+}
 
 // Icons: Lucide (https://lucide.dev), ISC License, Copyright (c) Lucide Contributors.
 // Inner markup only; lucide() adds the attributes every Lucide icon carries.
@@ -182,7 +191,7 @@ function modelLabel(model, effort = "") {
 }
 
 function effortBadge(effort) {
-    return effort ? `<span class="${BADGE.tag}">${escapeHtml(effort)}</span>` : "";
+    return effort ? badge("tag", effort) : "";
 }
 
 function shortTask(task) {
@@ -248,14 +257,14 @@ function percent(rate) {
 function outcome(trial) {
     if (trial.reward === null || trial.reward === undefined) {
         return trial.error
-            ? `<span class="${BADGE.fail}">error</span>`
-            : `<span class="${BADGE.tag}">no reward</span>`;
+            ? badge("fail", "error")
+            : badge("tag", "no reward");
     }
-    const badge = trial.reward >= 1
-        ? `<span class="${BADGE.pass}">pass</span>`
-        : `<span class="${BADGE.fail}">fail</span>`;
-    if (!trial.error) return badge;
-    return `${badge} <span class="text-2xs text-gray-11 whitespace-nowrap"
+    const verdict = trial.reward >= 1
+        ? badge("pass", "pass")
+        : badge("fail", "fail");
+    if (!trial.error) return verdict;
+    return `${verdict} <span class="text-2xs text-gray-11 whitespace-nowrap"
         title="${escapeHtml(trial.error)}">error</span>`;
 }
 
@@ -644,7 +653,8 @@ function renderBenchmarkBar() {
         slot.innerHTML = `<a class="border border-gray-3 box-border flex font-mono h-12
             items-center leading-tight no-underline px-8 rounded text-gray-12 text-xs
             tracking-0 uppercase whitespace-nowrap hover:bg-gray-3"
-            href="benchmarks.html">All benchmarks</a>`;
+            href="benchmarks.html"><span class="box-edge-cap-alphabetic box-trim-both">All
+            benchmarks</span></a>`;
     }).catch(() => {
         // No registry is the state this site was in before benchmarks existed.
         // The page below it works either way, so it says nothing.
