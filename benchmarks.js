@@ -27,8 +27,8 @@ function renderCard(entry, isDefault) {
     return `<li>
         <a class="bg-gray-3 block no-underline p-6 rounded-lg text-gray-12 hover:bg-gray-5" href="${url}">
             <h2 class="flex flex-wrap font-normal gap-2 items-center leading-snug m-0 mb-1 text-lg tracking-1">${escapeHtml(entry.name)}
-                ${isDefault ? `<span class="${BADGE.tag}">opens by default</span>` : ""}
-                ${entry.synthetic ? `<span class="${BADGE.fail}">synthetic</span>` : ""}
+                ${isDefault ? badge("tag", "opens by default") : ""}
+                ${entry.synthetic ? badge("fail", "synthetic") : ""}
             </h2>
             ${entry.description
                 ? `<p class="m-0 max-w-2xl mb-3 text-gray-11">${escapeHtml(entry.description)}</p>` : ""}
