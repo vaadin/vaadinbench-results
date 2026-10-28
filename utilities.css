@@ -685,12 +685,12 @@ html {
     height: 1.875rem; /* 30px */
 }
 
-.h-8 {
-    height: 2rem; /* 32px */
-}
-
 .h-10 {
     height: 2.5rem; /* 40px */
+}
+
+.h-12 {
+    height: 3rem; /* 48px */
 }
 
 .h-auto {
@@ -926,10 +926,6 @@ html {
     padding-left: 1.25rem; /* 20px */
 }
 
-.pl-8 {
-    padding-left: 2rem; /* 32px */
-}
-
 .pr-3 {
     padding-right: 0.75rem; /* 12px */
 }
@@ -960,6 +956,10 @@ html {
 
 .px-5 {
     padding-inline: 1.25rem; /* 20px */
+}
+
+.px-8 {
+    padding-inline: 2rem; /* 32px */
 }
 
 .py-0\.5 {
