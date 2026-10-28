@@ -136,7 +136,7 @@ function renderConfigNotes(configs) {
 // mark, a configuration its shape -- so the legend and the filter are the same
 // control. A selected chip goes grey. They are toggles rather than actions, so
 // they are set in Regular 14, not an action's Mono uppercase.
-const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 h-7 items-center leading-snug pl-2 pr-3 rounded-full text-sm tracking-1";
+const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 h-10 items-center leading-snug pl-2 pr-3 rounded-full text-sm tracking-1";
 
 function chipClasses(pressed) {
     return pressed
@@ -171,13 +171,14 @@ function renderFilters(shapes) {
     return `<div class="flex flex-col gap-2 mb-6">
         <div class="flex flex-wrap gap-1 items-center">
             ${key("Model")}
-            ${models.map((model) => chip("models", model, "", modelLabel(model))).join("")}
+            ${models.map((model) => chip("models", model, modelMark(model, "h-4 shrink-0 w-4"),
+                escapeHtml(modelParts(model).name))).join("")}
             ${clear("models")}
         </div>
         <div class="flex flex-wrap gap-1 items-center">
             ${key("Config")}
             ${configs.map((config) => chip("configs", config,
-                shapeGlyph(shapes.get(config)), escapeHtml(config))).join("")}
+                shapeGlyph(shapes.get(config), "h-4 w-4"), escapeHtml(config))).join("")}
             ${clear("configs")}
         </div>
         ${renderConfigNotes(configs)}
