@@ -50,7 +50,7 @@ fetchJson("data/benchmarks.json").then((registry) => {
         content.innerHTML = `<p class="${EMPTY}">No benchmarks published yet.</p>`;
         return;
     }
-    content.innerHTML = `<h1 class="font-normal leading-tight m-0 mb-2 text-2xl tracking-0">Benchmarks</h1>
+    content.innerHTML = `<h1 class="font-bold leading-tight m-0 mb-2 text-2xl tracking-0">Benchmarks</h1>
         <p class="leading-snug m-0 max-w-2xl mb-6 text-base text-gray-11 tracking-1">Each one is
         a separate set of runs, with its own leaderboard and its own trials. Nothing
         is compared across them: a different benchmark is a different question.</p>

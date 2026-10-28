@@ -363,7 +363,7 @@ function renderChart(rows, hues, shapes, field) {
 
     // Ticks and axis titles carry `data-tick`, which makes them obstacles for
     // layoutChartLabels(): no label settles on top of "100%" or "$2.00".
-    const TICK = "fill-gray-11 font-mono tabular-nums text-2xs";
+    const TICK = "-tracking-4 fill-gray-11 font-mono tabular-nums text-2xs";
     const grid = [0, 25, 50, 75, 100].map((value) => `<line class="stroke-gray-3"
         x1="${L}" x2="${W - R}" y1="${py(value / 100)}" y2="${py(value / 100)}"/>
         <text class="${TICK}" data-tick x="${L - 8}" y="${py(value / 100) + 4}"

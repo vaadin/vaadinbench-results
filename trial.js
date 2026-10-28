@@ -126,7 +126,7 @@ function renderWrongJob(wanted) {
             ${escapeHtml(config)}</a></p>`;
 }
 
-const TITLE = "font-normal leading-tight m-0 text-2xl tracking-0";
+const TITLE = "font-bold leading-tight m-0 text-2xl tracking-0";
 
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
@@ -242,7 +242,7 @@ function renderTool(entry) {
         ? `${lines} line${lines === 1 ? "" : "s"}${call.output_truncated ? "+" : ""}`
         : "no output";
     const body = call.output
-        ? `<pre class="border-gray-3 border-t font-mono leading-snug m-0 overflow-x-auto px-4 py-3 text-xs tracking-0">${
+        ? `<pre class="border-gray-3 border-t font-mono leading-tight m-0 overflow-x-auto px-4 py-3 text-xs tracking-0">${
             escapeHtml(call.output)}</pre>${call.output_truncated
             ? `<p class="${NOTE} border-gray-3 border-t px-4 py-2">Output truncated.</p>` : ""}`
         : `<p class="${NOTE} border-gray-3 border-t px-4 py-2">No output recorded.</p>`;
@@ -322,7 +322,7 @@ const DIFF_KINDS = {
     meta: `${DIFF_LINE} border-transparent text-gray-11`,
     "": `${DIFF_LINE} border-transparent text-gray-12`,
 };
-const DIFF_ROWS = "font-mono leading-snug min-w-max text-xs tracking-0";
+const DIFF_ROWS = "font-mono leading-tight min-w-max text-xs tracking-0";
 
 // Two columns from md up: the panel, then what it filters.
 const SPLIT = "flex flex-col gap-4 md:flex-row md:gap-6";
