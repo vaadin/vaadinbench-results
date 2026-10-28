@@ -223,7 +223,9 @@ function renderLeaderboard(rows, shapes) {
             data-config="${escapeHtml(row.config)}"
             data-effort="${escapeHtml(row.effort)}">
             <td class="${TD_NUM} text-gray-11 w-6">${i + 1}</td>
-            <td class="${TD}"><span class="block">${modelLabel(row.model, row.effort)}</span>
+            <td class="${TD}"><span class="flex gap-2 items-center">${
+                modelMark(row.model, "h-4 shrink-0 w-4")}<span>${
+                escapeHtml(modelParts(row.model).name)}</span>${effortBadge(row.effort)}</span>
                 <span class="flex gap-1 items-center mt-0.5 text-2xs text-gray-11">${
                     shapeGlyph(shapes.get(row.config))}${escapeHtml(row.config)}</span></td>
             <td class="${TD} min-w-32 w-2/5"><span
