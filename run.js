@@ -16,8 +16,8 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `<h1 class="-tracking-1 font-bold leading-tight m-0 text-3xl mb-6">${
-            escapeHtml(modelWithEffort(wanted.model, wanted.effort))} · ${escapeHtml(wanted.config)}</h1>
+    return `<h2 class="font-bold leading-tight m-0 text-2xl tracking-0 mb-6">${
+            escapeHtml(modelWithEffort(wanted.model, wanted.effort))} · ${escapeHtml(wanted.config)}</h2>
         ${metricsTable([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
             ["Solved", `${solved}/${graded.length}`],

@@ -267,7 +267,7 @@ Elements are styled only with utility classes named after Tailwind's, which
 `utilities.css` hand-writes without a Tailwind install: one property per class,
 grouped by property, and only the classes the pages use. Colours are 12-step
 scales written as `light-dark()` on `html`; type is Regular and Mono, with Bold
-only for page titles, and no font files are shipped. Most markup is built in
+only for the h1 and page titles, and no font files are shipped. Most markup is built in
 the page scripts, so that is where most classes live. `tests/test_styles.py` fails on an unused utility, a
 class with no definition, any rule that is not a utility, or a page that loads
 another stylesheet.
