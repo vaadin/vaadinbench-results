@@ -136,7 +136,7 @@ function renderConfigNotes(configs) {
 // mark, a configuration its shape -- so the legend and the filter are the same
 // control. A selected chip goes grey. They are toggles rather than actions, so
 // they are set in Regular 14, not an action's Mono uppercase.
-const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 h-10 items-center leading-snug pl-2 pr-3 rounded-full text-sm tracking-1";
+const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 h-8 items-center leading-snug px-4 rounded-full text-sm tracking-1";
 
 function chipClasses(pressed) {
     return pressed
