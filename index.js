@@ -134,8 +134,9 @@ function renderConfigNotes(configs) {
 // go back to that instead of emptying the table.
 // Each chip wears what its value is drawn with below -- a model its vendor's
 // mark, a configuration its shape -- so the legend and the filter are the same
-// control. A selected chip goes grey.
-const CHIP = "border box-border cursor-pointer flex font-mono gap-2 h-7 items-center leading-tight pl-2 pr-3 rounded-full text-xs tracking-0 uppercase";
+// control. A selected chip goes grey. They are toggles rather than actions, so
+// they are set in Regular 14, not an action's Mono uppercase.
+const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 h-7 items-center leading-snug pl-2 pr-3 rounded-full text-sm tracking-1";
 
 function chipClasses(pressed) {
     return pressed
@@ -214,7 +215,7 @@ function renderLeaderboard(rows, shapes) {
         // it would also draw a coloured nub on a row that solved nothing. The
         // width is data, so it is the one inline style.
         const fill = row.rate
-            ? `<span class="bg-claude-orange block h-full min-w-1 rounded-full"
+            ? `<span class="${vendorBar(row.model)} block h-full min-w-1 rounded-full"
                 style="width:${row.rate * 100}%"></span>`
             : "";
         // The whole row is the target, so it takes the hover tint.

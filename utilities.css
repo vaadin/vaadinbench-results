@@ -52,8 +52,10 @@ html {
 
     --violet-11: light-dark(#4b3ef2, #9eaeff);
 
-    /* Claude's terracotta, as claude.ai uses it: the Claude mark and the score bars. */
-    --claude-orange: #D97757;
+    /* Vendor brand colours, for each vendor's mark and its models' score bars:
+       Claude's terracotta as claude.ai uses it, OpenAI's black (white on dark). */
+    --claude: #D97757;
+    --openai: light-dark(#000000, #ffffff);
 
     /* vaadin.com's stack. The font isn't shipped (licence); it applies only where installed. */
     --font-sans: nb_international_pro, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
@@ -163,8 +165,8 @@ html {
     background-color: var(--blue-9);
 }
 
-.bg-claude-orange {
-    background-color: var(--claude-orange);
+.bg-claude {
+    background-color: var(--claude);
 }
 
 .bg-gray-2 {
@@ -175,8 +177,16 @@ html {
     background-color: var(--gray-3);
 }
 
+.bg-gray-11 {
+    background-color: var(--gray-11);
+}
+
 .bg-green-3 {
     background-color: var(--green-3);
+}
+
+.bg-openai {
+    background-color: var(--openai);
 }
 
 .bg-orange-2 {
@@ -396,12 +406,16 @@ html {
 
 /* Fill */
 
-.fill-claude-orange {
-    fill: var(--claude-orange);
+.fill-claude {
+    fill: var(--claude);
 }
 
 .fill-current {
     fill: currentColor;
+}
+
+.fill-openai {
+    fill: var(--openai);
 }
 
 .fill-gray-3 {
@@ -866,10 +880,6 @@ html {
     padding-inline: 2rem; /* 32px */
 }
 
-.py-0\.5 {
-    padding-block: 0.125rem; /* 2px */
-}
-
 .py-1 {
     padding-block: 0.25rem; /* 4px */
 }
@@ -935,7 +945,18 @@ html {
 }
 
 
+/* Text box edge — Chrome 133+, Safari 18.2+; ignored elsewhere */
+
+.box-edge-cap-alphabetic {
+    text-box-edge: cap alphabetic;
+}
+
+
 /* Text box trim — Chrome 133+, Safari 18.2+; ignored elsewhere */
+
+.box-trim-both {
+    text-box-trim: trim-both;
+}
 
 .box-trim-end {
     text-box-trim: trim-end;
