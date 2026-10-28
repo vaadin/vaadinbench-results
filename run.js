@@ -72,8 +72,8 @@ content.addEventListener("click", (event) => {
 });
 
 if (!wanted.model || !wanted.config) {
-    content.innerHTML =
-        `<p class="${EMPTY}">No configuration requested. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`;
+    showContent(
+        `<p class="${EMPTY}">No configuration requested. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
 } else {
     fetchJson(dataUrl("index.json")).then((index) => {
         const runs = index.runs ?? [];
@@ -82,12 +82,12 @@ if (!wanted.model || !wanted.config) {
             && (!wanted.effort || effortOf(trial) === wanted.effort));
 
         if (!rows.length) {
-            content.innerHTML = `<p class="${EMPTY}">No trials for
+            showContent(`<p class="${EMPTY}">No trials for
                 ${escapeHtml(shortModel(wanted.model))} in
-                ${escapeHtml(wanted.config)}. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`;
+                ${escapeHtml(wanted.config)}. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
         } else {
-            content.innerHTML = syntheticBanner(rows.some((t) => t.synthetic))
-                + renderHeader(rows) + renderTrials(rows);
+            showContent(syntheticBanner(rows.some((t) => t.synthetic))
+                + renderHeader(rows) + renderTrials(rows));
             document.title =
                 `${modelWithEffort(wanted.model, wanted.effort)} · ${wanted.config} · VaadinBench`;
         }

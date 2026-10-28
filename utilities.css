@@ -167,6 +167,22 @@ html {
     animation-delay: 120ms;
 }
 
+.delay-160 {
+    animation-delay: 160ms;
+}
+
+.delay-200 {
+    animation-delay: 200ms;
+}
+
+.delay-240 {
+    animation-delay: 240ms;
+}
+
+.delay-280 {
+    animation-delay: 280ms;
+}
+
 
 /* Background color */
 

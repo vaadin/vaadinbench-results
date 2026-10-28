@@ -524,7 +524,7 @@ function renderInstruction() {
 function render() {
     const wanted = wrongJob();
     if (wanted) {
-        document.getElementById("content").innerHTML = renderWrongJob(wanted);
+        showContent(renderWrongJob(wanted));
         renderCrumb(configOf(wanted));
         document.title = `Not published · VaadinBench`;
         return;
@@ -536,8 +536,7 @@ function render() {
         instruction: renderInstruction,
     };
     const view = views[activeTab] ?? views.trajectory;
-    document.getElementById("content").innerHTML =
-        renderHeader() + renderTabs() + view();
+    showContent(renderHeader() + renderTabs() + view());
     renderCrumb();
     document.title = `${shortTask(trial.task)} · ${shortModel(trial.model)} · VaadinBench`;
 }
@@ -575,8 +574,8 @@ document.getElementById("content").addEventListener("click", (event) => {
 
 const id = new URLSearchParams(location.search).get("id");
 if (!id) {
-    document.getElementById("content").innerHTML =
-        `<p class="${EMPTY}">No trial requested. <a class="${LINK}" href="${leaderboardUrl()}">Back to the results.</a></p>`;
+    showContent(
+        `<p class="${EMPTY}">No trial requested. <a class="${LINK}" href="${leaderboardUrl()}">Back to the results.</a></p>`);
 } else {
     fetchJson(dataUrl(`trials/${encodeURIComponent(id)}.json`)).then((loaded) => {
         trial = loaded;

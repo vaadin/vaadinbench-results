@@ -433,7 +433,7 @@ function render() {
     // keeps its colour and a configuration its shape as chips are toggled.
     const hues = hueMap(trials.map((trial) => trial.model));
     const shapes = shapeMap(trials.map((trial) => configOf(trial.job)));
-    document.getElementById("content").innerHTML = [
+    showContent([
         syntheticBanner(runs.some((run) => run.synthetic)),
         renderTabs(),
         renderFilters(hues, shapes),
@@ -443,7 +443,7 @@ function render() {
             // however the chips are set.
             ? renderChart(rows, hues, shapes, plottable(summarize(trials)))
             : renderLeaderboard(rows, hues, shapes),
-    ].join("");
+    ].join(""));
     const content = document.getElementById("content");
     bindTips(content);
     const chart = content.querySelector("[data-chart]");
@@ -521,8 +521,7 @@ fetchJson(dataUrl("index.json")).then((index) => {
     runs = index.runs ?? [];
     trials = runs.flatMap((run) => run.trials ?? []);
     if (!trials.length) {
-        document.getElementById("content").innerHTML =
-            `<p class="${EMPTY}">No results published yet.</p>`;
+        showContent(`<p class="${EMPTY}">No results published yet.</p>`);
     } else {
         render();
     }
