@@ -259,6 +259,10 @@ html {
     border-color: var(--gray-5);
 }
 
+.border-gray-12 {
+    border-color: var(--gray-12);
+}
+
 .border-green-7 {
     border-color: var(--green-7);
 }
