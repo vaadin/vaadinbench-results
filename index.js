@@ -256,7 +256,7 @@ function renderChartHead(metric) {
             <div class="bg-gray-3 box-border flex h-10 p-1 rounded-lg w-fit">
                 ${options.map(([id, label]) => `<label class="cursor-pointer flex font-mono items-center leading-tight px-4 rounded text-gray-11 text-xs tracking-0 uppercase has-checked:bg-white has-checked:text-gray-12 has-focus-visible:outline-2 has-focus-visible:outline-gray-12 dark:has-checked:bg-gray-1"><input
                     class="sr-only" type="radio" name="x" value="${id}"${
-                    state.x === id ? " checked" : ""}>${label}</label>`).join("")}
+                    state.x === id ? " checked" : ""}><span class="box-edge-cap-alphabetic box-trim-both">${label}</span></label>`).join("")}
             </div>
         </fieldset>
     </div>`;
