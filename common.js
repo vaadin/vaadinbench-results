@@ -146,12 +146,11 @@ function modelText(model) {
     return spoken ? `${spoken} ${name}` : name;
 }
 
-// Vendor marks in their own colours: Claude's terracotta (#D97757, as claude.ai
-// uses it) and OpenAI's monochrome, which takes the colour of the text around
-// it. A brand colour is part of the mark, so it is data here rather than a
-// palette step. Paths from @lobehub/icons-static-svg 1.101.0 (MIT); the marks
+// Vendor marks in their own colours: Claude's terracotta (--claude-orange, as
+// claude.ai uses it) and OpenAI's monochrome, which takes the colour of the text
+// around it. Paths from @lobehub/icons-static-svg 1.101.0 (MIT); the marks
 // themselves are Anthropic's and OpenAI's trademarks.
-const VENDOR_COLOURS = { Claude: "#D97757", OpenAI: "currentColor" };
+const VENDOR_FILLS = { Claude: "fill-claude-orange", OpenAI: "fill-current" };
 
 const VENDOR_MARKS = {
     Claude: 'M4.709 15.955l4.72-2.647.08-.23-.08-.128H9.2l-.79-.048-2.698-.073-2.339-.097-2.266-.122-.571-.121L0 11.784l.055-.352.48-.321.686.06 1.52.103 2.278.158 1.652.097 2.449.255h.389l.055-.157-.134-.098-.103-.097-2.358-1.596-2.552-1.688-1.336-.972-.724-.491-.364-.462-.158-1.008.656-.722.881.06.225.061.893.686 1.908 1.476 2.491 1.833.365.304.145-.103.019-.073-.164-.274-1.355-2.446-1.446-2.49-.644-1.032-.17-.619a2.97 2.97 0 01-.104-.729L6.283.134 6.696 0l.996.134.42.364.62 1.414 1.002 2.229 1.555 3.03.456.898.243.832.091.255h.158V9.01l.128-1.706.237-2.095.23-2.695.08-.76.376-.91.747-.492.584.28.48.685-.067.444-.286 1.851-.559 2.903-.364 1.942h.212l.243-.242.985-1.306 1.652-2.064.73-.82.85-.904.547-.431h1.033l.76 1.129-.34 1.166-1.064 1.347-.881 1.142-1.264 1.7-.79 1.36.073.11.188-.02 2.856-.606 1.543-.28 1.841-.315.833.388.091.395-.328.807-1.969.486-2.309.462-3.439.813-.042.03.049.061 1.549.146.662.036h1.622l3.02.225.79.522.474.638-.079.485-1.215.62-1.64-.389-3.829-.91-1.312-.329h-.182v.11l1.093 1.068 2.006 1.81 2.509 2.33.127.578-.322.455-.34-.049-2.205-1.657-.851-.747-1.926-1.62h-.128v.17l.444.649 2.345 3.521.122 1.08-.17.353-.608.213-.668-.122-1.374-1.925-1.415-2.167-1.143-1.943-.14.08-.674 7.254-.316.37-.729.28-.607-.461-.322-.747.322-1.476.389-1.924.315-1.53.286-1.9.17-.632-.012-.042-.14.018-1.434 1.967-2.18 2.945-1.726 1.845-.414.164-.717-.37.067-.662.401-.589 2.388-3.036 1.44-1.882.93-1.086-.006-.158h-.055L4.132 18.56l-1.13.146-.487-.456.061-.746.231-.243 1.908-1.312-.006.006z',
@@ -160,14 +159,19 @@ const VENDOR_MARKS = {
 
 // The mark is sized in em, so it scales with whatever text it sits in -- a
 // chip, a table row, a page title. It is labelled, so the name reads "Claude
-// Haiku 5.5" aloud as well as on screen.
+// Haiku 5.5" aloud as well as on screen. The reasoning effort, when there is
+// one, follows as a badge.
 function modelLabel(model, effort = "") {
     const { vendor, name } = modelParts(model);
     const mark = vendor && VENDOR_MARKS[vendor]
-        ? `<svg class="align-[-0.125em] h-[1em] w-[1em]" fill="${VENDOR_COLOURS[vendor]}" fill-rule="evenodd"
+        ? `<svg class="${VENDOR_FILLS[vendor]} align-[-0.125em] h-[1em] w-[1em]" fill-rule="evenodd"
             role="img" aria-label="${vendor}" viewBox="0 0 24 24"><path d="${VENDOR_MARKS[vendor]}"/></svg> `
         : "";
-    return `${mark}${escapeHtml(name)}${effort ? ` · ${escapeHtml(effort)}` : ""}`;
+    const label = `${mark}${escapeHtml(name)}`;
+    return effort
+        ? `<span class="gap-2 inline-flex items-center"><span>${label}</span><span
+            class="${BADGE.tag}">${escapeHtml(effort)}</span></span>`
+        : label;
 }
 
 function shortTask(task) {
@@ -259,36 +263,7 @@ function leaderboardUrl() {
     return pageUrl("index.html");
 }
 
-// One hue per model, so a row's bar and its dot in the chart are the same
-// colour. Assigned by position in the sorted model list rather than by name, so
-// a new model picks up the next hue on its own. Yellow is out: its text step
-// cannot be read at chip size.
-const HUES = ["blue", "violet", "orange", "green", "red", "teal"];
-
-// Each hue's classes, spelled out rather than built from the name, so every
-// utility the pages use appears in the source and the unused-utility check can
-// see it. Step 9 for anything filled, 11 for anything set as type, 3 and 7 for a
-// selected chip's tint and edge.
-const HUE_CLASSES = {
-    blue: { fill: "bg-blue-9", tint: "bg-blue-3", edge: "border-blue-7", text: "text-blue-11", dot: "fill-blue-9", label: "fill-blue-11" },
-    violet: { fill: "bg-violet-9", tint: "bg-violet-3", edge: "border-violet-7", text: "text-violet-11", dot: "fill-violet-9", label: "fill-violet-11" },
-    orange: { fill: "bg-orange-9", tint: "bg-orange-3", edge: "border-orange-7", text: "text-orange-11", dot: "fill-orange-9", label: "fill-orange-11" },
-    green: { fill: "bg-green-9", tint: "bg-green-3", edge: "border-green-7", text: "text-green-11", dot: "fill-green-9", label: "fill-green-11" },
-    red: { fill: "bg-red-9", tint: "bg-red-3", edge: "border-red-7", text: "text-red-11", dot: "fill-red-9", label: "fill-red-11" },
-    teal: { fill: "bg-teal-9", tint: "bg-teal-3", edge: "border-teal-7", text: "text-teal-11", dot: "fill-teal-9", label: "fill-teal-11" },
-};
-
-function hueMap(models) {
-    const sorted = [...new Set(models)].sort();
-    return new Map(sorted.map((model, i) => [model, HUES[i % HUES.length]]));
-}
-
-function hueClasses(hue) {
-    return HUE_CLASSES[hue] ?? HUE_CLASSES.blue;
-}
-
-// Configurations are the other axis of comparison, and colour is already spent
-// on models, so they get a shape. Nine points labelled in text collide with each
+// Configurations are the other axis of comparison, and they get a shape. Nine points labelled in text collide with each
 // other and with the dots; two legends and a tooltip do not.
 const SHAPES = ["circle", "square", "triangle", "diamond"];
 
