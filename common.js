@@ -78,10 +78,11 @@ function lucide(name, klass = "h-4 shrink-0 w-4") {
         viewBox="0 0 24 24">${ICONS[name]}</svg>`;
 }
 
-// Tabs are actions: 13 Mono uppercase, the label in its own trimmed span. The
-// selected one is told apart by its underline as well as its colour.
-const TAB = "-mb-px bg-transparent border-0 border-b-2 border-transparent cursor-pointer font-mono leading-tight p-0 pb-3 text-gray-11 text-xs tracking-0 uppercase hover:text-gray-12";
-const TAB_SELECTED = "-mb-px bg-transparent border-0 border-b-2 border-blue-9 cursor-pointer font-mono leading-tight p-0 pb-3 text-gray-12 text-xs tracking-0 uppercase";
+// Tabs are as tall as the header's button, in Regular 16, the label in its own
+// trimmed span. The selected one is told apart by its underline as well as its
+// colour.
+const TAB = "-mb-px bg-transparent border-0 border-b-2 border-transparent box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-11 tracking-1 hover:text-gray-12";
+const TAB_SELECTED = "-mb-px bg-transparent border-0 border-b-2 border-blue-9 box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-12 tracking-1";
 
 function tabBar(tabs, active) {
     return `<div class="border-b border-gray-3 flex flex-wrap gap-x-6 gap-y-2 mb-6" role="tablist">${
