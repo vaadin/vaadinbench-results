@@ -177,9 +177,12 @@ function modelLabel(model, effort = "") {
     const mark = modelMark(model, "align-[-0.125em] h-[1em] w-[1em]");
     const label = `${mark}${mark ? " " : ""}${escapeHtml(modelParts(model).name)}`;
     return effort
-        ? `<span class="gap-2 inline-flex items-center"><span>${label}</span><span
-            class="${BADGE.tag}">${escapeHtml(effort)}</span></span>`
+        ? `<span class="gap-2 inline-flex items-center"><span>${label}</span>${effortBadge(effort)}</span>`
         : label;
+}
+
+function effortBadge(effort) {
+    return effort ? `<span class="${BADGE.tag}">${escapeHtml(effort)}</span>` : "";
 }
 
 function shortTask(task) {
