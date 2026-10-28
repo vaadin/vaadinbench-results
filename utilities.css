@@ -76,7 +76,6 @@ html {
 }
 
 
-
 /* Accessibility */
 
 .sr-only {
@@ -122,26 +121,6 @@ html {
         opacity: 0;
         translate: 0 .5rem;
     }
-}
-
-/* The reindeer traces its outline, then fills it. The path's attributes are its
-   resting state (filled, no stroke), so the last frame needs no keyframe. */
-@keyframes draw {
-    0% {
-        fill-opacity: 0;
-        stroke-dashoffset: 1;
-        stroke-opacity: 1;
-    }
-
-    60% {
-        fill-opacity: 0;
-        stroke-dashoffset: 0;
-        stroke-opacity: 1;
-    }
-}
-
-.animate-draw {
-    animation: draw 2.4s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .animate-fade-in {
@@ -400,10 +379,6 @@ html {
 
 
 /* Color */
-
-.text-blue-9 {
-    color: var(--blue-9);
-}
 
 .text-blue-11 {
     color: var(--blue-11);
@@ -699,10 +674,6 @@ html {
 
 .h-7 {
     height: 1.75rem; /* 28px */
-}
-
-.h-7\.5 {
-    height: 1.875rem; /* 30px */
 }
 
 .h-10 {
@@ -1153,10 +1124,6 @@ html {
 
 .w-6 {
     width: 1.5rem; /* 24px */
-}
-
-.w-6\.5 {
-    width: 1.625rem; /* 26px */
 }
 
 .w-7 {
