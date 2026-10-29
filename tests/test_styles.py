@@ -89,13 +89,14 @@ class StylesheetTests(unittest.TestCase):
                     start = i + 1
         self.assertEqual(offenders, [])
 
-    def test_no_heading_is_bold(self):
-        # Headings are Regular, as on mcp.vaadin.com; Bold is for figures and
-        # names in tables, never a heading.
+    def test_nothing_is_bold(self):
+        # Type is Regular, Mono and one Medium, as on mcp.vaadin.com: no Bold,
+        # whether a class names it or a stylesheet rule sets it. Checked in the
+        # scripts too, where a class built at runtime escapes the static check.
+        self.assertNotRegex(self.css, r"font-weight:\s*(bold|[6-9]00)")
         for path in pages() + scripts():
             with self.subTest(path.name):
-                bold = re.findall(r'<h[1-6]\b[^>]*class="[^"]*\bfont-bold\b', path.read_text())
-                self.assertEqual(bold, [])
+                self.assertNotIn("font-bold", path.read_text())
 
     def test_static_classes_are_defined(self):
         # `group` is a marker for group-* variants, which name it in selectors.

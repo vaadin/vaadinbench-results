@@ -395,7 +395,7 @@ function pointCard(row, metric, shapes) {
     const line = (label, value) => `<div class="flex gap-6 items-baseline justify-between">
         <dt class="font-mono leading-tight text-gray-11 text-xs tracking-0 uppercase">${label}</dt><dd class="m-0">${value}</dd></div>`;
     return `<div class="flex gap-2 items-center">${modelMark(row.model, "h-4 shrink-0 w-4")}<span
-            class="font-bold leading-snug text-base tracking-1">${escapeHtml(modelParts(row.model).name)}</span>${
+            class="font-normal leading-snug text-base tracking-1">${escapeHtml(modelParts(row.model).name)}</span>${
             effortBadge(row.effort)}</div>
         <div class="flex gap-2 items-center mt-2 text-gray-11"><span class="flex justify-center shrink-0 w-4">${
             shapeGlyph(shapes.get(row.config))}</span>${escapeHtml(row.config)}</div>

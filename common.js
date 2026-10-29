@@ -69,7 +69,6 @@ const ICONS = {
     "circle-dot": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/>',
     "arrow-up": '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
     "arrow-down": '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
-    "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
     circle: '<circle cx="12" cy="12" r="10"/>',
     square: '<rect width="18" height="18" x="3" y="3" rx="2"/>',
     triangle: '<path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>',
@@ -784,7 +783,7 @@ function section(title, lead, body, edges = "border-t") {
 
 // Summary figures as KPI cards: one card per figure, its name small above its
 // value, which is set larger since it is what the card is for: 12 Mono
-// over 22 Bold. A description
+// over 22 Regular. A description
 // list, so each value is announced with its name.
 function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
@@ -792,7 +791,7 @@ function metricCards(pairs) {
     return `<dl class="gap-4 grid grid-cols-2 m-0 md:grid-cols-4">${cells.map(([label, value]) =>
         `<div class="bg-gray-2 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
             class="-tracking-4 font-mono leading-tight text-2xs text-gray-11 uppercase">${
-            escapeHtml(label)}</dt><dd class="font-bold leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
+            escapeHtml(label)}</dt><dd class="font-normal leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
 }
 
