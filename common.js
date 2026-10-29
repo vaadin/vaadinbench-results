@@ -768,15 +768,16 @@ function unescapeHtml(value) {
 }
 
 // Summary figures as KPI cards: one card per figure, its name small above its
-// value, which is set large since it is what the card is for. A description
+// value, which is set larger since it is what the card is for: 12 Mono
+// over 22. A description
 // list, so each value is announced with its name.
 function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
     return `<dl class="gap-4 grid grid-cols-2 m-0 mb-5 md:grid-cols-4">${cells.map(([label, value]) =>
-        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-4 min-w-0 p-5 rounded-lg"><dt
-            class="box-edge-cap-alphabetic box-trim-both font-mono leading-tight text-gray-11 text-xs tracking-0 uppercase">${
-            escapeHtml(label)}</dt><dd class="font-bold leading-tight m-0 tabular-nums text-2xl tracking-0 whitespace-nowrap">${
+        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-3 min-w-0 p-5 rounded-lg"><dt
+            class="-tracking-4 box-edge-cap-alphabetic box-trim-both font-mono leading-tight text-2xs text-gray-11 uppercase">${
+            escapeHtml(label)}</dt><dd class="font-normal leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
 }
 

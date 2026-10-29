@@ -88,9 +88,9 @@ if (!wanted.model || !wanted.config) {
             // under the breadcrumb. Laid out as a leaderboard row
             // is: the configuration on a line of its own, indented to the name.
             document.getElementById("title").innerHTML = `<span class="flex gap-3 items-center">${
-                modelMark(wanted.model, "h-8 shrink-0 w-8")}<span>${escapeHtml(modelParts(wanted.model).name)}</span>${
+                modelMark(wanted.model, "h-10 shrink-0 w-10")}<span>${escapeHtml(modelParts(wanted.model).name)}</span>${
                 effortBadge(wanted.effort)}</span><span
-                class="block font-normal leading-snug mt-1 pl-11 text-gray-11 text-lg tracking-1">${escapeHtml(wanted.config)}</span>`;
+                class="block font-normal leading-snug mt-1 pl-13 text-gray-11 text-xl tracking-1">${escapeHtml(wanted.config)}</span>`;
             showContent(syntheticBanner(rows.some((t) => t.synthetic))
                 + renderHeader(rows) + renderTrials(rows));
             document.title =
