@@ -151,7 +151,7 @@ const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 
 function chipClasses(pressed) {
     return pressed
         ? `${CHIP} bg-gray-3 border-gray-5 text-gray-12`
-        : `${CHIP} bg-gray-1 border-gray-3 text-gray-11 hover:border-gray-5`;
+        : `${CHIP} bg-background border-gray-3 text-gray-11 hover:border-gray-5`;
 }
 
 function renderFilters(shapes) {

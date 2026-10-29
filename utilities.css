@@ -24,11 +24,13 @@
 html {
     color-scheme: light dark;
     color: var(--gray-12);
-    background-color: light-dark(white, #0f0f0f);
+    background-color: var(--background);
     font-family: var(--font-sans);
     /* Stops scroll anchoring nudging the page as the fade-in moves content. */
     overflow-anchor: none;
 
+    /* The page itself; also what a surface over the animated background uses to look like the page. */
+    --background: light-dark(white, #0f0f0f);
     --blue-3: light-dark(#e9f3ff, #0c264b);
     --blue-9: light-dark(#056ff0, #056ff0);
     --blue-11: light-dark(#0068e9, #7fb8ff);
@@ -257,6 +259,10 @@ html {
 
 
 /* Background color */
+
+.bg-background {
+    background-color: var(--background);
+}
 
 .bg-blue-3 {
     background-color: var(--blue-3);
