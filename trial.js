@@ -312,7 +312,7 @@ function lineKind(line) {
 // are as wide as the longest one, which lets a tint run to the right edge.
 const DIFF_LINE = "block border-0 border-l-2 pl-2 pr-3 whitespace-pre";
 const DIFF_KINDS = {
-    add: `${DIFF_LINE} bg-green-3 border-green-7 text-green-11`,
+    add: `${DIFF_LINE} bg-teal-3 border-teal-7 text-teal-11`,
     del: `${DIFF_LINE} bg-red-3 border-red-7 text-red-11`,
     hunk: `${DIFF_LINE} bg-gray-2 border-transparent text-gray-11`,
     file: `${DIFF_LINE} bg-gray-3 border-transparent py-1 text-gray-12`,
@@ -376,7 +376,7 @@ function splitPath(path) {
 }
 
 function fileStat(file) {
-    return `${file.added ? `<span class="text-green-11">+${file.added}</span>` : ""}
+    return `${file.added ? `<span class="text-teal-11">+${file.added}</span>` : ""}
         ${file.removed ? `<span class="ml-1 text-red-11">−${file.removed}</span>` : ""}`;
 }
 

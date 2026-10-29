@@ -324,7 +324,7 @@ function renderQuadrants(metric, xCut, px, py, box) {
     // Named for what each band means, not for which corner it sits in: the good
     // corner is at the left only because cheaper is better on that axis.
     const BANDS = {
-        good: { fill: "fill-green-3", swatch: "bg-green-3" },
+        good: { fill: "fill-teal-3", swatch: "bg-teal-3" },
         poor: { fill: "fill-gray-3", swatch: "bg-gray-3" },
     };
     const band = (kind, x1, y1, x2, y2) => `<rect class="${BANDS[kind].fill}"
@@ -343,7 +343,7 @@ function renderQuadrants(metric, xCut, px, py, box) {
             ${swatch("good", "Most attractive quadrant")}
             ${poor ? swatch("poor", "Least attractive") : ""}
         </div>`,
-        note: `<p class="${NOTE} mt-3">Green: more than ${percent(QUADRANT.score)} of the
+        note: `<p class="${NOTE} mt-3">Teal: more than ${percent(QUADRANT.score)} of the
             graded trials solved, for under ${escapeHtml(metric.format(xCut))} a trial.${
             poor ? ` Grey: less than that, for more than that. The other two corners
             are the trade-off.` : " Nothing left on screen is above that."}</p>`,

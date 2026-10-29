@@ -36,7 +36,7 @@ const TD_NUM = "px-4 py-3 tabular-nums text-right whitespace-nowrap";
 // trimmed to cap height on both sides -- so it is the capitals that are centred,
 // not a line box with room for descenders below them.
 const BADGE = {
-    pass: "-tracking-4 bg-green-3 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-green-11 uppercase",
+    pass: "-tracking-4 bg-teal-3 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-teal-11 uppercase",
     fail: "-tracking-4 bg-red-3 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-red-11 uppercase",
     // Outlined rather than filled, so it reads on a grey tile as well as a white table.
     tag: "-tracking-4 border border-gray-5 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-gray-11 uppercase",
