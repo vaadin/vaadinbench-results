@@ -854,5 +854,34 @@ function showError(error) {
         `<p class="${EMPTY}">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`);
 }
 
+// An animated background: a Unicorn Studio scene (WebGL), whose player and
+// scene data load from outside this site at run time -- the player from
+// jsDelivr, the scene from Unicorn Studio. It sits behind the page in a fixed
+// layer the size of the window, out of the accessibility tree and the way of
+// clicks, and is not loaded at all under reduced motion. Should the player not
+// load, the layer goes and the page is as it was.
+const BACKGROUND_PROJECT = "uQZQm2qUfWbxcybJ0RLZ";
+const BACKGROUND_PLAYER = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.4.3/dist/unicornStudio.umd.js";
+
+function loadBackground() {
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const scene = document.createElement("div");
+    scene.className = "-z-10 fixed inset-0 pointer-events-none";
+    scene.setAttribute("aria-hidden", "true");
+    scene.dataset.usProject = BACKGROUND_PROJECT;
+    document.body.prepend(scene);
+    const start = () => window.UnicornStudio?.init?.();
+    window.UnicornStudio = window.UnicornStudio ?? { isInitialized: false };
+    const player = document.createElement("script");
+    player.src = BACKGROUND_PLAYER;
+    player.onload = () => {
+        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
+        else start();
+    };
+    player.onerror = () => scene.remove();
+    document.head.appendChild(player);
+}
+
 localiseHomeLinks();
 renderBenchmarkBar();
+loadBackground();
