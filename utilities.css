@@ -1298,6 +1298,10 @@ html {
     width: 2rem; /* 32px */
 }
 
+.w-10 {
+    width: 2.5rem; /* 40px */
+}
+
 .w-14 {
     width: 3.5rem; /* 56px */
 }

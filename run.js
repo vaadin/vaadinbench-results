@@ -16,9 +16,7 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `<h2 class="font-bold leading-tight m-0 text-2xl tracking-0 mb-6">${
-            modelLabel(wanted.model, wanted.effort)} · ${escapeHtml(wanted.config)}</h2>
-        ${metricsTable([
+    return `${metricsTable([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
             ["Solved", `${solved}/${graded.length}`],
             ["Tasks", tasks.size],
@@ -86,6 +84,10 @@ if (!wanted.model || !wanted.config) {
                 ${escapeHtml(modelText(wanted.model))} in
                 ${escapeHtml(wanted.config)}. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
         } else {
+            // The page is about this one configuration, so it is the page's h1,
+            // in the header beside the way back.
+            document.getElementById("title").innerHTML =
+                `${modelLabel(wanted.model, wanted.effort)} · ${escapeHtml(wanted.config)}`;
             showContent(syntheticBanner(rows.some((t) => t.synthetic))
                 + renderHeader(rows) + renderTrials(rows));
             document.title =

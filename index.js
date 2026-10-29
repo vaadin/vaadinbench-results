@@ -268,14 +268,17 @@ function renderLeaderboard(rows) {
             ? `<span class="${vendorBar(row.model)} block h-full min-w-1 rounded-full"
                 style="width:${row.rate * 100}%"></span>`
             : "";
-        // The whole row is the target, so it takes the hover tint.
+        // The model's name is the link, so the row is reachable by keyboard and
+        // announced as one; the rest of the row is a mouse convenience for the
+        // same place, so it takes the hover tint.
         return `<tr class="cursor-pointer h-18 hover:bg-gray-2" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
             data-effort="${escapeHtml(row.effort)}">
             <td class="${TD_NUM} text-gray-11">${i + 1}</td>
             <td class="${TD}"><span class="flex gap-2 items-center">${
-                modelMark(row.model, "h-4 shrink-0 w-4")}<span class="font-bold leading-snug text-base tracking-1">${
-                escapeHtml(modelParts(row.model).name)}</span>${effortBadge(row.effort)}</span>
+                modelMark(row.model, "h-4 shrink-0 w-4")}<a class="font-bold leading-snug no-underline text-base text-gray-12 tracking-1 hover:underline"
+                href="${escapeHtml(runUrl(row.model, row.config, row.effort))}">${
+                escapeHtml(modelParts(row.model).name)}</a>${effortBadge(row.effort)}</span>
                 <span class="block mt-0.5 pl-6 text-2xs text-gray-11">${escapeHtml(row.config)}</span></td>
             <td class="${TD}"><span
                 class="bg-gray-3 block h-2 overflow-hidden rounded-full">${fill}</span></td>
@@ -570,7 +573,7 @@ document.getElementById("content").addEventListener("click", (event) => {
         return;
     }
     const row = event.target.closest("tr[data-model]");
-    if (row) location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
+    if (row && !event.target.closest("a")) location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
 });
 
 // Places the configuration help under the button that opens it, inside the
