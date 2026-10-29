@@ -701,9 +701,12 @@ function renderMarkdown(text) {
 
         const heading = line.match(/^(#{1,6})\s+(.*)$/);
         if (heading) {
+            // Styled by the source's level, but tagged two below it: the page
+            // already has its h1 and h2s, and rendered text sits under them.
             const level = heading[1].length;
-            out.push(`<h${level} class="${MD_HEADING[level] ?? MD_HEADING_MINOR}">${
-                mdInline(heading[2].trim())}</h${level}>`);
+            const tag = `h${Math.min(level + 2, 6)}`;
+            out.push(`<${tag} class="${MD_HEADING[level] ?? MD_HEADING_MINOR}">${
+                mdInline(heading[2].trim())}</${tag}>`);
             i += 1;
             continue;
         }

@@ -86,8 +86,8 @@ const TYPE_RINGS = {
     thinking: `${RING} border-gray-3 text-violet-11`,
 };
 
-// The page title lives in the shell, so the trial names itself one level down
-// and the breadcrumb carries the way back to the configuration it came from.
+// The task is the page's h1, under the breadcrumb, which carries the model and
+// configuration and the way back to them.
 function renderCrumb(config = configOf(trial.job)) {
     // The separator between levels has to differ from the one inside a level:
     // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
@@ -119,22 +119,17 @@ function renderWrongJob(wanted) {
         and only the last one kept its trajectory. The leaderboard's numbers are
         unaffected &mdash; they are stored per run &mdash; and re-publishing that
         job separates them again.`)}
-        <h2 class="${TITLE} mb-4">${escapeHtml(shortTask(trial.task))} ·
-            ${modelLabel(trial.model)}</h2>
         <p class="${EMPTY}"><a class="${LINK}" href="${runUrl(trial.model, config)}">Back to
             ${modelLabel(trial.model)} ·
             ${escapeHtml(config)}</a></p>`;
 }
 
-const TITLE = "font-bold leading-tight m-0 text-2xl tracking-0";
-
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
-        <h2 class="${TITLE} mb-2">${escapeHtml(shortTask(trial.task))} ·
-            ${modelLabel(trial.model)}</h2>
         <p class="m-0 mb-6 text-gray-11 wrap-anywhere">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
-            · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
+            · attempt ${trial.attempt} · job <span class="align-bottom inline-block max-w-xs truncate"
+                title="${escapeHtml(trial.job)}">${escapeHtml(trial.job)}</span>
         </p>
         ${metricCards([
             ["Outcome", outcome(trial)],
@@ -522,6 +517,7 @@ function render() {
     if (wanted) {
         showContent(renderWrongJob(wanted));
         renderCrumb(configOf(wanted));
+        document.getElementById("title").textContent = shortTask(trial.task);
         document.title = `Not published · VaadinBench`;
         return;
     }
@@ -534,6 +530,7 @@ function render() {
     const shown = views[activeTab] ? activeTab : "trajectory";
     showContent(renderHeader() + renderTabs() + tabPanel(shown, views[shown]()));
     renderCrumb();
+    document.getElementById("title").textContent = shortTask(trial.task);
     document.title = `${shortTask(trial.task)} · ${modelText(trial.model)} · VaadinBench`;
 }
 
