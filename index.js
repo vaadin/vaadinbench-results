@@ -387,14 +387,18 @@ const LEGEND = "flex flex-wrap gap-x-4 gap-y-2 mt-4 text-gray-11";
 // configuration, and the two numbers the point is plotted from.
 let chartCards = [];
 
+// The configuration's shape sits in the mark's 16px column, so its name lines
+// up under the model's.
 function pointCard(row, metric, shapes) {
-    const line = (label, value) => `<div class="flex gap-6 justify-between">
-        <dt class="text-gray-11">${label}</dt><dd class="m-0">${value}</dd></div>`;
+    // Labelled like the KPI cards and the table headings: 13 Mono uppercase.
+    const line = (label, value) => `<div class="flex gap-6 items-baseline justify-between">
+        <dt class="font-mono leading-tight text-gray-11 text-xs tracking-0 uppercase">${label}</dt><dd class="m-0">${value}</dd></div>`;
     return `<div class="flex gap-2 items-center">${modelMark(row.model, "h-4 shrink-0 w-4")}<span
             class="font-bold leading-snug text-base tracking-1">${escapeHtml(modelParts(row.model).name)}</span>${
             effortBadge(row.effort)}</div>
-        <div class="flex gap-2 items-center mt-2 text-gray-11">${shapeGlyph(shapes.get(row.config))}${escapeHtml(row.config)}</div>
-        <dl class="border-gray-3 border-t flex flex-col gap-1 m-0 mt-3 pt-3">
+        <div class="flex gap-2 items-center mt-2 text-gray-11"><span class="flex justify-center shrink-0 w-4">${
+            shapeGlyph(shapes.get(row.config))}</span>${escapeHtml(row.config)}</div>
+        <dl class="border-gray-3 border-t flex flex-col gap-3 m-0 mt-4 pt-4">
             ${line("Score", `${percent(row.rate)} <span class="text-gray-11">${row.solved}/${row.graded}</span>`)}
             ${line(metric.short, escapeHtml(metric.format(metric.value(row))))}
         </dl>`;
