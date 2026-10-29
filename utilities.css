@@ -1078,6 +1078,10 @@ html {
     position: absolute;
 }
 
+.fixed {
+    position: fixed;
+}
+
 .relative {
     position: relative;
 }
@@ -1160,6 +1164,10 @@ html {
 
 .bottom-0 {
     bottom: 0;
+}
+
+.inset-0 {
+    inset: 0;
 }
 
 .inset-auto {
@@ -1300,6 +1308,10 @@ html {
 
 
 /* Z-index */
+
+.-z-10 {
+    z-index: -10;
+}
 
 .z-10 {
     z-index: 10;
