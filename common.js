@@ -77,8 +77,8 @@ const ICONS = {
     "square-check": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>',
     "square-minus": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/>',
     check: '<path d="M20 6 9 17l-5-5"/>',
-    "circle-alert": '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
-    "circle-minus": '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
+    "triangle-alert": '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+    minus: '<path d="M5 12h14"/>',
     "circle-help": '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
 };
 
@@ -405,23 +405,25 @@ function outcome(trial) {
         title="${escapeHtml(trial.error)}">error</span>`;
 }
 
-// The same verdict as icons, for a table column: each one named by aria-label
-// and, for the pointer, a tooltip. An agent error beside a grade is its own
-// icon, whose tooltip carries the error itself.
+// The same verdict as icon badges, for a table column: square, as tall as the
+// text badges and coloured as they are, each named by aria-label and, for the
+// pointer, a tooltip. An agent error beside a grade is its own badge, whose
+// tooltip carries the error itself.
+const ICON_BADGE = "box-border flex h-6 items-center justify-center rounded shrink-0 w-6";
 function outcomeIcons(trial) {
-    const icon = (name, colour, label, tip = label) => `<span class="flex ${colour}" role="img"
-        aria-label="${escapeHtml(label)}" title="${escapeHtml(tip)}">${lucide(name, "h-5 shrink-0 w-5")}</span>`;
+    const icon = (name, colours, label, tip = label) => `<span class="${ICON_BADGE} ${colours}" role="img"
+        aria-label="${escapeHtml(label)}" title="${escapeHtml(tip)}">${lucide(name)}</span>`;
     if (trial.reward === null || trial.reward === undefined) {
         return trial.error
-            ? icon("circle-alert", "text-red-11", "Error", `Error: ${trial.error}`)
-            : icon("circle-minus", "text-gray-11", "No reward");
+            ? icon("triangle-alert", "bg-red-3 text-red-11", "Error", `Error: ${trial.error}`)
+            : icon("minus", "bg-gray-3 text-gray-11", "No reward");
     }
     const verdict = trial.reward >= 1
-        ? icon("check", "text-teal-11", "Pass")
-        : icon("x", "text-red-11", "Fail");
+        ? icon("check", "bg-teal-3 text-teal-11", "Pass")
+        : icon("x", "bg-red-3 text-red-11", "Fail");
     if (!trial.error) return verdict;
     return `<span class="flex gap-1 items-center">${verdict}${
-        icon("circle-alert", "text-gray-11", "Agent error", `Agent error: ${trial.error}`)}</span>`;
+        icon("triangle-alert", "bg-gray-3 text-gray-11", "Agent error", `Agent error: ${trial.error}`)}</span>`;
 }
 
 // The job rides along so the trial page can check that the file it loaded is
@@ -771,15 +773,15 @@ function unescapeHtml(value) {
 
 // Summary figures as KPI cards: one card per figure, its name small above its
 // value, which is set larger since it is what the card is for: 12 Mono
-// over 32 Bold. A description
+// over 22 Bold. A description
 // list, so each value is announced with its name.
 function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
-    return `<dl class="gap-4 grid grid-cols-2 m-0 mb-5 md:grid-cols-4">${cells.map(([label, value]) =>
-        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
-            class="-tracking-4 box-edge-cap-alphabetic box-trim-both font-mono leading-tight text-2xs text-gray-11 uppercase">${
-            escapeHtml(label)}</dt><dd class="font-bold leading-tight m-0 tabular-nums text-2xl tracking-0 whitespace-nowrap">${
+    return `<dl class="gap-4 grid grid-cols-2 m-0 mb-8 md:grid-cols-4">${cells.map(([label, value]) =>
+        `<div class="bg-gray-2 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
+            class="-tracking-4 font-mono leading-tight text-2xs text-gray-11 uppercase">${
+            escapeHtml(label)}</dt><dd class="font-bold leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
 }
 
