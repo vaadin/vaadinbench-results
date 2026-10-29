@@ -85,7 +85,7 @@ if (!wanted.model || !wanted.config) {
                 ${escapeHtml(wanted.config)}. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
         } else {
             // The page is about this one configuration, so it is the page's h1,
-            // in the header beside the way back. Laid out as a leaderboard row
+            // under the breadcrumb. Laid out as a leaderboard row
             // is: the configuration on a line of its own, indented to the name.
             document.getElementById("title").innerHTML = `<span class="flex gap-3 items-center">${
                 modelMark(wanted.model, "h-8 shrink-0 w-8")}<span>${escapeHtml(modelParts(wanted.model).name)}</span>${
