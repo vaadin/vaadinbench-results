@@ -278,7 +278,8 @@ Elements are styled only with utility classes named after Tailwind's, which
 grouped by property, and only the classes the pages use. Colours are 12-step
 scales written as `light-dark()` on `html`; type is Regular and Mono, with Medium
 only for configuration names in the config help, Bold only for KPI values and
-model and task names in tables (headings are Regular), and no font files are shipped. Most markup is built in the page scripts, so that is where most
+the model name in the chart's details card (headings and table columns are
+Regular), and no font files are shipped. Most markup is built in the page scripts, so that is where most
 classes live. `tests/test_styles.py` fails on an unused utility, a class with
 no definition, any rule that is not a utility, or a page that loads another
 stylesheet.

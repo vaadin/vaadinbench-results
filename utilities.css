@@ -12,7 +12,7 @@
      14       font-normal leading-snug text-sm tracking-1
      16       font-normal leading-snug text-base tracking-1
      16 Medium font-medium leading-snug text-base tracking-1 (configuration names in the config help)
-     16 Bold  font-bold leading-snug text-base tracking-1 (model and task names in tables)
+     16 Bold  font-bold leading-snug text-base tracking-1 (the model name in the chart's details card)
      18       font-normal leading-snug text-lg tracking-1
      22       font-normal leading-snug text-xl tracking-1
      22 Bold  font-bold leading-snug text-xl tracking-1 (KPI values)
