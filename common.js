@@ -103,46 +103,95 @@ function tabPanel(active, html) {
     return `<div aria-labelledby="tab-${active}" id="tab-panel" role="tabpanel">${html}</div>`;
 }
 
-// Tab switches are animated: the underline glides from the old tab to the new
-// one, and the panel comes in from the side the new tab is on. Both are CSS -- a
-// transition and an animation, each off under reduced motion; this only says
-// where they start, since the page is redrawn in between. A tab click calls
-// noteTabSwitch() before redrawing, and showContent() does the rest.
+// Tab switches are animated. On a click the old panel slides out toward the
+// side away from the new tab while the underline starts gliding to it. Once the
+// panel is out the page is redrawn: the new panel slides in from the other side,
+// and the redrawn underline carries on from wherever the glide had got to, for
+// the time it had left. The motion is CSS -- a transition and four animations,
+// all off under reduced motion; this only says where each one starts, since the
+// page is redrawn in the middle.
+const GLIDE_MS = 200; // the underline's duration-200
 let tabFrom = null;
+let switching = false;
+let queued = null; // a tab clicked while another switch was still sliding out
 
 const tabsIn = (bar) => [...bar.querySelectorAll('[role="tab"]')];
 const selectedIn = (tabs) => tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+const underlineAt = (tab) => ({
+    left: `${tab.offsetLeft}px`,
+    top: `${tab.offsetTop + tab.offsetHeight - 2}px`,
+    width: `${tab.offsetWidth}px`,
+});
 
-function noteTabSwitch() {
+// `redraw` makes tab `id` the selected one and redraws the page. A click during
+// a switch is kept, the latest one only, and played once the switch is done.
+function switchTab(id, redraw) {
+    if (switching) {
+        queued = [id, redraw];
+        return;
+    }
     const bar = document.querySelector('[role="tablist"]');
     const indicator = bar?.querySelector("[data-tab-indicator]");
-    if (!indicator) return;
-    const { left, top, width } = indicator.style;
-    tabFrom = { index: selectedIn(tabsIn(bar)), left, top, width };
+    const tabs = bar ? tabsIn(bar) : [];
+    const from = selectedIn(tabs);
+    const to = tabs.findIndex((tab) => tab.dataset.tab === id);
+    if (!indicator || to < 0 || to === from) {
+        redraw();
+        return;
+    }
+    switching = true;
+    const started = performance.now();
+    Object.assign(indicator.style, underlineAt(tabs[to]));
+    let done = false;
+    const finish = () => {
+        if (done) return;
+        done = true;
+        const now = getComputedStyle(indicator);
+        tabFrom = { index: from, left: now.left, top: now.top, width: now.width,
+            duration: Math.max(0, GLIDE_MS - (performance.now() - started)) };
+        switching = false;
+        redraw();
+        if (queued) {
+            const [next, nextRedraw] = queued;
+            queued = null;
+            switchTab(next, nextRedraw);
+        }
+    };
+    const panel = document.querySelector('[role="tabpanel"]');
+    if (!panel || matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        finish();
+        return;
+    }
+    panel.addEventListener("animationend", finish, { once: true });
+    setTimeout(finish, 400); // in case the animation never runs
+    // Replaces the classes, not adds to them: a panel from the first draw still
+    // carries its entrance delay (delay-*), which would hold the exit back too.
+    panel.className = to > from ? "animate-slide-out-to-left" : "animate-slide-out-to-right";
 }
 
 function settleTabs(from = null) {
     const bar = document.querySelector('[role="tablist"]');
     const indicator = bar?.querySelector("[data-tab-indicator]");
     if (!indicator) return;
-    // Start where the old underline was and let the transition carry it; with
-    // nothing to start from (first draw, resize), arrive without a glide. The
-    // start goes in before anything is measured: measuring lays the new
-    // underline out at its class default, top left, and from there a later
-    // start position would be a change to animate.
-    if (from) Object.assign(indicator.style, { left: from.left, top: from.top, width: from.width });
-    else indicator.style.transition = "none";
+    // Start where the old underline had got to and let the transition carry it
+    // the rest of the way; with nothing to start from (first draw, resize),
+    // arrive without a glide. The start goes in before anything is measured:
+    // measuring lays the new underline out at its class default, top left, and
+    // from there a later start position would be a change to animate.
+    if (from) {
+        Object.assign(indicator.style, { left: from.left, top: from.top, width: from.width });
+        indicator.style.transitionDuration = `${from.duration}ms`;
+        indicator.addEventListener("transitionend", () => {
+            indicator.style.transitionDuration = "";
+        }, { once: true });
+    } else {
+        indicator.style.transition = "none";
+    }
     const tabs = tabsIn(bar);
     const index = selectedIn(tabs);
-    const tab = tabs[index];
-    if (!tab) return;
-    const to = {
-        left: `${tab.offsetLeft}px`,
-        top: `${tab.offsetTop + tab.offsetHeight - 2}px`,
-        width: `${tab.offsetWidth}px`,
-    };
+    if (index < 0) return;
     indicator.getBoundingClientRect();
-    Object.assign(indicator.style, to);
+    Object.assign(indicator.style, underlineAt(tabs[index]));
     if (!from) {
         indicator.getBoundingClientRect();
         indicator.style.transition = "";

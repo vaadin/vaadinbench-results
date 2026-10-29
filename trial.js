@@ -541,14 +541,17 @@ function render() {
 document.getElementById("content").addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
     if (tab) {
-        noteTabSwitch();
-        activeTab = tab.dataset.tab;
-        // Keep the tab in the URL, so a link to a trial can point at the diff or
-        // the verifier output rather than always landing on the trajectory.
-        const url = new URL(location.href);
-        url.searchParams.set("tab", activeTab);
-        history.replaceState(null, "", url);
-        render();
+        const id = tab.dataset.tab;
+        switchTab(id, () => {
+            activeTab = id;
+            // Keep the tab in the URL, so a link to a trial can point at the
+            // diff or the verifier output rather than always landing on the
+            // trajectory.
+            const url = new URL(location.href);
+            url.searchParams.set("tab", activeTab);
+            history.replaceState(null, "", url);
+            render();
+        });
         return;
     }
     const facet = event.target.closest("[data-kinds]");
