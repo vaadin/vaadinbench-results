@@ -772,11 +772,11 @@ function unescapeHtml(value) {
 }
 
 // A section of a page, laid out as mcp.vaadin.com lays its sections out: a
-// rule above, 32px to a heading in 32 Regular and its one-line description in
-// 18 Regular grey, 24px to the content, and 40px below. `edges` names the rules
+// rule above, 32px to a heading in 32 Regular and, 6px under it, its one-line
+// description in 18 Regular grey, 24px to the content, and 40px below. `edges` names the rules
 // (a top one by default; a section followed by something unruled takes both).
 const SECTION_TITLE = "font-normal leading-tight m-0 text-2xl tracking-0";
-const SECTION_LEAD = "font-normal leading-snug m-0 text-gray-11 text-lg tracking-1";
+const SECTION_LEAD = "font-normal leading-snug m-0 mt-1.5 text-gray-11 text-lg tracking-1";
 function section(title, lead, body, edges = "border-t") {
     return `<section class="border-gray-3 ${edges} pb-10 pt-8"><h2 class="${SECTION_TITLE}">${title}</h2>
         <p class="${SECTION_LEAD}">${lead}</p><div class="mt-6">${body}</div></section>`;
