@@ -41,7 +41,7 @@ function renderTrials(rows) {
                 href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
                 <span class="block mt-0.5 text-2xs text-gray-11">${escapeHtml(trial.job)}</span></td>
             <td class="${TD_NUM}">${trial.attempt}</td>
-            <td class="${TD}">${outcome(trial)}</td>
+            <td class="${TD}">${outcomeIcons(trial)}</td>
             <td class="${TD_NUM}">${duration(trial.duration_s)}</td>
             <td class="${TD_NUM}">${trial.steps}</td>
             <td class="${TD_NUM}">${tokens(trial.output_tokens)}</td>
