@@ -136,7 +136,7 @@ function renderHeader() {
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
         </p>
-        ${metricsTable([
+        ${metricCards([
             ["Outcome", outcome(trial)],
             ["Reward", trial.reward ?? "—"],
             ["Duration", duration(trial.duration_s)],

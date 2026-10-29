@@ -14,8 +14,8 @@
      16 Bold  font-bold leading-snug text-base tracking-1 (leaderboard model names)
      18       font-normal leading-snug text-lg tracking-1
      22       font-normal leading-snug text-xl tracking-1
-     32 Bold  font-bold leading-tight text-2xl tracking-0 (page titles)
-     44 Bold  -tracking-1 font-bold leading-tight text-3xl (the h1: the VaadinBench wordmark) */
+     32 Bold  font-bold leading-tight text-2xl tracking-0 (page titles, KPI values)
+     44 Bold  -tracking-1 font-bold leading-tight text-3xl (the VaadinBench wordmark) */
 
 
 /* Base */
@@ -497,6 +497,10 @@ html {
     display: flex;
 }
 
+.grid {
+    display: grid;
+}
+
 .inline-flex {
     display: inline-flex;
 }
@@ -681,6 +685,13 @@ html {
 
 .gap-y-2 {
     row-gap: 0.5rem; /* 8px */
+}
+
+
+/* Grid template columns */
+
+.grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 
@@ -1015,6 +1026,10 @@ html {
 
 .pl-6 {
     padding-left: 1.5rem; /* 24px */
+}
+
+.pl-11 {
+    padding-left: 2.75rem; /* 44px */
 }
 
 .pr-3 {
@@ -1526,6 +1541,10 @@ html {
 
     .md\:mb-0 {
         margin-bottom: 0;
+    }
+
+    .md\:grid-cols-4 {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
     }
 
     .md\:max-h-\[calc\(100vh-2rem\)\] {
