@@ -717,6 +717,10 @@ html {
     height: 1rem; /* 16px */
 }
 
+.h-5 {
+    height: 1.25rem; /* 20px */
+}
+
 .h-6 {
     height: 1.5rem; /* 24px */
 }
@@ -1303,6 +1307,10 @@ html {
 
 .w-4 {
     width: 1rem; /* 16px */
+}
+
+.w-5 {
+    width: 1.25rem; /* 20px */
 }
 
 .w-7 {

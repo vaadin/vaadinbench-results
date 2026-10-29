@@ -76,6 +76,10 @@ const ICONS = {
     diamond: '<path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z"/>',
     "square-check": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>',
     "square-minus": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/>',
+    "circle-check": '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+    "circle-x": '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+    "circle-alert": '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+    "circle-minus": '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
     "circle-help": '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
 };
 
@@ -400,6 +404,25 @@ function outcome(trial) {
     if (!trial.error) return verdict;
     return `${verdict} <span class="text-2xs text-gray-11 whitespace-nowrap"
         title="${escapeHtml(trial.error)}">error</span>`;
+}
+
+// The same verdict as icons, for a table column: each one named by aria-label
+// and, for the pointer, a tooltip. An agent error beside a grade is its own
+// icon, whose tooltip carries the error itself.
+function outcomeIcons(trial) {
+    const icon = (name, colour, label, tip = label) => `<span class="flex ${colour}" role="img"
+        aria-label="${escapeHtml(label)}" title="${escapeHtml(tip)}">${lucide(name, "h-5 shrink-0 w-5")}</span>`;
+    if (trial.reward === null || trial.reward === undefined) {
+        return trial.error
+            ? icon("circle-alert", "text-red-11", "Error", `Error: ${trial.error}`)
+            : icon("circle-minus", "text-gray-11", "No reward");
+    }
+    const verdict = trial.reward >= 1
+        ? icon("circle-check", "text-teal-11", "Pass")
+        : icon("circle-x", "text-red-11", "Fail");
+    if (!trial.error) return verdict;
+    return `<span class="flex gap-1 items-center">${verdict}${
+        icon("circle-alert", "text-gray-11", "Agent error", `Agent error: ${trial.error}`)}</span>`;
 }
 
 // The job rides along so the trial page can check that the file it loaded is
