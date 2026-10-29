@@ -94,7 +94,7 @@ if (!wanted.model || !wanted.config) {
             document.getElementById("title").innerHTML = `<span class="flex gap-3 items-center">${
                 modelMark(wanted.model, "h-10 shrink-0 w-10")}<span>${escapeHtml(modelParts(wanted.model).name)}</span>${
                 effortBadge(wanted.effort)}</span><span
-                class="block font-normal leading-snug mt-1 pl-13 text-gray-11 text-xl tracking-1">${escapeHtml(wanted.config)}</span>`;
+                class="block font-normal leading-snug mt-1 pl-13 text-gray-11 text-lg tracking-1">${escapeHtml(wanted.config)}</span>`;
             showContent(syntheticBanner(rows.some((t) => t.synthetic))
                 + renderHeader(rows) + renderTrials(rows));
             document.title =
