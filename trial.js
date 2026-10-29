@@ -92,11 +92,13 @@ function renderCrumb(config = configOf(trial.job)) {
     // The separator between levels has to differ from the one inside a level:
     // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
     // really one link and then a model-and-configuration pair.
+    // One list item per level; the chevron opens the level it leads to, and is
+    // hidden from screen readers, which announce the list's structure instead.
     document.getElementById("crumb").innerHTML =
-        `<a class="${LINK}" href="${leaderboardUrl()}">Leaderboard</a>
-         <span class="flex self-center text-gray-11">${lucide("chevron-right")}</span>
+        `<li><a class="${LINK}" href="${leaderboardUrl()}">Leaderboard</a></li>
+         <li class="flex gap-2 items-baseline"><span class="flex self-center text-gray-11">${lucide("chevron-right")}</span>
          <a class="${LINK}" href="${runUrl(trial.model, config, effortOf(trial))}">${modelLabel(trial.model, effortOf(trial))}
-            <span class="text-gray-11">·</span> ${escapeHtml(config)}</a>`;
+            <span class="text-gray-11">·</span> ${escapeHtml(config)}</a></li>`;
 }
 
 // If the caller said which run it wanted and the file says otherwise, the file
