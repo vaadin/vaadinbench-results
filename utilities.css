@@ -446,12 +446,20 @@ html {
     color: var(--blue-11);
 }
 
+.text-claude {
+    color: var(--claude);
+}
+
 .text-gray-11 {
     color: var(--gray-11);
 }
 
 .text-gray-12 {
     color: var(--gray-12);
+}
+
+.text-openai {
+    color: var(--openai);
 }
 
 .text-red-11 {
@@ -653,6 +661,10 @@ html {
     gap: 1rem; /* 16px */
 }
 
+.gap-6 {
+    gap: 1.5rem; /* 24px */
+}
+
 .gap-x-4 {
     column-gap: 1rem; /* 16px */
 }
@@ -843,6 +855,10 @@ html {
     margin-top: 0.25rem; /* 4px */
 }
 
+.mt-2 {
+    margin-top: 0.5rem; /* 8px */
+}
+
 .mt-3 {
     margin-top: 0.75rem; /* 12px */
 }
@@ -944,6 +960,10 @@ html {
     padding: 0.25rem; /* 4px */
 }
 
+.p-4 {
+    padding: 1rem; /* 16px */
+}
+
 .p-5 {
     padding: 1.25rem; /* 20px */
 }
@@ -982,6 +1002,10 @@ html {
 
 .pr-3 {
     padding-right: 0.75rem; /* 12px */
+}
+
+.pt-3 {
+    padding-top: 0.75rem; /* 12px */
 }
 
 .pt-4 {

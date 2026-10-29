@@ -41,12 +41,12 @@ const state = {
 // ask when comparing how much work two models did rather than what it billed.
 const METRICS = {
     cost: {
-        label: "cost per trial", axis: "Cost per trial",
+        label: "cost per trial", axis: "Cost per trial", short: "Cost / trial",
         value: (row) => row.cost / row.attempts,
         tick: (value) => `$${value.toFixed(2)}`, format: money,
     },
     tokens: {
-        label: "output tokens per trial", axis: "Output tokens per trial",
+        label: "output tokens per trial", axis: "Output tokens per trial", short: "Out. tokens / trial",
         value: (row) => row.out / row.attempts,
         tick: (value) => tokens(Math.round(value)), format: (value) => tokens(Math.round(value)),
     },
@@ -374,6 +374,23 @@ function renderQuadrants(metric, xCut, px, py, box) {
 
 const LEGEND = "flex flex-wrap gap-x-4 gap-y-2 mt-4 text-gray-11";
 
+// The card a chart point opens: who (vendor mark, model, effort), in which
+// configuration, and the two numbers the point is plotted from.
+let chartCards = [];
+
+function pointCard(row, metric, shapes) {
+    const line = (label, value) => `<div class="flex gap-6 justify-between">
+        <dt class="text-gray-11">${label}</dt><dd class="m-0">${value}</dd></div>`;
+    return `<div class="flex gap-2 items-center">${modelMark(row.model, "h-4 shrink-0 w-4")}<span
+            class="font-bold leading-snug text-base tracking-1">${escapeHtml(modelParts(row.model).name)}</span>${
+            effortBadge(row.effort)}</div>
+        <div class="flex gap-2 items-center mt-2 text-gray-11">${shapeGlyph(shapes.get(row.config))}${escapeHtml(row.config)}</div>
+        <dl class="border-gray-3 border-t flex flex-col gap-1 m-0 mt-3 pt-3">
+            ${line("Score", `${percent(row.rate)} <span class="text-gray-11">${row.solved}/${row.graded}</span>`)}
+            ${line(metric.short, escapeHtml(metric.format(metric.value(row))))}
+        </dl>`;
+}
+
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
 function renderChart(rows, shapes, field) {
@@ -409,25 +426,34 @@ function renderChart(rows, shapes, field) {
         .join("");
 
     const modelCount = new Set(points.map((p) => p.model)).size;
+    const efforts = new Map();
+    for (const p of points) efforts.set(p.model, (efforts.get(p.model) ?? new Set()).add(p.effort));
 
-    // Every point keeps its name. A label is SVG text and cannot hold a vendor
-    // mark, so it is the bare model name. Where labels land is settled after the
-    // fact by layoutChartLabels(), which can measure the text.
-    // Each marker also gets an invisible disc, so a 6px shape is not a 6px target.
-    const dots = points.map((row) => {
+    // A point says who and how by itself: its colour is the vendor's and its
+    // shape the configuration. So a label is only the model name, with the
+    // effort where that model appears at more than one; with one model in the
+    // plot, whose name the chip above already says, it is effort and
+    // configuration. The rest is in the point's card. Where labels land is
+    // settled after the fact by layoutChartLabels(), which can measure the text.
+    // Each marker also gets an invisible disc, so a 6px shape is not a 6px
+    // target, and each point is focusable, so the cards are not mouse-only.
+    const cards = [];
+    const dots = points.map((row, i) => {
         const x = px(metric.value(row)), y = py(row.rate);
-        // With one model in the plot its name says nothing the chip above does not.
-        const name = [modelCount > 1 ? modelParts(row.model).name : "", row.effort, row.config]
-            .filter(Boolean).join(" · ");
-        const tip = `${modelWithEffort(row.model, row.effort)} · ${row.config} — ${percent(row.rate)}`
-            + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
-        return `<g data-tip="${escapeHtml(tip)}">
+        const name = modelCount > 1
+            ? [modelParts(row.model).name, efforts.get(row.model).size > 1 ? row.effort : ""].filter(Boolean).join(" ")
+            : [row.effort, row.config].filter(Boolean).join(" · ");
+        const spoken = `${modelWithEffort(row.model, row.effort)}, ${row.config}: ${percent(row.rate)}`
+            + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))} ${metric.label}`;
+        cards.push(pointCard(row, metric, shapes));
+        return `<g class="cursor-pointer" data-tip="${i}" role="img" aria-label="${escapeHtml(spoken)}" tabindex="0">
             <circle class="fill-transparent" cx="${x}" cy="${y}" r="13"/>
-            ${marker(shapes.get(row.config), x, y, "text-gray-12")}
+            ${marker(shapes.get(row.config), x, y, vendorText(row.model))}
             <text class="fill-gray-11 text-2xs" data-label data-cx="${x}" data-cy="${y}"
                 x="${x + 11}" y="${y + 4}">${escapeHtml(name)}</text>
         </g>`;
     }).join("");
+    chartCards = cards;
 
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
         .map(([config, shape]) => `<span class="flex gap-2 items-center">${
@@ -435,9 +461,9 @@ function renderChart(rows, shapes, field) {
 
     const AXIS_TITLE = "-tracking-4 fill-gray-11 font-mono text-2xs uppercase";
     return `${head}<div class="border border-gray-3 pb-2 pt-4 px-4 relative rounded-lg"><div
-        class="absolute bg-white border border-gray-3 pointer-events-none px-2 py-1 rounded tabular-nums text-gray-12 whitespace-nowrap z-10 dark:bg-gray-1"
+        class="absolute bg-white border border-gray-3 box-border p-4 pointer-events-none rounded-lg shadow-xl tabular-nums text-gray-12 whitespace-nowrap z-10 dark:bg-gray-1"
         data-tooltip hidden></div>
-    <svg class="block h-auto overflow-visible w-full" data-chart viewBox="0 0 ${W} ${H}" role="img"
+    <svg class="block h-auto overflow-visible w-full" data-chart viewBox="0 0 ${W} ${H}" role="group"
         aria-label="Score against cost per trial">
         ${bands.bands}
         ${grid}
@@ -472,7 +498,7 @@ function render() {
             : renderLeaderboard(rows)),
     ].join(""));
     const content = document.getElementById("content");
-    bindTips(content);
+    bindTips(content, (point) => chartCards[Number(point.dataset.tip)] ?? "");
     const chart = content.querySelector("[data-chart]");
     layoutChartLabels(chart);
     document.fonts?.ready.then(() => layoutChartLabels(chart));

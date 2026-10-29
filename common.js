@@ -287,6 +287,12 @@ function modelText(model) {
 // Anthropic's and OpenAI's trademarks.
 const VENDOR_FILLS = { Claude: "fill-claude", OpenAI: "fill-openai" };
 const VENDOR_BARS = { Claude: "bg-claude", OpenAI: "bg-openai" };
+const VENDOR_TEXT = { Claude: "text-claude", OpenAI: "text-openai" };
+
+// A chart point in its vendor's colour; anything else in full-contrast ink.
+function vendorText(model) {
+    return VENDOR_TEXT[modelParts(model).vendor] ?? "text-gray-12";
+}
 
 function vendorBar(model) {
     return VENDOR_BARS[modelParts(model).vendor] ?? "bg-gray-11";
@@ -498,29 +504,57 @@ function layoutChartLabels(svg) {
     }
 }
 
-// A tooltip that follows the pointer rather than SVG's own <title>, which waits
-// about a second and then lets the window manager put it wherever it likes --
-// far from the point it describes, which reads as a bug.
-function bindTips(root) {
-    const tip = root.querySelector("[data-tooltip]");
-    if (!tip) return;
+// The details card for a chart point. It follows the pointer rather than SVG's
+// own <title>, which waits about a second and then lands wherever the window
+// manager puts it; it also opens on keyboard focus, and on a touch screen a tap
+// opens it until the next tap elsewhere. It sits above the point, or below
+// where there is no room above. `content` gives a point's card as markup. The
+// listeners go on once: the chart is redrawn into the same root, and only what
+// a card shows changes.
+let tipContent = null;
+let tipsBound = false;
+
+function bindTips(root, content) {
+    tipContent = content;
+    if (tipsBound) return;
+    tipsBound = true;
+    const tip = () => root.querySelector("[data-tooltip]");
     const show = (target) => {
-        const box = target.getBoundingClientRect();
-        const frame = tip.parentElement.getBoundingClientRect();
-        tip.textContent = target.dataset.tip;
-        tip.hidden = false;
-        // Measured after the text is in, so the width is the real one, then
-        // clamped so a point near either edge keeps the whole label on screen.
-        const left = box.left - frame.left + box.width / 2 - tip.offsetWidth / 2;
-        tip.style.left = `${Math.max(0, Math.min(left, frame.width - tip.offsetWidth))}px`;
-        tip.style.top = `${box.top - frame.top - tip.offsetHeight - 8}px`;
+        const card = tip();
+        if (!card) return;
+        card.innerHTML = tipContent(target);
+        card.hidden = false;
+        // Measured once the card is filled, so its size is the real one, and
+        // placed against the marker rather than the point's label.
+        const box = (target.querySelector("[data-dot]") ?? target).getBoundingClientRect();
+        const frame = card.parentElement.getBoundingClientRect();
+        const left = box.left - frame.left + box.width / 2 - card.offsetWidth / 2;
+        card.style.left = `${Math.max(0, Math.min(left, frame.width - card.offsetWidth))}px`;
+        const roomAbove = box.top - card.offsetHeight - 8 >= 0;
+        card.style.top = roomAbove
+            ? `${box.top - frame.top - card.offsetHeight - 8}px`
+            : `${box.bottom - frame.top + 8}px`;
     };
+    const hide = () => {
+        const card = tip();
+        if (card) card.hidden = true;
+    };
+    const point = (event) => event.target.closest?.("[data-tip]");
     root.addEventListener("pointerover", (event) => {
-        const target = event.target.closest("[data-tip]");
-        if (target) show(target);
+        if (event.pointerType !== "touch" && point(event)) show(point(event));
     });
     root.addEventListener("pointerout", (event) => {
-        if (event.target.closest("[data-tip]")) tip.hidden = true;
+        if (event.pointerType !== "touch" && point(event)) hide();
+    });
+    root.addEventListener("focusin", (event) => {
+        if (point(event)) show(point(event));
+    });
+    root.addEventListener("focusout", (event) => {
+        if (point(event)) hide();
+    });
+    root.addEventListener("click", (event) => {
+        if (point(event)) show(point(event));
+        else hide();
     });
 }
 
