@@ -201,6 +201,23 @@ function renderTabs() {
     return tabBar([["leaderboard", "Leaderboard"], ["chart", "Chart"]], state.tab);
 }
 
+// The sort as it was before a header click, so the arrows can move from it: the
+// sorted column's arrow turns over when its direction flips, and fades in on a
+// column that has just been picked while the old column's fades out. Cleared
+// once drawn, so redraws for any other reason do not animate. The motion is CSS
+// and off under reduced motion.
+let sortFrom = null;
+
+// One arrow, pointing down; ascending turns it over.
+function sortArrow(dir, motion = "") {
+    const turned = dir === "asc" ? " rotate-180" : "";
+    if (motion === "out") {
+        return lucide("arrow-down", `animate-disappear h-4 opacity-0${turned} shrink-0 w-4 motion-reduce:animate-none`);
+    }
+    const animation = { in: "animate-appear ", up: "animate-turn-up ", down: "animate-turn-down " }[motion] ?? "";
+    return lucide("arrow-down", `${animation}h-4${turned} shrink-0 w-4${animation ? " motion-reduce:animate-none" : ""}`);
+}
+
 function renderHead() {
     const cell = (column) => {
         const active = state.sort === column.key;
@@ -211,8 +228,13 @@ function renderHead() {
         // and every header is the same height. A number column puts the slot
         // first, keeping its label flush right over the numbers.
         const base = column.num ? TH_NUM : TH;
-        const slot = `<span class="flex h-4 shrink-0 w-4">${active
-            ? lucide(state.dir === "asc" ? "arrow-up" : "arrow-down") : ""}</span>`;
+        const was = sortFrom && sortFrom.sort === column.key ? sortFrom : null;
+        let arrow = "";
+        if (active && !sortFrom) arrow = sortArrow(state.dir);
+        else if (active && !was) arrow = sortArrow(state.dir, "in");
+        else if (active) arrow = sortArrow(state.dir, was.dir === state.dir ? "" : state.dir === "asc" ? "up" : "down");
+        else if (was) arrow = sortArrow(was.dir, "out");
+        const slot = `<span class="flex h-4 shrink-0 w-4">${arrow}</span>`;
         // The cell's trim does not reach into the flex row, so the label carries its own.
         const label = `<span class="box-edge-cap-alphabetic box-trim-both">${escapeHtml(column.label)}</span>`;
         return `<th class="${base} cursor-pointer select-none" data-sort="${column.key}"
@@ -488,12 +510,14 @@ document.getElementById("content").addEventListener("click", (event) => {
     if (sort) {
         const column = COLUMNS.find((entry) => entry.key === sort.dataset.sort);
         if (column) {
+            sortFrom = { sort: state.sort, dir: state.dir };
             state.dir = state.sort === column.key
                 ? (state.dir === "asc" ? "desc" : "asc")
                 : column.dir;
             state.sort = column.key;
             syncUrl();
             render();
+            sortFrom = null;
         }
         return;
     }
