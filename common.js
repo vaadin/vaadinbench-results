@@ -76,8 +76,7 @@ const ICONS = {
     diamond: '<path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z"/>',
     "square-check": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>',
     "square-minus": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/>',
-    "circle-check": '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
-    "circle-x": '<circle cx="12" cy="12" r="10"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
     "circle-alert": '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
     "circle-minus": '<circle cx="12" cy="12" r="10"/><path d="M8 12h8"/>',
     "circle-help": '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
@@ -418,8 +417,8 @@ function outcomeIcons(trial) {
             : icon("circle-minus", "text-gray-11", "No reward");
     }
     const verdict = trial.reward >= 1
-        ? icon("circle-check", "text-teal-11", "Pass")
-        : icon("circle-x", "text-red-11", "Fail");
+        ? icon("check", "text-teal-11", "Pass")
+        : icon("x", "text-red-11", "Fail");
     if (!trial.error) return verdict;
     return `<span class="flex gap-1 items-center">${verdict}${
         icon("circle-alert", "text-gray-11", "Agent error", `Agent error: ${trial.error}`)}</span>`;
@@ -769,15 +768,15 @@ function unescapeHtml(value) {
 
 // Summary figures as KPI cards: one card per figure, its name small above its
 // value, which is set larger since it is what the card is for: 12 Mono
-// over 22. A description
+// over 32 Bold. A description
 // list, so each value is announced with its name.
 function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
     return `<dl class="gap-4 grid grid-cols-2 m-0 mb-5 md:grid-cols-4">${cells.map(([label, value]) =>
-        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-3 min-w-0 p-5 rounded-lg"><dt
+        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
             class="-tracking-4 box-edge-cap-alphabetic box-trim-both font-mono leading-tight text-2xs text-gray-11 uppercase">${
-            escapeHtml(label)}</dt><dd class="font-normal leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
+            escapeHtml(label)}</dt><dd class="font-bold leading-tight m-0 tabular-nums text-2xl tracking-0 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
 }
 
