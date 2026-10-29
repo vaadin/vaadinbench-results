@@ -35,11 +35,11 @@ function renderTrials(rows) {
             || a.attempt - b.attempt)
         // The task link keeps the row's ink until hover: the whole row is the
         // target, so nothing inside it should look like the one clickable part.
-        // Laid out as the leaderboard is: 72px rows, the name in 16 Bold as the
+        // Laid out as the leaderboard is: 72px rows, the name in 16 Regular as the
         // link, and fixed columns (widths on the header), the task taking what
         // the others leave and the job id cut to it.
         .map((trial) => `<tr class="cursor-pointer group h-18 hover:bg-gray-2" data-href="${trialUrl(trial.id, trial.job)}">
-            <td class="${TD}"><a class="block font-bold leading-snug no-underline text-base text-gray-12 tracking-1 truncate group-hover:underline"
+            <td class="${TD}"><a class="block font-normal leading-snug no-underline text-base text-gray-12 tracking-1 truncate group-hover:underline"
                 href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
                 <span class="block mt-0.5 text-2xs text-gray-11 truncate"
                 title="${escapeHtml(trial.job)}">${escapeHtml(trial.job)}</span></td>

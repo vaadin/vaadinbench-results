@@ -277,7 +277,7 @@ function renderLeaderboard(rows) {
             data-effort="${escapeHtml(row.effort)}">
             <td class="${TD_NUM} text-gray-11">${i + 1}</td>
             <td class="${TD}"><span class="flex gap-2 items-center">${
-                modelMark(row.model, "h-4 shrink-0 w-4")}<a class="font-bold leading-snug no-underline text-base text-gray-12 tracking-1 hover:underline"
+                modelMark(row.model, "h-4 shrink-0 w-4")}<a class="font-normal leading-snug no-underline text-base text-gray-12 tracking-1 hover:underline"
                 href="${escapeHtml(runUrl(row.model, row.config, row.effort))}">${
                 escapeHtml(modelParts(row.model).name)}</a>${effortBadge(row.effort)}</span>
                 <span class="block mt-0.5 pl-6 text-2xs text-gray-11">${escapeHtml(row.config)}</span></td>
