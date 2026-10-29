@@ -263,7 +263,7 @@ function renderLeaderboard(rows) {
                 style="width:${row.rate * 100}%"></span>`
             : "";
         // The whole row is the target, so it takes the hover tint.
-        return `<tr class="cursor-pointer hover:bg-gray-2" data-model="${escapeHtml(row.model)}"
+        return `<tr class="cursor-pointer h-18 hover:bg-gray-2" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
             data-effort="${escapeHtml(row.effort)}">
             <td class="${TD_NUM} text-gray-11 w-6">${i + 1}</td>

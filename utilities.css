@@ -708,6 +708,10 @@ html {
     height: 3rem; /* 48px */
 }
 
+.h-18 {
+    height: 4.5rem; /* 72px */
+}
+
 .h-auto {
     height: auto;
 }
