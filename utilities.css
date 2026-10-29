@@ -13,8 +13,8 @@
      16 Medium font-medium leading-snug text-base tracking-1 (configuration names in the config help)
      16 Bold  font-bold leading-snug text-base tracking-1 (leaderboard model names)
      18       font-normal leading-snug text-lg tracking-1
-     22       font-normal leading-snug text-xl tracking-1 (KPI values)
-     32 Bold  font-bold leading-tight text-2xl tracking-0 (page titles)
+     22       font-normal leading-snug text-xl tracking-1
+     32 Bold  font-bold leading-tight text-2xl tracking-0 (page titles, KPI values)
      44 Bold  -tracking-1 font-bold leading-tight text-3xl (h1s: the wordmark, the run page's title) */
 
 
