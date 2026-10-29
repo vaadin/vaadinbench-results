@@ -862,15 +862,17 @@ function showError(error) {
 // load, the layer goes and the page is as it was. It is blended so that it only
 // ever tints the page: multiply in light mode, where the scene's white drops out
 // and nothing comes out lighter than the page; screen in dark mode, where its
-// black drops out and only its bright parts show. It is also faded to a fifth, since
-// the scene's mid-grey field would otherwise dim the whole page.
+// black drops out and only its bright parts show. The scene's field is a light grey
+// (#dfdfdf), not white, so it is brightened until the field clips to white and
+// drops out; in dark mode it is then inverted, so the field is black instead and
+// the dots come through light.
 const BACKGROUND_PROJECT = "uQZQm2qUfWbxcybJ0RLZ";
 const BACKGROUND_PLAYER = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.4.3/dist/unicornStudio.umd.js";
 
 function loadBackground() {
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const scene = document.createElement("div");
-    scene.className = "-z-10 fixed inset-0 mix-blend-multiply opacity-20 pointer-events-none dark:mix-blend-screen";
+    scene.className = "-z-10 fixed inset-0 brightness-115 mix-blend-multiply pointer-events-none dark:invert dark:mix-blend-screen";
     scene.setAttribute("aria-hidden", "true");
     scene.dataset.usProject = BACKGROUND_PROJECT;
     document.body.prepend(scene);

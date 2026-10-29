@@ -538,6 +538,14 @@ html {
 
 
 
+/* Filter — composed, so brightness and invert can apply together */
+
+.brightness-115 {
+    --tw-brightness: brightness(1.15);
+    filter: var(--tw-brightness) var(--tw-invert,);
+}
+
+
 /* Flex */
 
 .flex-1 {
@@ -921,10 +929,6 @@ html {
 
 .opacity-0 {
     opacity: 0;
-}
-
-.opacity-20 {
-    opacity: 0.2;
 }
 
 
@@ -1364,6 +1368,11 @@ html {
 @media (prefers-color-scheme: dark) {
     .dark\:bg-gray-1 {
         background-color: var(--gray-1);
+    }
+
+    .dark\:invert {
+        --tw-invert: invert(1);
+        filter: var(--tw-brightness,) var(--tw-invert);
     }
 
     .dark\:mix-blend-screen {
