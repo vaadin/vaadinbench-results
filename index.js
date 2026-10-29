@@ -181,7 +181,7 @@ function renderFilters(shapes) {
     // it names a single form control, not a group of buttons.
     const key = (id, label, extra = "") => `<span class="flex gap-2 items-center shrink-0 w-24"><span
         class="${EYEBROW} box-edge-cap-alphabetic box-trim-both" id="${id}">${label}</span>${extra}</span>`;
-    return `<div class="flex flex-col gap-2 mb-6">
+    return `<div class="flex flex-col gap-2 mb-10">
         <div class="flex flex-wrap gap-1 items-center" role="group" aria-labelledby="filter-models">
             ${key("filter-models", "Model")}
             ${models.map((model) => chip("models", model, modelMark(model, "h-4 shrink-0 w-4"),
@@ -205,16 +205,21 @@ function renderHead() {
     const cell = (column) => {
         const active = state.sort === column.key;
         const order = state.dir === "asc" ? "ascending" : "descending";
-        // The column being sorted by is in full-contrast ink, and every header
-        // keeps a slot for the arrow, so nothing shifts as the sort moves.
+        // The arrow alone marks the column being sorted by, and every header
+        // keeps a slot for it, so nothing shifts as the sort moves. Label
+        // and slot are one centred row, so the arrow sits on the label's middle
+        // and every header is the same height. A number column puts the slot
+        // first, keeping its label flush right over the numbers.
         const base = column.num ? TH_NUM : TH;
-        return `<th class="${active ? base.replace("text-gray-11", "text-gray-12")
-            : `${base} hover:text-gray-12`} cursor-pointer select-none" data-sort="${column.key}"
+        const slot = `<span class="flex h-4 shrink-0 w-4">${active
+            ? lucide(state.dir === "asc" ? "arrow-up" : "arrow-down") : ""}</span>`;
+        // The cell's trim does not reach into the flex row, so the label carries its own.
+        const label = `<span class="box-edge-cap-alphabetic box-trim-both">${escapeHtml(column.label)}</span>`;
+        return `<th class="${base} cursor-pointer select-none" data-sort="${column.key}"
             aria-sort="${active ? order : "none"}"
-            title="Sort by ${escapeHtml(column.label.toLowerCase())}">${
-            escapeHtml(column.label)}<span class="inline-block ml-1 w-4">${
-            active ? lucide(state.dir === "asc" ? "arrow-up" : "arrow-down",
-                "align-[-0.125em] h-4 inline-block w-4") : ""}</span></th>`;
+            title="Sort by ${escapeHtml(column.label.toLowerCase())}"><span
+            class="${column.num ? "flex gap-1 items-center justify-end" : "flex gap-1 items-center"}">${
+            column.num ? slot + label : label + slot}</span></th>`;
     };
     const [model, ...rest] = COLUMNS;
     return `<thead><tr>
