@@ -15,7 +15,8 @@
      18       font-normal leading-snug text-lg tracking-1
      22       font-normal leading-snug text-xl tracking-1
      22 Bold  font-bold leading-snug text-xl tracking-1 (KPI values)
-     32 Bold  font-bold leading-tight text-2xl tracking-0 (subheadings)
+     32       font-normal leading-tight text-2xl tracking-0 (section headings)
+     32 Bold  font-bold leading-tight text-2xl tracking-0 (the benchmarks page title)
      44 Bold  -tracking-1 font-bold leading-tight text-3xl (h1s: the wordmark, the run and trial titles) */
 
 
@@ -435,6 +436,11 @@ html {
 
 .border-t-0 {
     border-top-width: 0;
+}
+
+.border-y {
+    border-block-style: solid;
+    border-block-width: 1px;
 }
 
 
@@ -891,12 +897,12 @@ html {
     margin-top: 1rem; /* 16px */
 }
 
-.mt-8 {
-    margin-top: 2rem; /* 32px */
+.mt-6 {
+    margin-top: 1.5rem; /* 24px */
 }
 
-.mt-12 {
-    margin-top: 3rem; /* 48px */
+.mt-8 {
+    margin-top: 2rem; /* 32px */
 }
 
 .mx-auto {
@@ -1049,6 +1055,10 @@ html {
 
 .pt-4 {
     padding-top: 1rem; /* 16px */
+}
+
+.pt-8 {
+    padding-top: 2rem; /* 32px */
 }
 
 .px-0\.75 {

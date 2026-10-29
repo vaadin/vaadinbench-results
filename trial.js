@@ -134,11 +134,11 @@ function renderWrongJob(wanted) {
 
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
-        <p class="m-0 mb-8 text-gray-11 wrap-anywhere">
+        <p class="m-0 mb-10 text-gray-11 wrap-anywhere">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
             · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
         </p>
-        ${metricCards([
+        ${section("Summary", "This one attempt, as the task's verifier graded it.", metricCards([
             ["Outcome", outcome(trial)],
             ["Reward", trial.reward ?? "—"],
             ["Duration", duration(trial.duration_s)],
@@ -146,7 +146,7 @@ function renderHeader() {
             ["Out. tokens", tokens(trial.output_tokens)],
             ["Cost", money(trial.cost_usd)],
             ["Verify", duration(trial.verify_s)],
-        ])}`;
+        ]), "border-y mb-10")}`;
 }
 
 function renderTabs() {

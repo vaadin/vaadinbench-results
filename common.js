@@ -771,6 +771,17 @@ function unescapeHtml(value) {
         .replace(/&amp;/g, "&");
 }
 
+// A section of a page, laid out as mcp.vaadin.com lays its sections out: a
+// rule above, 32px to a heading in 32 Regular and its one-line description in
+// 18 Regular grey, 24px to the content, and 40px below. `edges` names the rules
+// (a top one by default; a section followed by something unruled takes both).
+const SECTION_TITLE = "font-normal leading-tight m-0 text-2xl tracking-0";
+const SECTION_LEAD = "font-normal leading-snug m-0 text-gray-11 text-lg tracking-1";
+function section(title, lead, body, edges = "border-t") {
+    return `<section class="border-gray-3 ${edges} pb-10 pt-8"><h2 class="${SECTION_TITLE}">${title}</h2>
+        <p class="${SECTION_LEAD}">${lead}</p><div class="mt-6">${body}</div></section>`;
+}
+
 // Summary figures as KPI cards: one card per figure, its name small above its
 // value, which is set larger since it is what the card is for: 12 Mono
 // over 22 Bold. A description
@@ -778,7 +789,7 @@ function unescapeHtml(value) {
 function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
-    return `<dl class="gap-4 grid grid-cols-2 m-0 mb-8 md:grid-cols-4">${cells.map(([label, value]) =>
+    return `<dl class="gap-4 grid grid-cols-2 m-0 md:grid-cols-4">${cells.map(([label, value]) =>
         `<div class="bg-background border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
             class="-tracking-4 font-mono leading-tight text-2xs text-gray-11 uppercase">${
             escapeHtml(label)}</dt><dd class="font-bold leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
