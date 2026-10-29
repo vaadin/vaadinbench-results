@@ -55,6 +55,10 @@ html {
 
     --violet-11: light-dark(#4b3ef2, #9eaeff);
 
+    /* Table header band: a grey with a hint of blue (hue ~206°), just below white
+       in light mode and just above the page in dark. */
+    --off-blue: light-dark(#f0f4f7, #1a1f24);
+
     /* Vendor brand colours, for each vendor's mark and its models' score bars:
        Claude's terracotta as claude.ai uses it, OpenAI's black (white on dark). */
     --claude: #D97757;
@@ -232,6 +236,10 @@ html {
 
 .bg-green-3 {
     background-color: var(--green-3);
+}
+
+.bg-off-blue {
+    background-color: var(--off-blue);
 }
 
 .bg-openai {
@@ -428,10 +436,6 @@ html {
 
 .flex {
     display: flex;
-}
-
-.inline-block {
-    display: inline-block;
 }
 
 .inline-flex {
@@ -681,6 +685,10 @@ html {
     justify-content: center;
 }
 
+.justify-end {
+    justify-content: flex-end;
+}
+
 
 /* Letter spacing */
 
@@ -759,6 +767,10 @@ html {
 
 .mb-8 {
     margin-bottom: 2rem; /* 32px */
+}
+
+.mb-10 {
+    margin-bottom: 2.5rem; /* 40px */
 }
 
 .ml-1 {

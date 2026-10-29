@@ -20,11 +20,14 @@ const CODE = "bg-gray-3 font-mono px-0.75 py-1 rounded text-gray-12 text-xs trac
 const PRE = "bg-gray-3 font-mono leading-tight m-0 overflow-x-auto px-4 py-3 rounded-lg text-xs tracking-0";
 const NOTE = "m-0 text-2xs text-gray-11";
 
-// Tables share one frame and one set of cells. Rows are divided by the body
-// (`divide-y`), so the last row needs no override.
-const TABLE_WRAP = "border border-gray-3 mb-5 overflow-x-auto overscroll-x-contain rounded-lg";
-const TH = "-tracking-4 border-b border-gray-3 font-mono font-normal leading-tight px-4 py-3 text-2xs text-gray-11 text-left uppercase whitespace-nowrap";
-const TH_NUM = "-tracking-4 border-b border-gray-3 font-mono font-normal leading-tight px-4 py-3 tabular-nums text-2xs text-gray-11 text-right uppercase whitespace-nowrap";
+// Tables share one wrapper, which scrolls a wide table sideways and draws no
+// frame, and one set of cells; the header row is set off by an off-blue band.
+// Rows are divided by the body (`divide-y`), so the last row needs no override.
+const TABLE_WRAP = "mb-5 overflow-x-auto overscroll-x-contain";
+// Header cells are 48px high; their labels are 13 Mono in full-contrast ink,
+// trimmed to cap height so they sit centred in the cell.
+const TH = "bg-off-blue border-b border-gray-3 box-edge-cap-alphabetic box-trim-both font-mono font-normal h-12 leading-tight p-0 px-4 text-gray-12 text-left text-xs tracking-0 uppercase whitespace-nowrap";
+const TH_NUM = "bg-off-blue border-b border-gray-3 box-edge-cap-alphabetic box-trim-both font-mono font-normal h-12 leading-tight p-0 px-4 tabular-nums text-gray-12 text-right text-xs tracking-0 uppercase whitespace-nowrap";
 const TBODY = "divide-gray-3 divide-y";
 const TD = "px-4 py-3 text-left whitespace-nowrap";
 const TD_NUM = "px-4 py-3 tabular-nums text-right whitespace-nowrap";
