@@ -265,6 +265,10 @@ html {
     background-color: var(--claude);
 }
 
+.bg-gray-1 {
+    background-color: var(--gray-1);
+}
+
 .bg-gray-2 {
     background-color: var(--gray-2);
 }
@@ -1366,6 +1370,10 @@ html {
 @media (prefers-color-scheme: dark) {
     .dark\:bg-gray-1 {
         background-color: var(--gray-1);
+    }
+
+    .dark\:bg-transparent {
+        background-color: transparent;
     }
 
     /* Filters compose, so brightness and invert apply together */

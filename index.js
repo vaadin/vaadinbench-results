@@ -151,7 +151,7 @@ const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 
 function chipClasses(pressed) {
     return pressed
         ? `${CHIP} bg-gray-3 border-gray-5 text-gray-12`
-        : `${CHIP} bg-transparent border-gray-3 text-gray-11 hover:border-gray-5`;
+        : `${CHIP} bg-gray-1 border-gray-3 text-gray-11 dark:bg-transparent hover:border-gray-5`;
 }
 
 function renderFilters(shapes) {
@@ -460,7 +460,7 @@ function renderChart(rows, shapes, field) {
             shapeGlyph(shape)}${escapeHtml(config)}</span>`).join("");
 
     const AXIS_TITLE = "-tracking-4 fill-gray-11 font-mono text-2xs uppercase";
-    return `${head}<div class="border border-gray-3 pb-2 pt-4 px-4 relative rounded-lg"><div
+    return `${head}<div class="bg-gray-1 border border-gray-3 pb-2 pt-4 px-4 relative rounded-lg dark:bg-transparent"><div
         class="absolute bg-white border border-gray-3 box-border p-4 pointer-events-none rounded-lg shadow-xl tabular-nums text-gray-12 whitespace-nowrap z-10 dark:bg-gray-1"
         data-tooltip hidden></div>
     <svg class="block h-auto overflow-visible w-full" data-chart viewBox="0 0 ${W} ${H}" role="group"
