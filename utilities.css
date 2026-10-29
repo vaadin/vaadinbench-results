@@ -865,6 +865,10 @@ html {
     padding-left: 1.25rem; /* 20px */
 }
 
+.pl-6 {
+    padding-left: 1.5rem; /* 24px */
+}
+
 .pr-3 {
     padding-right: 0.75rem; /* 12px */
 }

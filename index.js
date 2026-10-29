@@ -222,7 +222,10 @@ function renderHead() {
     </tr></thead>`;
 }
 
-function renderLeaderboard(rows, shapes) {
+// A row names its configuration in words, under the model and indented to line
+// up with its name, so it needs no shape: shapes are for the chart, where points
+// have no room for words.
+function renderLeaderboard(rows) {
     if (!rows.length) return `<p class="${EMPTY}">Nothing matches this filter.</p>`;
     const body = sortRows(rows).map((row, i) => {
         // No fill at all at zero: a minimum width keeps a 1% score visible, but
@@ -240,8 +243,7 @@ function renderLeaderboard(rows, shapes) {
             <td class="${TD}"><span class="flex gap-2 items-center">${
                 modelMark(row.model, "h-4 shrink-0 w-4")}<span class="font-bold leading-snug text-base tracking-1">${
                 escapeHtml(modelParts(row.model).name)}</span>${effortBadge(row.effort)}</span>
-                <span class="flex gap-1 items-center mt-0.5 text-2xs text-gray-11">${
-                    shapeGlyph(shapes.get(row.config))}${escapeHtml(row.config)}</span></td>
+                <span class="block mt-0.5 pl-6 text-2xs text-gray-11">${escapeHtml(row.config)}</span></td>
             <td class="${TD} min-w-32 w-2/5"><span
                 class="bg-gray-3 block h-2 overflow-hidden rounded-full">${fill}</span></td>
             <td class="${TD_NUM}">${percent(row.rate)}</td>
@@ -440,7 +442,7 @@ function render() {
             // against the whole field, so the same result keeps the same verdict
             // however the chips are set.
             ? renderChart(rows, shapes, plottable(summarize(trials)))
-            : renderLeaderboard(rows, shapes),
+            : renderLeaderboard(rows),
     ].join(""));
     const content = document.getElementById("content");
     bindTips(content);
