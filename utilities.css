@@ -3,8 +3,8 @@
    the groups. Hand-written, and only what the pages use: tests/test_styles.py
    fails on an unused one.
 
-   Type scale (Regular and Mono, as on mcp.vaadin.com; Medium for 16 Medium; Bold
-   for 16 Bold and 22 Bold only, never for a heading):
+   Type scale (Regular and Mono, as on mcp.vaadin.com; Medium for 16 Medium only;
+   nothing is Bold):
      11 Mono  font-mono leading-none text-3xs tracking-0 (effort badges)
      12 Mono  -tracking-4 font-mono leading-tight text-2xs
      12       font-normal leading-snug text-2xs tracking-1
@@ -12,10 +12,8 @@
      14       font-normal leading-snug text-sm tracking-1
      16       font-normal leading-snug text-base tracking-1
      16 Medium font-medium leading-snug text-base tracking-1 (configuration names in the config help)
-     16 Bold  font-bold leading-snug text-base tracking-1 (the model name in the chart's details card)
      18       font-normal leading-snug text-lg tracking-1
-     22       font-normal leading-snug text-xl tracking-1
-     22 Bold  font-bold leading-snug text-xl tracking-1 (KPI values)
+     22       font-normal leading-snug text-xl tracking-1 (KPI values)
      32       font-normal leading-tight text-2xl tracking-0 (section headings, the benchmarks page title)
      44       -tracking-1 font-normal leading-tighter text-3xl (h1s: the wordmark, the run and trial titles) */
 
@@ -655,10 +653,6 @@ html {
 
 .font-medium {
     font-weight: 500;
-}
-
-.font-bold {
-    font-weight: 700;
 }
 
 

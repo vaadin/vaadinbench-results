@@ -100,7 +100,7 @@ function renderCrumb(config = configOf(trial.job)) {
     // hidden from screen readers, which announce the list's structure instead.
     // Everything in it is 8px apart: levels, chevron, and the parts of a level.
     document.getElementById("crumb").innerHTML =
-        `<li><a class="${CRUMB_LINK}" href="${leaderboardUrl()}">Leaderboard</a></li>
+        `<li><a class="${CRUMB_LINK}" href="${leaderboardUrl()}">VaadinBench</a></li>
          <li class="flex gap-2 items-center"><span class="flex text-gray-11">${lucide("chevron-right")}</span>
          <a class="${CRUMB_LINK} flex flex-wrap gap-2 items-center" href="${runUrl(trial.model, config, effortOf(trial))}">${
             modelMark(trial.model, "h-4 shrink-0 w-4")}<span>${escapeHtml(modelParts(trial.model).name)}</span>${
