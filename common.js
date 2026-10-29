@@ -125,6 +125,13 @@ function settleTabs(from = null) {
     const bar = document.querySelector('[role="tablist"]');
     const indicator = bar?.querySelector("[data-tab-indicator]");
     if (!indicator) return;
+    // Start where the old underline was and let the transition carry it; with
+    // nothing to start from (first draw, resize), arrive without a glide. The
+    // start goes in before anything is measured: measuring lays the new
+    // underline out at its class default, top left, and from there a later
+    // start position would be a change to animate.
+    if (from) Object.assign(indicator.style, { left: from.left, top: from.top, width: from.width });
+    else indicator.style.transition = "none";
     const tabs = tabsIn(bar);
     const index = selectedIn(tabs);
     const tab = tabs[index];
@@ -134,10 +141,6 @@ function settleTabs(from = null) {
         top: `${tab.offsetTop + tab.offsetHeight - 2}px`,
         width: `${tab.offsetWidth}px`,
     };
-    // Start where the old underline was and let the transition carry it; with
-    // nothing to start from (first draw, resize), arrive without a glide.
-    if (from) Object.assign(indicator.style, { left: from.left, top: from.top, width: from.width });
-    else indicator.style.transition = "none";
     indicator.getBoundingClientRect();
     Object.assign(indicator.style, to);
     if (!from) {
