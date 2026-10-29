@@ -39,7 +39,8 @@ function renderTrials(rows) {
         .map((trial) => `<tr class="cursor-pointer group hover:bg-gray-2" data-href="${trialUrl(trial.id, trial.job)}">
             <td class="${TD}"><a class="no-underline text-gray-12 group-hover:underline"
                 href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
-                <span class="block mt-0.5 text-2xs text-gray-11">${escapeHtml(trial.job)}</span></td>
+                <span class="block max-w-xs mt-0.5 text-2xs text-gray-11 truncate"
+                title="${escapeHtml(trial.job)}">${escapeHtml(trial.job)}</span></td>
             <td class="${TD_NUM}">${trial.attempt}</td>
             <td class="${TD}">${outcomeIcons(trial)}</td>
             <td class="${TD_NUM}">${duration(trial.duration_s)}</td>

@@ -501,6 +501,10 @@ html {
     display: grid;
 }
 
+.inline-block {
+    display: inline-block;
+}
+
 .inline-flex {
     display: inline-flex;
 }
@@ -903,6 +907,10 @@ html {
     max-width: 42rem; /* 672px */
 }
 
+.max-w-xs {
+    max-width: 20rem; /* 320px */
+}
+
 .max-w-full {
     max-width: 100%;
 }
@@ -1191,6 +1199,13 @@ html {
     text-overflow: ellipsis;
 }
 
+/* truncate: three properties, as in Tailwind */
+.truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 
 /* Text transform */
 
@@ -1269,6 +1284,11 @@ html {
 
 .align-\[-0\.125em\] {
     vertical-align: -0.125em;
+}
+
+/* An inline-block that clips its overflow has its baseline at its bottom edge */
+.align-bottom {
+    vertical-align: bottom;
 }
 
 
