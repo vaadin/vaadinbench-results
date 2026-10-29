@@ -437,12 +437,12 @@ function render() {
         syntheticBanner(runs.some((run) => run.synthetic)),
         renderTabs(),
         renderFilters(shapes),
-        state.tab === "chart"
+        tabPanel(state.tab, state.tab === "chart"
             // The chart is drawn from the filtered rows but shades its quadrants
             // against the whole field, so the same result keeps the same verdict
             // however the chips are set.
             ? renderChart(rows, shapes, plottable(summarize(trials)))
-            : renderLeaderboard(rows),
+            : renderLeaderboard(rows)),
     ].join(""));
     const content = document.getElementById("content");
     bindTips(content);
@@ -471,6 +471,7 @@ function syncUrl() {
 document.getElementById("content").addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
     if (tab) {
+        noteTabSwitch();
         state.tab = tab.dataset.tab;
         syncUrl();
         render();
