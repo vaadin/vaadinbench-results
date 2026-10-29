@@ -4,6 +4,7 @@
    fails on an unused one.
 
    Type scale (Regular and Mono; Medium for 16 Medium; Bold for 16 Bold and 32 up):
+     11 Mono  font-mono leading-none text-3xs tracking-0 (not used yet, so text-3xs and leading-none are not defined)
      12 Mono  -tracking-4 font-mono leading-tight text-2xs
      12       font-normal leading-snug text-2xs tracking-1
      13 Mono  font-mono leading-tight text-xs tracking-0 (code; uppercase for actions)
