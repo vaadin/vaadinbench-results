@@ -910,6 +910,13 @@ html {
 }
 
 
+/* Mix blend mode */
+
+.mix-blend-multiply {
+    mix-blend-mode: multiply;
+}
+
+
 /* Opacity */
 
 .opacity-0 {
@@ -1353,6 +1360,10 @@ html {
 @media (prefers-color-scheme: dark) {
     .dark\:bg-gray-1 {
         background-color: var(--gray-1);
+    }
+
+    .dark\:mix-blend-screen {
+        mix-blend-mode: screen;
     }
 
     .dark\:has-checked\:bg-gray-1:has(:checked) {
