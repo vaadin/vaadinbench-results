@@ -16,7 +16,7 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `${metricCards([
+    return section("Summary", "Across every trial of this configuration. Cost and time are per trial unless marked total.", metricCards([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
             ["Solved", `${solved}/${graded.length}`],
             ["Tasks", tasks.size],
@@ -25,8 +25,7 @@ function renderHeader(rows) {
             ["Cost / trial", money(cost / rows.length)],
             ["Time / trial", duration(time / rows.length)],
             ["Total cost", money(cost)],
-        ])}
-        <h2 class="font-bold leading-tight m-0 mb-6 mt-12 text-2xl tracking-0">Trials</h2>`;
+        ]));
 }
 
 function renderTrials(rows) {
@@ -52,14 +51,15 @@ function renderTrials(rows) {
             <td class="${TD_NUM}">${money(trial.cost_usd)}</td>
         </tr>`).join("");
 
-    return `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-256 table-fixed w-full">
+    return section("Trials", "Every attempt, in task order. Open one for its trajectory, changes and verifier output.",
+        `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-256 table-fixed w-full">
         <thead><tr>
             <th class="${TH}">Task</th><th class="${TH_NUM} w-28">Attempt</th><th class="${TH} w-28">Outcome</th>
             <th class="${TH_NUM} w-28">Time</th><th class="${TH_NUM} w-24">Steps</th>
             <th class="${TH_NUM} w-38">Out. tokens</th><th class="${TH_NUM} w-28">Cost</th>
         </tr></thead>
         <tbody class="${TBODY}">${body}</tbody>
-    </table></div>`;
+    </table></div>`);
 }
 
 const content = document.getElementById("content");
