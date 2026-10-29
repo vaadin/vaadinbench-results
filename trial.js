@@ -531,8 +531,8 @@ function render() {
         verifier: renderVerifier,
         instruction: renderInstruction,
     };
-    const view = views[activeTab] ?? views.trajectory;
-    showContent(renderHeader() + renderTabs() + view());
+    const shown = views[activeTab] ? activeTab : "trajectory";
+    showContent(renderHeader() + renderTabs() + tabPanel(shown, views[shown]()));
     renderCrumb();
     document.title = `${shortTask(trial.task)} · ${modelText(trial.model)} · VaadinBench`;
 }
@@ -541,6 +541,7 @@ function render() {
 document.getElementById("content").addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
     if (tab) {
+        noteTabSwitch();
         activeTab = tab.dataset.tab;
         // Keep the tab in the URL, so a link to a trial can point at the diff or
         // the verifier output rather than always landing on the trajectory.

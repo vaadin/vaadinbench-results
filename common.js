@@ -85,15 +85,74 @@ function lucide(name, klass = "h-4 shrink-0 w-4", fill = "none") {
 }
 
 // Tabs are as tall as the header's button, in Regular 16. The selected one is
-// told apart by its full-contrast underline as well as its colour.
-const TAB = "-mb-px bg-transparent border-0 border-b-2 border-transparent box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-11 tracking-1 hover:text-gray-12";
-const TAB_SELECTED = "-mb-px bg-transparent border-0 border-b-2 border-gray-12 box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-12 tracking-1";
+// told apart by its full-contrast underline as well as its colour. There is one
+// underline for the whole bar, placed by settleTabs(), so that it can glide.
+const TAB = "-mb-px bg-transparent border-0 box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-11 tracking-1 hover:text-gray-12";
+const TAB_SELECTED = "-mb-px bg-transparent border-0 box-border cursor-pointer font-normal font-sans h-12 leading-snug p-0 text-base text-gray-12 tracking-1";
 
 function tabBar(tabs, active) {
-    return `<div class="border-b border-gray-3 flex flex-wrap gap-x-6 gap-y-2 mb-6" role="tablist">${
+    return `<div class="border-b border-gray-3 flex flex-wrap gap-x-6 gap-y-2 mb-6 relative" role="tablist">${
         tabs.map(([id, label]) => `<button class="${id === active ? TAB_SELECTED : TAB}"
-            data-tab="${id}" role="tab" aria-selected="${id === active}">${label}</button>`).join("")}</div>`;
+            data-tab="${id}" id="tab-${id}" role="tab" aria-selected="${id === active}"
+            aria-controls="tab-panel">${label}</button>`).join("")}<span
+        class="absolute bg-gray-12 duration-200 h-0.5 left-0 pointer-events-none top-0 transition-all motion-reduce:transition-none"
+        aria-hidden="true" data-tab-indicator></span></div>`;
 }
+
+function tabPanel(active, html) {
+    return `<div aria-labelledby="tab-${active}" id="tab-panel" role="tabpanel">${html}</div>`;
+}
+
+// Tab switches are animated: the underline glides from the old tab to the new
+// one, and the panel comes in from the side the new tab is on. Both are CSS -- a
+// transition and an animation, each off under reduced motion; this only says
+// where they start, since the page is redrawn in between. A tab click calls
+// noteTabSwitch() before redrawing, and showContent() does the rest.
+let tabFrom = null;
+
+const tabsIn = (bar) => [...bar.querySelectorAll('[role="tab"]')];
+const selectedIn = (tabs) => tabs.findIndex((tab) => tab.getAttribute("aria-selected") === "true");
+
+function noteTabSwitch() {
+    const bar = document.querySelector('[role="tablist"]');
+    const indicator = bar?.querySelector("[data-tab-indicator]");
+    if (!indicator) return;
+    const { left, top, width } = indicator.style;
+    tabFrom = { index: selectedIn(tabsIn(bar)), left, top, width };
+}
+
+function settleTabs(from = null) {
+    const bar = document.querySelector('[role="tablist"]');
+    const indicator = bar?.querySelector("[data-tab-indicator]");
+    if (!indicator) return;
+    const tabs = tabsIn(bar);
+    const index = selectedIn(tabs);
+    const tab = tabs[index];
+    if (!tab) return;
+    const to = {
+        left: `${tab.offsetLeft}px`,
+        top: `${tab.offsetTop + tab.offsetHeight - 2}px`,
+        width: `${tab.offsetWidth}px`,
+    };
+    // Start where the old underline was and let the transition carry it; with
+    // nothing to start from (first draw, resize), arrive without a glide.
+    if (from) Object.assign(indicator.style, { left: from.left, top: from.top, width: from.width });
+    else indicator.style.transition = "none";
+    indicator.getBoundingClientRect();
+    Object.assign(indicator.style, to);
+    if (!from) {
+        indicator.getBoundingClientRect();
+        indicator.style.transition = "";
+    }
+    const panel = document.querySelector('[role="tabpanel"]');
+    if (from && panel && from.index !== index) {
+        panel.classList.add(index > from.index
+            ? "animate-slide-in-from-right" : "animate-slide-in-from-left", "motion-reduce:animate-none");
+    }
+}
+
+addEventListener("resize", () => settleTabs());
+document.fonts?.ready.then(() => settleTabs());
 
 // Pages serves everything with `max-age=600` and no way to override it, so a
 // reader who saw an earlier publish gets that copy back from disk without the
@@ -686,6 +745,8 @@ let entered = false;
 function showContent(html) {
     const content = document.getElementById("content");
     content.innerHTML = html;
+    settleTabs(tabFrom);
+    tabFrom = null;
     if (entered) return;
     entered = true;
     const footer = document.querySelector("footer");

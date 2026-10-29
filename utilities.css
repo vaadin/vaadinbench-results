@@ -118,8 +118,31 @@ html {
     }
 }
 
+/* A tab panel coming in from the side its tab is on. */
+@keyframes slide-in-from-left {
+    0% {
+        opacity: 0;
+        translate: -1rem 0;
+    }
+}
+
+@keyframes slide-in-from-right {
+    0% {
+        opacity: 0;
+        translate: 1rem 0;
+    }
+}
+
 .animate-fade-in {
     animation: fade-in 400ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-slide-in-from-left {
+    animation: slide-in-from-left 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+.animate-slide-in-from-right {
+    animation: slide-in-from-right 250ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 
@@ -180,6 +203,10 @@ html {
     background-color: var(--gray-11);
 }
 
+.bg-gray-12 {
+    background-color: var(--gray-12);
+}
+
 .bg-green-3 {
     background-color: var(--green-3);
 }
@@ -224,10 +251,6 @@ html {
 
 .border-gray-5 {
     border-color: var(--gray-5);
-}
-
-.border-gray-12 {
-    border-color: var(--gray-12);
 }
 
 .border-green-7 {
@@ -304,11 +327,6 @@ html {
 .border-b {
     border-bottom-style: solid;
     border-bottom-width: 1px;
-}
-
-.border-b-2 {
-    border-bottom-style: solid;
-    border-bottom-width: 2px;
 }
 
 .border-l-2 {
@@ -577,6 +595,10 @@ html {
 
 /* Height */
 
+.h-0\.5 {
+    height: 0.125rem; /* 2px */
+}
+
 .h-2 {
     height: 0.5rem; /* 8px */
 }
@@ -808,6 +830,10 @@ html {
     overflow-x: auto;
 }
 
+.overflow-x-clip {
+    overflow-x: clip;
+}
+
 
 /* Overflow wrap */
 
@@ -1026,6 +1052,10 @@ html {
     inset: auto;
 }
 
+.left-0 {
+    left: 0;
+}
+
 .top-0 {
     top: 0;
 }
@@ -1057,6 +1087,13 @@ html {
     transition-property: transform, translate, scale, rotate;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 150ms;
+}
+
+
+/* Transition duration — after Transition property, so it overrides transition-all */
+
+.duration-200 {
+    transition-duration: 200ms;
 }
 
 
