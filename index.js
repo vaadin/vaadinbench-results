@@ -110,8 +110,9 @@ const CONFIG_NOTES = {
     "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
 
-// One line per configuration, under its chips. Short on purpose: the point is
-// to say what the agent had, not to document the plugins.
+// One line per configuration, in a popover on the help icon beside the
+// configuration chips. Short on purpose: the point is to say what the agent had,
+// not to document the plugins.
 function renderConfigNotes(configs) {
     const notes = trials.length && trials.every((trial) => trial.agent === "codex")
         ? { ...CONFIG_NOTES,
@@ -120,13 +121,21 @@ function renderConfigNotes(configs) {
         : CONFIG_NOTES;
     const described = configs.filter((config) => notes[config]);
     if (!described.length) return "";
-    // Indented to line up with the chips rather than the key column, so it reads
-    // as a caption on them. Narrow, the names stack over their descriptions.
-    return `<dl class="flex flex-col gap-1 m-0 mt-1 text-2xs md:pl-25">${described.map((config) => `
-        <div class="flex flex-col md:flex-row md:gap-2">
-            <dt class="shrink-0 text-gray-12 md:w-44">${escapeHtml(config)}</dt>
-            <dd class="m-0 text-gray-11">${escapeHtml(notes[config])}</dd>
-        </div>`).join("")}</dl>`;
+    // A native popover: it opens, closes on Escape or a click elsewhere, and
+    // tells assistive technology which, with no script. The script below only
+    // places it under its button.
+    const label = "What each configuration gave the agent";
+    return `<button class="bg-transparent border-0 cursor-pointer flex p-0 text-gray-11 hover:text-gray-12"
+            popovertarget="config-help" aria-label="${label}" title="${label}">${lucide("circle-help")}</button>
+        <div class="bg-white border border-gray-3 box-border inset-auto m-0 p-4 rounded-lg shadow-xl text-gray-12 dark:bg-gray-1"
+            id="config-help" popover>
+            <p class="${EYEBROW} mb-3">Configurations</p>
+            <dl class="flex flex-col gap-3 m-0">${described.map((config) => `
+                <div>
+                    <dt class="text-gray-12">${escapeHtml(config)}</dt>
+                    <dd class="m-0 mt-1 text-gray-11">${escapeHtml(notes[config])}</dd>
+                </div>`).join("")}</dl>
+        </div>`;
 }
 
 // An empty set means no filter rather than nothing selected: a page that opens
@@ -166,21 +175,24 @@ function renderFilters(shapes) {
             aria-label="Clear the ${key === "models" ? "model" : "configuration"} filter"
             >${lucide("x")}</button>`
         : "";
-    const key = (label) => `<span class="${EYEBROW} shrink-0 w-24">${label}</span>`;
+    // Each row is a group of toggle buttons named by its key, so a screen reader
+    // announces "Model, group" before the first chip. A <label> would not do:
+    // it names a single form control, not a group of buttons.
+    const key = (id, label, extra = "") => `<span class="flex gap-2 items-center shrink-0 w-24"><span
+        class="${EYEBROW} box-edge-cap-alphabetic box-trim-both" id="${id}">${label}</span>${extra}</span>`;
     return `<div class="flex flex-col gap-2 mb-6">
-        <div class="flex flex-wrap gap-1 items-center">
-            ${key("Model")}
+        <div class="flex flex-wrap gap-1 items-center" role="group" aria-labelledby="filter-models">
+            ${key("filter-models", "Model")}
             ${models.map((model) => chip("models", model, modelMark(model, "h-4 shrink-0 w-4"),
                 escapeHtml(modelParts(model).name))).join("")}
             ${clear("models")}
         </div>
-        <div class="flex flex-wrap gap-1 items-center">
-            ${key("Config")}
+        <div class="flex flex-wrap gap-1 items-center" role="group" aria-labelledby="filter-configs">
+            ${key("filter-configs", "Config", renderConfigNotes(configs))}
             ${configs.map((config) => chip("configs", config,
                 shapeGlyph(shapes.get(config), "h-4 w-4"), escapeHtml(config))).join("")}
             ${clear("configs")}
         </div>
-        ${renderConfigNotes(configs)}
     </div>`;
 }
 
@@ -493,6 +505,31 @@ document.getElementById("content").addEventListener("click", (event) => {
     const row = event.target.closest("tr[data-model]");
     if (row) location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
 });
+
+// Places the configuration help under the button that opens it, inside the
+// page's 16px gutters, before it opens; and closes it on scroll rather than
+// leaving it behind. The width is set here, not by a class: a popover left to
+// size itself takes all the room to the right of where it is placed, so it
+// could never be pulled back inside the gutter. 24rem, or the viewport less
+// its gutters where that is narrower.
+function placePopover(popover) {
+    const button = document.querySelector(`[popovertarget="${popover.id}"]`);
+    if (!button) return;
+    const at = button.getBoundingClientRect();
+    const gutter = 16;
+    const width = Math.min(384, innerWidth - gutter * 2);
+    popover.style.width = `${width}px`;
+    popover.style.top = `${at.bottom + 8}px`;
+    popover.style.left = `${Math.max(gutter, Math.min(at.left, innerWidth - gutter - width))}px`;
+}
+
+// Toggle events do not bubble, so this listens in the capture phase.
+document.getElementById("content").addEventListener("beforetoggle", (event) => {
+    if (event.newState === "open") placePopover(event.target);
+}, true);
+addEventListener("scroll", () => {
+    document.querySelectorAll(":popover-open").forEach((popover) => popover.hidePopover());
+}, { passive: true });
 
 // The x-axis switch is a radio group, so it reports a change rather than a click.
 document.getElementById("content").addEventListener("change", (event) => {
