@@ -26,7 +26,7 @@ function renderHeader(rows) {
             ["Time / trial", duration(time / rows.length)],
             ["Total cost", money(cost)],
         ])}
-        <h2 class="font-bold leading-tight m-0 mb-6 mt-8 text-2xl tracking-0">Trials</h2>`;
+        <h2 class="font-bold leading-tight m-0 mb-6 mt-12 text-2xl tracking-0">Trials</h2>`;
 }
 
 function renderTrials(rows) {
