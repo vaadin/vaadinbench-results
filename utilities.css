@@ -539,13 +539,6 @@ html {
 
 
 
-/* Filter — composed, so brightness and invert can apply together */
-
-.brightness-115 {
-    --tw-brightness: brightness(1.15);
-    filter: var(--tw-brightness) var(--tw-invert,);
-}
-
 
 /* Flex */
 
@@ -930,6 +923,10 @@ html {
 
 .opacity-0 {
     opacity: 0;
+}
+
+.opacity-20 {
+    opacity: 0.2;
 }
 
 
@@ -1371,6 +1368,12 @@ html {
         background-color: var(--gray-1);
     }
 
+    /* Filters compose, so brightness and invert apply together */
+    .dark\:brightness-115 {
+        --tw-brightness: brightness(1.15);
+        filter: var(--tw-brightness) var(--tw-invert,);
+    }
+
     .dark\:invert {
         --tw-invert: invert(1);
         filter: var(--tw-brightness,) var(--tw-invert);
@@ -1378,6 +1381,10 @@ html {
 
     .dark\:mix-blend-screen {
         mix-blend-mode: screen;
+    }
+
+    .dark\:opacity-100 {
+        opacity: 1;
     }
 
     .dark\:has-checked\:bg-gray-1:has(:checked) {
