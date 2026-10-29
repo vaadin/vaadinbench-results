@@ -903,12 +903,12 @@ html {
     min-width: 0.25rem; /* 4px */
 }
 
-.min-w-32 {
-    min-width: 8rem; /* 128px */
-}
-
 .min-w-170 {
     min-width: 42.5rem; /* 680px */
+}
+
+.min-w-256 {
+    min-width: 64rem; /* 1024px */
 }
 
 .min-w-max {
@@ -1127,6 +1127,13 @@ html {
 
 
 
+/* Table layout */
+
+.table-fixed {
+    table-layout: fixed;
+}
+
+
 /* Text align */
 
 .text-left {
@@ -1271,10 +1278,6 @@ html {
     width: 1px;
 }
 
-.w-2 {
-    width: 0.5rem; /* 8px */
-}
-
 .w-3 {
     width: 0.75rem; /* 12px */
 }
@@ -1287,10 +1290,6 @@ html {
     width: 1rem; /* 16px */
 }
 
-.w-6 {
-    width: 1.5rem; /* 24px */
-}
-
 .w-7 {
     width: 1.75rem; /* 28px */
 }
@@ -1299,12 +1298,24 @@ html {
     width: 2rem; /* 32px */
 }
 
+.w-14 {
+    width: 3.5rem; /* 56px */
+}
+
 .w-24 {
     width: 6rem; /* 96px */
 }
 
-.w-2\/5 {
-    width: 40%;
+.w-28 {
+    width: 7rem; /* 112px */
+}
+
+.w-38 {
+    width: 9.5rem; /* 152px */
+}
+
+.w-60 {
+    width: 15rem; /* 240px */
 }
 
 .w-fit {
@@ -1370,10 +1381,6 @@ html {
 @media (prefers-color-scheme: dark) {
     .dark\:bg-gray-1 {
         background-color: var(--gray-1);
-    }
-
-    .dark\:bg-transparent {
-        background-color: transparent;
     }
 
     /* Filters compose, so brightness and invert apply together */
@@ -1513,6 +1520,10 @@ html {
         gap: 1.5rem; /* 24px */
     }
 
+    .md\:mb-0 {
+        margin-bottom: 0;
+    }
+
     .md\:max-h-\[calc\(100vh-2rem\)\] {
         max-height: calc(100vh - 2rem);
     }
@@ -1535,6 +1546,10 @@ html {
 
     .md\:top-4 {
         top: 1rem; /* 16px */
+    }
+
+    .md\:w-24 {
+        width: 6rem; /* 96px */
     }
 
     .md\:w-60 {

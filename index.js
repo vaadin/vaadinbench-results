@@ -5,15 +5,15 @@ let trials = [];
 let runs = [];
 const params = new URLSearchParams(location.search);
 const COLUMNS = [
-    { key: "model", label: "Model", dir: "asc",
+    { key: "model", label: "Model", width: "w-60", dir: "asc",
         value: (row) => `${modelWithEffort(row.model, row.effort)} ${row.config}`.toLowerCase() },
-    { key: "score", label: "Score", num: true, dir: "desc",
+    { key: "score", label: "Score", width: "w-24", num: true, dir: "desc",
         value: (row) => row.rate ?? -1 },
-    { key: "solved", label: "Solved", num: true, dir: "desc", value: (row) => row.solved },
-    { key: "tasks", label: "Tasks", num: true, dir: "desc", value: (row) => row.tasks.size },
-    { key: "cost", label: "Cost / trial", num: true, dir: "asc",
+    { key: "solved", label: "Solved", width: "w-28", num: true, dir: "desc", value: (row) => row.solved },
+    { key: "tasks", label: "Tasks", width: "w-24", num: true, dir: "desc", value: (row) => row.tasks.size },
+    { key: "cost", label: "Cost / trial", width: "w-38", num: true, dir: "asc",
         value: (row) => row.cost / row.attempts },
-    { key: "time", label: "Time / trial", num: true, dir: "asc",
+    { key: "time", label: "Time / trial", width: "w-38", num: true, dir: "asc",
         value: (row) => row.duration / row.attempts },
 ];
 
@@ -151,7 +151,7 @@ const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 
 function chipClasses(pressed) {
     return pressed
         ? `${CHIP} bg-gray-3 border-gray-5 text-gray-12`
-        : `${CHIP} bg-gray-1 border-gray-3 text-gray-11 dark:bg-transparent hover:border-gray-5`;
+        : `${CHIP} bg-gray-1 border-gray-3 text-gray-11 hover:border-gray-5`;
 }
 
 function renderFilters(shapes) {
@@ -178,8 +178,9 @@ function renderFilters(shapes) {
         : "";
     // Each row is a group of toggle buttons named by its key, so a screen reader
     // announces "Model, group" before the first chip. A <label> would not do:
-    // it names a single form control, not a group of buttons.
-    const key = (id, label, extra = "") => `<span class="flex gap-2 items-center shrink-0 w-24"><span
+    // it names a single form control, not a group of buttons. On a phone the
+    // name takes a line of its own, above its chips.
+    const key = (id, label, extra = "") => `<span class="flex gap-2 items-center mb-1 shrink-0 w-full md:mb-0 md:w-24"><span
         class="${EYEBROW} box-edge-cap-alphabetic box-trim-both" id="${id}">${label}</span>${extra}</span>`;
     return `<div class="flex flex-col gap-2 mb-10">
         <div class="flex flex-wrap gap-1 items-center" role="group" aria-labelledby="filter-models">
@@ -237,7 +238,7 @@ function renderHead() {
         const slot = `<span class="flex h-4 shrink-0 w-4">${arrow}</span>`;
         // The cell's trim does not reach into the flex row, so the label carries its own.
         const label = `<span class="box-edge-cap-alphabetic box-trim-both">${escapeHtml(column.label)}</span>`;
-        return `<th class="${base} cursor-pointer select-none" data-sort="${column.key}"
+        return `<th class="${base} ${column.width} cursor-pointer select-none" data-sort="${column.key}"
             aria-sort="${active ? order : "none"}"
             title="Sort by ${escapeHtml(column.label.toLowerCase())}"><span
             class="${column.num ? "flex gap-1 items-center justify-end" : "flex gap-1 items-center"}">${
@@ -245,10 +246,15 @@ function renderHead() {
     };
     const [model, ...rest] = COLUMNS;
     return `<thead><tr>
-        <th class="${TH}"></th>${cell(model)}<th class="${TH}"></th>${rest.map(cell).join("")}
+        <th class="${TH} w-14"></th>${cell(model)}<th class="${TH}"></th>${rest.map(cell).join("")}
     </tr></thead>`;
 }
 
+// The leaderboard's columns are fixed (table-fixed, widths on the header), so
+// filtering, which changes which names and ranks are in the table, cannot move
+// them. The score bar takes what is left, and the minimum width keeps it room
+// on a narrow screen, where the table scrolls instead.
+//
 // A row names its configuration in words, under the model and indented to line
 // up with its name, so it needs no shape: shapes are for the chart, where points
 // have no room for words.
@@ -266,12 +272,12 @@ function renderLeaderboard(rows) {
         return `<tr class="cursor-pointer h-18 hover:bg-gray-2" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
             data-effort="${escapeHtml(row.effort)}">
-            <td class="${TD_NUM} text-gray-11 w-6">${i + 1}</td>
+            <td class="${TD_NUM} text-gray-11">${i + 1}</td>
             <td class="${TD}"><span class="flex gap-2 items-center">${
                 modelMark(row.model, "h-4 shrink-0 w-4")}<span class="font-bold leading-snug text-base tracking-1">${
                 escapeHtml(modelParts(row.model).name)}</span>${effortBadge(row.effort)}</span>
                 <span class="block mt-0.5 pl-6 text-2xs text-gray-11">${escapeHtml(row.config)}</span></td>
-            <td class="${TD} min-w-32 w-2/5"><span
+            <td class="${TD}"><span
                 class="bg-gray-3 block h-2 overflow-hidden rounded-full">${fill}</span></td>
             <td class="${TD_NUM}">${percent(row.rate)}</td>
             <td class="${TD_NUM}">${row.solved}/${row.graded}</td>
@@ -281,7 +287,7 @@ function renderLeaderboard(rows) {
         </tr>`;
     }).join("");
 
-    return `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-170 w-full">
+    return `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-256 table-fixed w-full">
         ${renderHead()}
         <tbody class="${TBODY}">${body}</tbody>
     </table></div>`;
@@ -460,7 +466,7 @@ function renderChart(rows, shapes, field) {
             shapeGlyph(shape)}${escapeHtml(config)}</span>`).join("");
 
     const AXIS_TITLE = "-tracking-4 fill-gray-11 font-mono text-2xs uppercase";
-    return `${head}<div class="bg-gray-1 border border-gray-3 pb-2 pt-4 px-4 relative rounded-lg dark:bg-transparent"><div
+    return `${head}<div class="bg-gray-1 border border-gray-3 pb-2 pt-4 px-4 relative rounded-lg"><div
         class="absolute bg-white border border-gray-3 box-border p-4 pointer-events-none rounded-lg shadow-xl tabular-nums text-gray-12 whitespace-nowrap z-10 dark:bg-gray-1"
         data-tooltip hidden></div>
     <svg class="block h-auto overflow-visible w-full" data-chart viewBox="0 0 ${W} ${H}" role="group"
