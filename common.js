@@ -37,6 +37,8 @@ const BADGE = {
     fail: "-tracking-4 bg-red-3 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-red-11 uppercase",
     // Outlined rather than filled, so it reads on a grey tile as well as a white table.
     tag: "-tracking-4 border border-gray-5 box-border font-mono h-6 inline-flex items-center leading-tight px-1.5 rounded text-2xs text-gray-11 uppercase",
+    // A tag in 11 Mono: the effort sits beside a model name, so it is set smaller.
+    effort: "border border-gray-5 box-border font-mono h-6 inline-flex items-center leading-none px-1.5 rounded text-3xs text-gray-11 tracking-0 uppercase",
 };
 
 // `text` is plain text; it is escaped here.
@@ -203,7 +205,7 @@ function modelLabel(model, effort = "") {
 }
 
 function effortBadge(effort) {
-    return effort ? badge("tag", effort) : "";
+    return effort ? badge("effort", effort) : "";
 }
 
 function shortTask(task) {
