@@ -61,6 +61,7 @@ html {
 
     /* Table header band: a grey with a hint of blue (hue ~206°), just below white
        in light mode and just above the page in dark. */
+    /* Dark value is a stand-in, not a brand colour: #1a1f24 keeps off-blue's blue cast. */
     --off-blue: light-dark(#f0f4f7, #1a1f24);
 
     /* Vendor brand colours, for each vendor's mark and its models' score bars:
