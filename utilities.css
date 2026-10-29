@@ -778,6 +778,13 @@ html {
 }
 
 
+/* Opacity */
+
+.opacity-0 {
+    opacity: 0;
+}
+
+
 /* Overflow */
 
 .overflow-hidden {
@@ -928,6 +935,13 @@ html {
 }
 
 
+/* Scale */
+
+.scale-97 {
+    scale: 97%;
+}
+
+
 /* Stroke */
 
 .stroke-gray-3 {
@@ -1004,7 +1018,27 @@ html {
 }
 
 
+/* Transform origin */
+
+.origin-top-left {
+    transform-origin: top left;
+}
+
+
+/* Transition behavior */
+
+.transition-discrete {
+    transition-behavior: allow-discrete;
+}
+
+
 /* Transition property */
+
+.transition-all {
+    transition-property: all;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+}
 
 .transition-transform {
     transition-property: transform, translate, scale, rotate;
@@ -1207,6 +1241,30 @@ html {
 
     .hover\:underline:hover {
         text-decoration-line: underline;
+    }
+}
+
+
+/* Variant open: — an open <details> or <dialog>, or a popover that is showing, as in Tailwind */
+
+.open\:opacity-100:is([open], :popover-open) {
+    opacity: 1;
+}
+
+.open\:scale-100:is([open], :popover-open) {
+    scale: 100%;
+}
+
+
+/* Variant starting: — after open: so it wins on the first frame */
+
+@starting-style {
+    .starting\:open\:opacity-0:is([open], :popover-open) {
+        opacity: 0;
+    }
+
+    .starting\:open\:scale-97:is([open], :popover-open) {
+        scale: 97%;
     }
 }
 

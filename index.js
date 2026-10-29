@@ -123,14 +123,15 @@ function renderConfigNotes(configs) {
     if (!described.length) return "";
     // A native popover: it opens, closes on Escape or a click elsewhere, and
     // tells assistive technology which, with no script. The script below only
-    // places it under its button.
+    // places it under its button. It fades and scales in from its top-left
+    // corner, the one nearest the button, and back out on close.
     const label = "What each configuration gave the agent";
     return `<button class="bg-transparent border-0 cursor-pointer flex p-0 text-gray-11 hover:text-gray-12"
             popovertarget="config-help" aria-label="${label}" title="${label}">${lucide("circle-help")}</button>
-        <div class="bg-white border border-gray-3 box-border inset-auto m-0 p-4 rounded-lg shadow-xl text-gray-12 dark:bg-gray-1"
+        <div class="bg-white border border-gray-3 box-border inset-auto m-0 opacity-0 origin-top-left p-4 rounded-lg scale-97 shadow-xl text-gray-12 transition-all transition-discrete dark:bg-gray-1 open:opacity-100 open:scale-100 starting:open:opacity-0 starting:open:scale-97 motion-reduce:transition-none"
             id="config-help" popover>
-            <p class="${EYEBROW} mb-3">Configurations</p>
-            <dl class="flex flex-col gap-3 m-0">${described.map((config) => `
+            <p class="${EYEBROW} mb-4">Configurations</p>
+            <dl class="flex flex-col gap-4 m-0">${described.map((config) => `
                 <div>
                     <dt class="font-medium leading-snug text-base text-gray-12 tracking-1">${escapeHtml(config)}</dt>
                     <dd class="m-0 mt-1 text-gray-11">${escapeHtml(notes[config])}</dd>
