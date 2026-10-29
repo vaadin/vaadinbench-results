@@ -160,7 +160,7 @@ function renderFilters(shapes) {
     //
     // An icon button, so it carries a label for anyone not looking at it.
     const clear = (key) => state[key].size
-        ? `<button class="bg-transparent border-0 cursor-pointer flex h-7 items-center justify-center ml-1 p-0 rounded-full text-gray-11 w-7 hover:bg-gray-3 hover:text-gray-12"
+        ? `<button class="bg-transparent border-0 cursor-pointer flex h-8 items-center justify-center ml-1 p-0 rounded-full text-gray-11 w-8 hover:bg-gray-3 hover:text-gray-12"
             data-clear="${key}"
             title="Clear the ${key === "models" ? "model" : "configuration"} filter"
             aria-label="Clear the ${key === "models" ? "model" : "configuration"} filter"
@@ -199,8 +199,9 @@ function renderHead() {
             : `${base} hover:text-gray-12`} cursor-pointer select-none" data-sort="${column.key}"
             aria-sort="${active ? order : "none"}"
             title="Sort by ${escapeHtml(column.label.toLowerCase())}">${
-            escapeHtml(column.label)}<span class="inline-block ml-1 w-2">${
-            active ? (state.dir === "asc" ? "↑" : "↓") : ""}</span></th>`;
+            escapeHtml(column.label)}<span class="inline-block ml-1 w-4">${
+            active ? lucide(state.dir === "asc" ? "arrow-up" : "arrow-down",
+                "align-[-0.125em] h-4 inline-block w-4") : ""}</span></th>`;
     };
     const [model, ...rest] = COLUMNS;
     return `<thead><tr>
@@ -380,7 +381,7 @@ function renderChart(rows, shapes, field) {
             + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
         return `<g data-tip="${escapeHtml(tip)}">
             <circle class="fill-transparent" cx="${x}" cy="${y}" r="13"/>
-            ${marker(shapes.get(row.config), x, y, "fill-gray-12")}
+            ${marker(shapes.get(row.config), x, y, "text-gray-12")}
             <text class="fill-gray-11 text-2xs" data-label data-cx="${x}" data-cy="${y}"
                 x="${x + 11}" y="${y + 4}">${escapeHtml(name)}</text>
         </g>`;

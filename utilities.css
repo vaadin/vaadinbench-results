@@ -162,10 +162,6 @@ html {
     background-color: var(--blue-3);
 }
 
-.bg-blue-9 {
-    background-color: var(--blue-9);
-}
-
 .bg-claude {
     background-color: var(--claude);
 }
@@ -411,10 +407,6 @@ html {
     fill: var(--claude);
 }
 
-.fill-current {
-    fill: currentColor;
-}
-
 .fill-openai {
     fill: var(--openai);
 }
@@ -425,10 +417,6 @@ html {
 
 .fill-gray-11 {
     fill: var(--gray-11);
-}
-
-.fill-gray-12 {
-    fill: var(--gray-12);
 }
 
 .fill-green-3 {
@@ -571,14 +559,6 @@ html {
 
 
 /* Height */
-
-.h-0\.5 {
-    height: 0.125rem; /* 2px */
-}
-
-.h-1\.5 {
-    height: 0.375rem; /* 6px */
-}
 
 .h-2 {
     height: 0.5rem; /* 8px */
@@ -1048,10 +1028,6 @@ html {
     width: 1px;
 }
 
-.w-1\.5 {
-    width: 0.375rem; /* 6px */
-}
-
 .w-2 {
     width: 0.5rem; /* 8px */
 }
@@ -1074,6 +1050,10 @@ html {
 
 .w-7 {
     width: 1.75rem; /* 28px */
+}
+
+.w-8 {
+    width: 2rem; /* 32px */
 }
 
 .w-24 {

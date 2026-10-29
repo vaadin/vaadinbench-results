@@ -62,10 +62,21 @@ const ICONS = {
     "list-checks": '<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>',
     ellipsis: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
     "circle-dot": '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="1"/>',
+    "arrow-up": '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+    "arrow-down": '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+    "arrow-left": '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+    circle: '<circle cx="12" cy="12" r="10"/>',
+    square: '<rect width="18" height="18" x="3" y="3" rx="2"/>',
+    triangle: '<path d="M13.73 4a2 2 0 0 0-3.46 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/>',
+    diamond: '<path d="M2.7 10.3a2.41 2.41 0 0 0 0 3.41l7.59 7.59a2.41 2.41 0 0 0 3.41 0l7.59-7.59a2.41 2.41 0 0 0 0-3.41l-7.59-7.59a2.41 2.41 0 0 0-3.41 0Z"/>',
+    "square-check": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/>',
+    "square-minus": '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/>',
 };
 
-function lucide(name, klass = "h-4 shrink-0 w-4") {
-    return `<svg class="${klass}" aria-hidden="true" fill="none" stroke="currentColor"
+// `fill` is "currentColor" for a shape drawn solid, such as a configuration
+// marker; every other icon is Lucide's outline as published.
+function lucide(name, klass = "h-4 shrink-0 w-4", fill = "none") {
+    return `<svg class="${klass}" aria-hidden="true" fill="${fill}" stroke="currentColor"
         stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
         viewBox="0 0 24 24">${ICONS[name]}</svg>`;
 }
@@ -292,29 +303,20 @@ function shapeMap(configs) {
     return new Map(sorted.map((config, i) => [config, SHAPES[i % SHAPES.length]]));
 }
 
-// The chart's marker at text size, so a configuration carries the same shape in
-// a chip, a table row and a legend as it does in the scatter. It takes the text
-// colour around it; configuration glyphs have no colour mapping of their own.
+// A configuration's Lucide shape, drawn solid in the text colour around it, so
+// it carries the same mark in a chip, a table row and a legend as on the chart.
 function shapeGlyph(shape, size = "h-3 w-3") {
-    return `<svg class="${size} overflow-visible shrink-0" viewBox="0 0 14 14" aria-hidden="true">${
-        marker(shape, 7, 7, "fill-current", 5)}</svg>`;
+    return lucide(SHAPES.includes(shape) ? shape : "circle", `${size} shrink-0`, "currentColor");
 }
 
-const SHAPE_TAGS = { circle: "circle", square: "rect", triangle: "polygon", diamond: "polygon" };
-
-// `data-dot` marks it as an obstacle for layoutChartLabels().
-function marker(shape, x, y, klass, r = 6) {
-    const kind = SHAPE_TAGS[shape] ? shape : "circle";
-    const body = {
-        circle: `<circle cx="${x}" cy="${y}" r="${r}"`,
-        square: `<rect x="${x - r * 0.9}" y="${y - r * 0.9}" width="${r * 1.8}"
-            height="${r * 1.8}" rx="1"`,
-        triangle: `<polygon points="${x},${y - r * 1.15} ${x + r},${y + r * 0.8}
-            ${x - r},${y + r * 0.8}"`,
-        diamond: `<polygon points="${x},${y - r * 1.25} ${x + r * 1.05},${y}
-            ${x},${y + r * 1.25} ${x - r * 1.05},${y}"`,
-    }[kind];
-    return `${body} class="${klass}" data-dot/>`;
+// The same shape as a point on the chart: a nested SVG, `size` chart units
+// across, centred on (x, y). `data-dot` marks it as an obstacle for
+// layoutChartLabels(), which reads its box from x, y, width and height.
+function marker(shape, x, y, klass, size = 14) {
+    return `<svg class="${klass}" data-dot x="${x - size / 2}" y="${y - size / 2}"
+        width="${size}" height="${size}" fill="currentColor" stroke="currentColor"
+        stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        viewBox="0 0 24 24">${ICONS[SHAPES.includes(shape) ? shape : "circle"]}</svg>`;
 }
 
 // Candidate positions for a label, in preference order: beside the point first,
@@ -343,8 +345,14 @@ function layoutChartLabels(svg) {
     // Markers and the axis text are obstacles from the start; each label becomes
     // one as it lands. Including the ticks is what keeps a label from settling on
     // top of "100%" or "$2.00".
+    // A marker is a nested SVG, whose getBBox() answers in its own viewBox units
+    // rather than the chart's, so its box is read from its position and size.
+    const box = (node) => node.hasAttribute("data-dot")
+        ? { x: Number(node.getAttribute("x")), y: Number(node.getAttribute("y")),
+            width: Number(node.getAttribute("width")), height: Number(node.getAttribute("height")) }
+        : node.getBBox();
     const taken = [...svg.querySelectorAll("[data-dot], [data-tick]")]
-        .map((node) => grow(node.getBBox()));
+        .map((node) => grow(box(node)));
 
     // Overlap by area, not yes/no: when a point is boxed in on every side, the
     // least bad slot is a real answer and "keep the default" is not.
