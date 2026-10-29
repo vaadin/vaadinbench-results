@@ -20,10 +20,9 @@ const CODE = "bg-gray-3 font-mono px-0.75 py-1 rounded text-gray-12 text-xs trac
 const PRE = "bg-gray-3 font-mono leading-tight m-0 overflow-x-auto px-4 py-3 rounded-lg text-xs tracking-0";
 const NOTE = "m-0 text-2xs text-gray-11";
 
-// Tables share one wrapper, which scrolls a wide table sideways and draws no
-// frame, and one set of cells. Rows are divided by the body (`divide-y`), so the
-// last row needs no override.
-const TABLE_WRAP = "mb-5 overflow-x-auto overscroll-x-contain";
+// Tables share one frame and one set of cells. Rows are divided by the body
+// (`divide-y`), so the last row needs no override.
+const TABLE_WRAP = "border border-gray-3 mb-5 overflow-x-auto overscroll-x-contain rounded-lg";
 const TH = "-tracking-4 border-b border-gray-3 font-mono font-normal leading-tight px-4 py-3 text-2xs text-gray-11 text-left uppercase whitespace-nowrap";
 const TH_NUM = "-tracking-4 border-b border-gray-3 font-mono font-normal leading-tight px-4 py-3 tabular-nums text-2xs text-gray-11 text-right uppercase whitespace-nowrap";
 const TBODY = "divide-gray-3 divide-y";
