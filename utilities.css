@@ -923,6 +923,10 @@ html {
     opacity: 0;
 }
 
+.opacity-20 {
+    opacity: 0.2;
+}
+
 
 /* Overflow */
 
