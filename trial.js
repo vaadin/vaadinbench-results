@@ -88,8 +88,9 @@ const TYPE_RINGS = {
 
 // The task is the page's h1, under the breadcrumb, which carries the model and
 // configuration and the way back to them.
-// Quieter than a link in running text: grey until hovered.
-const CRUMB_LINK = "no-underline text-gray-11 hover:text-gray-12 hover:underline";
+// Quieter than a link in running text: grey, darkening on hover. No underline:
+// a level is several pieces (mark, name, badge), and one would break between them.
+const CRUMB_LINK = "no-underline text-gray-11 hover:text-gray-12";
 
 function renderCrumb(config = configOf(trial.job)) {
     // The separator between levels has to differ from the one inside a level:
