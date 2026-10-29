@@ -55,6 +55,10 @@ html {
 
     --violet-11: light-dark(#4b3ef2, #9eaeff);
 
+    /* 10% black, or 10% white on dark: a line that darkens (or lightens) whatever
+       is under it, so the chart's grid reads the same over white, teal and grey. */
+    --alpha-10: light-dark(rgb(0 0 0 / 0.1), rgb(255 255 255 / 0.1));
+
     /* Table header band: a grey with a hint of blue (hue ~206°), just below white
        in light mode and just above the page in dark. */
     --off-blue: light-dark(#f0f4f7, #1a1f24);
@@ -503,16 +507,16 @@ html {
     fill: var(--claude);
 }
 
-.fill-gray-3 {
-    fill: var(--gray-3);
-}
-
 .fill-gray-11 {
     fill: var(--gray-11);
 }
 
 .fill-openai {
     fill: var(--openai);
+}
+
+.fill-red-3 {
+    fill: var(--red-3);
 }
 
 .fill-teal-3 {
@@ -1067,13 +1071,11 @@ html {
 
 /* Stroke */
 
-.stroke-gray-3 {
-    stroke: var(--gray-3);
+.stroke-alpha-10 {
+    stroke: var(--alpha-10);
 }
 
-.stroke-gray-5 {
-    stroke: var(--gray-5);
-}
+
 
 
 /* Text align */

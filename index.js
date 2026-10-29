@@ -347,7 +347,7 @@ function renderQuadrants(metric, xCut, px, py, box) {
     // corner is at the left only because cheaper is better on that axis.
     const BANDS = {
         good: { fill: "fill-teal-3", swatch: "bg-teal-3" },
-        poor: { fill: "fill-gray-3", swatch: "bg-gray-3" },
+        poor: { fill: "fill-red-3", swatch: "bg-red-3" },
     };
     const band = (kind, x1, y1, x2, y2) => `<rect class="${BANDS[kind].fill}"
         x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"/>`;
@@ -367,7 +367,7 @@ function renderQuadrants(metric, xCut, px, py, box) {
         </div>`,
         note: `<p class="${NOTE} mt-3">Teal: more than ${percent(QUADRANT.score)} of the
             graded trials solved, for under ${escapeHtml(metric.format(xCut))} a trial.${
-            poor ? ` Grey: less than that, for more than that. The other two corners
+            poor ? ` Red: less than that, for more than that. The other two corners
             are the trade-off.` : " Nothing left on screen is above that."}</p>`,
     };
 }
@@ -399,7 +399,7 @@ function renderChart(rows, shapes, field) {
     // Ticks and axis titles carry `data-tick`, which makes them obstacles for
     // layoutChartLabels(): no label settles on top of "100%" or "$2.00".
     const TICK = "-tracking-4 fill-gray-11 font-mono tabular-nums text-2xs";
-    const grid = [0, 25, 50, 75, 100].map((value) => `<line class="stroke-gray-3"
+    const grid = [0, 25, 50, 75, 100].map((value) => `<line class="stroke-alpha-10"
         x1="${L}" x2="${W - R}" y1="${py(value / 100)}" y2="${py(value / 100)}"/>
         <text class="${TICK}" data-tick x="${L - 8}" y="${py(value / 100) + 4}"
             text-anchor="end">${value}%</text>`).join("");
@@ -441,8 +441,8 @@ function renderChart(rows, shapes, field) {
         aria-label="Score against cost per trial">
         ${bands.bands}
         ${grid}
-        <line class="stroke-gray-5" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
-        <line class="stroke-gray-5" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
+        <line class="stroke-alpha-10" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
+        <line class="stroke-alpha-10" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
         ${xAxis}
         <text class="${AXIS_TITLE}" data-tick x="${L}" y="${T - 12}">Score</text>
         <text class="${AXIS_TITLE}" data-tick x="${W - R}" y="${H - 6}"
