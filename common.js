@@ -779,7 +779,7 @@ function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
     return `<dl class="gap-4 grid grid-cols-2 m-0 mb-8 md:grid-cols-4">${cells.map(([label, value]) =>
-        `<div class="bg-gray-2 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
+        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
             class="-tracking-4 font-mono leading-tight text-2xs text-gray-11 uppercase">${
             escapeHtml(label)}</dt><dd class="font-bold leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
