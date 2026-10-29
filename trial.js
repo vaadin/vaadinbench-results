@@ -88,17 +88,22 @@ const TYPE_RINGS = {
 
 // The task is the page's h1, under the breadcrumb, which carries the model and
 // configuration and the way back to them.
+// Quieter than a link in running text: grey until hovered.
+const CRUMB_LINK = "no-underline text-gray-11 hover:text-gray-12 hover:underline";
+
 function renderCrumb(config = configOf(trial.job)) {
     // The separator between levels has to differ from the one inside a level:
     // "Leaderboard · haiku · skills-tools" reads as three siblings when it is
     // really one link and then a model-and-configuration pair.
     // One list item per level; the chevron opens the level it leads to, and is
     // hidden from screen readers, which announce the list's structure instead.
+    // Everything in it is 8px apart: levels, chevron, and the parts of a level.
     document.getElementById("crumb").innerHTML =
-        `<li><a class="${LINK}" href="${leaderboardUrl()}">Leaderboard</a></li>
-         <li class="flex gap-2 items-baseline"><span class="flex self-center text-gray-11">${lucide("chevron-right")}</span>
-         <a class="${LINK}" href="${runUrl(trial.model, config, effortOf(trial))}">${modelLabel(trial.model, effortOf(trial))}
-            <span class="text-gray-11">·</span> ${escapeHtml(config)}</a></li>`;
+        `<li><a class="${CRUMB_LINK}" href="${leaderboardUrl()}">Leaderboard</a></li>
+         <li class="flex gap-2 items-center"><span class="flex text-gray-11">${lucide("chevron-right")}</span>
+         <a class="${CRUMB_LINK} flex flex-wrap gap-2 items-center" href="${runUrl(trial.model, config, effortOf(trial))}">${
+            modelMark(trial.model, "h-4 shrink-0 w-4")}<span>${escapeHtml(modelParts(trial.model).name)}</span>${
+            effortBadge(effortOf(trial))}<span>·</span><span>${escapeHtml(config)}</span></a></li>`;
 }
 
 // If the caller said which run it wanted and the file says otherwise, the file
