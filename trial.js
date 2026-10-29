@@ -126,10 +126,9 @@ function renderWrongJob(wanted) {
 
 function renderHeader() {
     return `${syntheticBanner(trial.synthetic)}
-        <p class="m-0 mb-6 text-gray-11 wrap-anywhere">
+        <p class="m-0 mb-8 text-gray-11 wrap-anywhere">
             ${escapeHtml(trial.agent ?? "agent")} ${escapeHtml(trial.agent_version ?? "")}
-            · attempt ${trial.attempt} · job <span class="align-bottom inline-block max-w-xs truncate"
-                title="${escapeHtml(trial.job)}">${escapeHtml(trial.job)}</span>
+            · attempt ${trial.attempt} · job ${escapeHtml(trial.job)}
         </p>
         ${metricCards([
             ["Outcome", outcome(trial)],

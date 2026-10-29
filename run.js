@@ -26,7 +26,7 @@ function renderHeader(rows) {
             ["Time / trial", duration(time / rows.length)],
             ["Total cost", money(cost)],
         ])}
-        <h2 class="${SECTION}">Trials</h2>`;
+        <h2 class="font-bold leading-tight m-0 mb-6 mt-8 text-2xl tracking-0">Trials</h2>`;
 }
 
 function renderTrials(rows) {
@@ -36,10 +36,13 @@ function renderTrials(rows) {
             || a.attempt - b.attempt)
         // The task link keeps the row's ink until hover: the whole row is the
         // target, so nothing inside it should look like the one clickable part.
-        .map((trial) => `<tr class="cursor-pointer group hover:bg-gray-2" data-href="${trialUrl(trial.id, trial.job)}">
-            <td class="${TD}"><a class="no-underline text-gray-12 group-hover:underline"
+        // Laid out as the leaderboard is: 72px rows, the name in 16 Bold as the
+        // link, and fixed columns (widths on the header), the task taking what
+        // the others leave and the job id cut to it.
+        .map((trial) => `<tr class="cursor-pointer group h-18 hover:bg-gray-2" data-href="${trialUrl(trial.id, trial.job)}">
+            <td class="${TD}"><a class="block font-bold leading-snug no-underline text-base text-gray-12 tracking-1 truncate group-hover:underline"
                 href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
-                <span class="block max-w-xs mt-0.5 text-2xs text-gray-11 truncate"
+                <span class="block mt-0.5 text-2xs text-gray-11 truncate"
                 title="${escapeHtml(trial.job)}">${escapeHtml(trial.job)}</span></td>
             <td class="${TD_NUM}">${trial.attempt}</td>
             <td class="${TD}">${outcomeIcons(trial)}</td>
@@ -49,11 +52,11 @@ function renderTrials(rows) {
             <td class="${TD_NUM}">${money(trial.cost_usd)}</td>
         </tr>`).join("");
 
-    return `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-170 w-full">
+    return `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-256 table-fixed w-full">
         <thead><tr>
-            <th class="${TH}">Task</th><th class="${TH_NUM}">Attempt</th><th class="${TH}">Outcome</th>
-            <th class="${TH_NUM}">Time</th><th class="${TH_NUM}">Steps</th>
-            <th class="${TH_NUM}">Out. tokens</th><th class="${TH_NUM}">Cost</th>
+            <th class="${TH}">Task</th><th class="${TH_NUM} w-28">Attempt</th><th class="${TH} w-28">Outcome</th>
+            <th class="${TH_NUM} w-28">Time</th><th class="${TH_NUM} w-24">Steps</th>
+            <th class="${TH_NUM} w-38">Out. tokens</th><th class="${TH_NUM} w-28">Cost</th>
         </tr></thead>
         <tbody class="${TBODY}">${body}</tbody>
     </table></div>`;

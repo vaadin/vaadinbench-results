@@ -3,7 +3,7 @@
    the groups. Hand-written, and only what the pages use: tests/test_styles.py
    fails on an unused one.
 
-   Type scale (Regular and Mono; Medium for 16 Medium; Bold for 16 Bold and 32 up):
+   Type scale (Regular and Mono; Medium for 16 Medium; Bold for 16 Bold, 22 Bold and 32 up):
      11 Mono  font-mono leading-none text-3xs tracking-0 (effort badges)
      12 Mono  -tracking-4 font-mono leading-tight text-2xs
      12       font-normal leading-snug text-2xs tracking-1
@@ -14,8 +14,9 @@
      16 Bold  font-bold leading-snug text-base tracking-1 (leaderboard model names)
      18       font-normal leading-snug text-lg tracking-1
      22       font-normal leading-snug text-xl tracking-1
-     32 Bold  font-bold leading-tight text-2xl tracking-0 (page titles, KPI values)
-     44 Bold  -tracking-1 font-bold leading-tight text-3xl (h1s: the wordmark, the run page's title) */
+     22 Bold  font-bold leading-snug text-xl tracking-1 (KPI values)
+     32 Bold  font-bold leading-tight text-2xl tracking-0 (subheadings)
+     44 Bold  -tracking-1 font-bold leading-tight text-3xl (h1s: the wordmark, the run and trial titles) */
 
 
 /* Base */
@@ -501,10 +502,6 @@ html {
     display: grid;
 }
 
-.inline-block {
-    display: inline-block;
-}
-
 .inline-flex {
     display: inline-flex;
 }
@@ -721,10 +718,6 @@ html {
     height: 1rem; /* 16px */
 }
 
-.h-5 {
-    height: 1.25rem; /* 20px */
-}
-
 .h-6 {
     height: 1.5rem; /* 24px */
 }
@@ -905,10 +898,6 @@ html {
 
 .max-w-2xl {
     max-width: 42rem; /* 672px */
-}
-
-.max-w-xs {
-    max-width: 20rem; /* 320px */
 }
 
 .max-w-full {
@@ -1286,11 +1275,6 @@ html {
     vertical-align: -0.125em;
 }
 
-/* An inline-block that clips its overflow has its baseline at its bottom edge */
-.align-bottom {
-    vertical-align: bottom;
-}
-
 
 /* Whitespace */
 
@@ -1325,8 +1309,8 @@ html {
     width: 1rem; /* 16px */
 }
 
-.w-5 {
-    width: 1.25rem; /* 20px */
+.w-6 {
+    width: 1.5rem; /* 24px */
 }
 
 .w-7 {
