@@ -3,12 +3,13 @@
    the groups. Hand-written, and only what the pages use: tests/test_styles.py
    fails on an unused one.
 
-   Type scale (Regular and Mono; Bold for 16 Bold and 32 up):
+   Type scale (Regular and Mono; Medium for 16 Medium; Bold for 16 Bold and 32 up):
      12 Mono  -tracking-4 font-mono leading-tight text-2xs
      12       font-normal leading-snug text-2xs tracking-1
      13 Mono  font-mono leading-tight text-xs tracking-0 (code; uppercase for actions)
      14       font-normal leading-snug text-sm tracking-1
      16       font-normal leading-snug text-base tracking-1
+     16 Medium font-medium leading-snug text-base tracking-1 (configuration names in the config help)
      16 Bold  font-bold leading-snug text-base tracking-1 (leaderboard model names)
      18       font-normal leading-snug text-lg tracking-1
      22       font-normal leading-snug text-xl tracking-1
@@ -523,6 +524,10 @@ html {
 
 .font-normal {
     font-weight: 400;
+}
+
+.font-medium {
+    font-weight: 500;
 }
 
 .font-bold {

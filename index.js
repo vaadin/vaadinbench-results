@@ -132,7 +132,7 @@ function renderConfigNotes(configs) {
             <p class="${EYEBROW} mb-3">Configurations</p>
             <dl class="flex flex-col gap-3 m-0">${described.map((config) => `
                 <div>
-                    <dt class="text-gray-12">${escapeHtml(config)}</dt>
+                    <dt class="font-medium leading-snug text-base text-gray-12 tracking-1">${escapeHtml(config)}</dt>
                     <dd class="m-0 mt-1 text-gray-11">${escapeHtml(notes[config])}</dd>
                 </div>`).join("")}</dl>
         </div>`;
