@@ -175,17 +175,14 @@ function groupState(kinds) {
     return shown === kinds.length ? "on" : "some";
 }
 
-// A row is a box, a label and a count. The box is drawn, not a checkbox, because
-// it needs the third state; the label is grey only while its kinds are hidden.
+// A row is a box, a label and a count. The box is a Lucide icon, not a checkbox,
+// because it needs the third state; the label is grey only while its kinds are
+// hidden.
 const FACET = "bg-transparent border-0 cursor-pointer flex font-sans gap-2 items-center leading-snug p-0 py-1 text-left text-sm tracking-1 w-full";
-const FACET_BOX = "border box-border flex h-3 items-center justify-center rounded-xs shrink-0 w-3";
 const FACET_STATES = {
-    on: { button: `${FACET} text-gray-12`, box: `${FACET_BOX} border-blue-9`,
-        mark: '<span class="bg-blue-9 h-1.5 rounded-xs w-1.5"></span>' },
-    some: { button: `${FACET} text-gray-12`, box: `${FACET_BOX} border-blue-9`,
-        mark: '<span class="bg-blue-9 h-0.5 rounded-full w-2"></span>' },
-    off: { button: `${FACET} text-gray-11 hover:text-gray-12`, box: `${FACET_BOX} border-gray-5`,
-        mark: "" },
+    on: { button: `${FACET} text-gray-12`, box: lucide("square-check", "h-4 shrink-0 text-blue-11 w-4") },
+    some: { button: `${FACET} text-gray-12`, box: lucide("square-minus", "h-4 shrink-0 text-blue-11 w-4") },
+    off: { button: `${FACET} text-gray-11 hover:text-gray-12`, box: lucide("square") },
 };
 
 function renderRow(label, kinds, count, depth) {
@@ -194,7 +191,7 @@ function renderRow(label, kinds, count, depth) {
     return `<li${depth ? ' class="pl-4"' : ""}>
         <button class="${look.button}" data-kinds="${escapeHtml(kinds.join(","))}"
             data-state="${state}" aria-pressed="${state !== "off"}">
-            <span class="${look.box}" aria-hidden="true">${look.mark}</span>
+            ${look.box}
             <span class="flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">${escapeHtml(label)}</span>
             <span class="shrink-0 tabular-nums">${count}</span>
         </button>
