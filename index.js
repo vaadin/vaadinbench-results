@@ -128,7 +128,7 @@ function renderConfigNotes(configs) {
     const label = "What each configuration gave the agent";
     return `<button class="bg-transparent border-0 cursor-pointer flex p-0 text-gray-11 hover:text-gray-12"
             popovertarget="config-help" aria-label="${label}" title="${label}">${lucide("circle-help")}</button>
-        <div class="bg-white border border-gray-3 box-border inset-auto m-0 opacity-0 origin-top-left p-4 rounded-lg scale-97 shadow-xl text-gray-12 transition-all transition-discrete dark:bg-gray-1 open:opacity-100 open:scale-100 starting:open:opacity-0 starting:open:scale-97 motion-reduce:transition-none"
+        <div class="bg-white border border-gray-3 box-border inset-auto m-0 opacity-0 origin-top-left p-5 rounded-lg scale-97 shadow-xl text-gray-12 transition-all transition-discrete dark:bg-gray-1 open:opacity-100 open:scale-100 starting:open:opacity-0 starting:open:scale-97 motion-reduce:transition-none"
             id="config-help" popover>
             <p class="${EYEBROW} mb-4">Configurations</p>
             <dl class="flex flex-col gap-4 m-0">${described.map((config) => `
@@ -471,10 +471,12 @@ function syncUrl() {
 document.getElementById("content").addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
     if (tab) {
-        noteTabSwitch();
-        state.tab = tab.dataset.tab;
-        syncUrl();
-        render();
+        const id = tab.dataset.tab;
+        switchTab(id, () => {
+            state.tab = id;
+            syncUrl();
+            render();
+        });
         return;
     }
     const sort = event.target.closest("[data-sort]");
