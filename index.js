@@ -5,15 +5,15 @@ let trials = [];
 let runs = [];
 const params = new URLSearchParams(location.search);
 const COLUMNS = [
-    { key: "model", label: "Model", dir: "asc",
+    { key: "model", label: "Model", width: "w-60", dir: "asc",
         value: (row) => `${modelWithEffort(row.model, row.effort)} ${row.config}`.toLowerCase() },
-    { key: "score", label: "Score", num: true, dir: "desc",
+    { key: "score", label: "Score", width: "w-24", num: true, dir: "desc",
         value: (row) => row.rate ?? -1 },
-    { key: "solved", label: "Solved", num: true, dir: "desc", value: (row) => row.solved },
-    { key: "tasks", label: "Tasks", num: true, dir: "desc", value: (row) => row.tasks.size },
-    { key: "cost", label: "Cost / trial", num: true, dir: "asc",
+    { key: "solved", label: "Solved", width: "w-28", num: true, dir: "desc", value: (row) => row.solved },
+    { key: "tasks", label: "Tasks", width: "w-24", num: true, dir: "desc", value: (row) => row.tasks.size },
+    { key: "cost", label: "Cost / trial", width: "w-38", num: true, dir: "asc",
         value: (row) => row.cost / row.attempts },
-    { key: "time", label: "Time / trial", num: true, dir: "asc",
+    { key: "time", label: "Time / trial", width: "w-38", num: true, dir: "asc",
         value: (row) => row.duration / row.attempts },
 ];
 
@@ -41,12 +41,12 @@ const state = {
 // ask when comparing how much work two models did rather than what it billed.
 const METRICS = {
     cost: {
-        label: "cost per trial", axis: "Cost per trial",
+        label: "cost per trial", axis: "Cost per trial", short: "Cost / trial",
         value: (row) => row.cost / row.attempts,
         tick: (value) => `$${value.toFixed(2)}`, format: money,
     },
     tokens: {
-        label: "output tokens per trial", axis: "Output tokens per trial",
+        label: "output tokens per trial", axis: "Output tokens per trial", short: "Out. tokens / trial",
         value: (row) => row.out / row.attempts,
         tick: (value) => tokens(Math.round(value)), format: (value) => tokens(Math.round(value)),
     },
@@ -111,8 +111,9 @@ const CONFIG_NOTES = {
     "vaadin-skills-mcp-java": "The vaadin-skills setup with the newer /docs-java server in place of /docs.",
 };
 
-// One line per configuration, under its chips. Short on purpose: the point is
-// to say what the agent had, not to document the plugins.
+// One line per configuration, in a popover on the help icon beside the
+// configuration chips. Short on purpose: the point is to say what the agent had,
+// not to document the plugins.
 function renderConfigNotes(configs) {
     const notes = trials.length && trials.every((trial) => trial.agent === "codex")
         ? { ...CONFIG_NOTES,
@@ -121,124 +122,196 @@ function renderConfigNotes(configs) {
         : CONFIG_NOTES;
     const described = configs.filter((config) => notes[config]);
     if (!described.length) return "";
-    return `<dl class="config-notes">${described.map((config) => `
-        <dt>${escapeHtml(config)}</dt><dd>${escapeHtml(notes[config])}</dd>`
-    ).join("")}</dl>`;
+    // A native popover: it opens, closes on Escape or a click elsewhere, and
+    // tells assistive technology which, with no script. The script below only
+    // places it under its button. It fades and scales in from its top-left
+    // corner, the one nearest the button, and back out on close.
+    const label = "What each configuration gave the agent";
+    return `<button class="bg-transparent border-0 cursor-pointer flex p-0 text-gray-11 hover:text-gray-12"
+            popovertarget="config-help" aria-label="${label}" title="${label}">${lucide("circle-help")}</button>
+        <div class="bg-white border border-gray-3 box-border inset-auto m-0 opacity-0 origin-top-left p-5 rounded-lg scale-97 shadow-xl text-gray-12 transition-all transition-discrete dark:bg-gray-1 open:opacity-100 open:scale-100 starting:open:opacity-0 starting:open:scale-97 motion-reduce:transition-none"
+            id="config-help" popover>
+            <p class="${EYEBROW} mb-4">Configurations</p>
+            <dl class="flex flex-col gap-4 m-0">${described.map((config) => `
+                <div>
+                    <dt class="font-medium leading-snug text-base text-gray-12 tracking-1">${escapeHtml(config)}</dt>
+                    <dd class="m-0 mt-1 text-gray-11">${escapeHtml(notes[config])}</dd>
+                </div>`).join("")}</dl>
+        </div>`;
 }
 
 // An empty set means no filter rather than nothing selected: a page that opens
 // showing everything is the useful default, and clearing the last chip should
 // go back to that instead of emptying the table.
-// Each chip wears the colour its value is drawn in below -- a swatch for a
-// model, its shape for a configuration -- so the legend and the filter are the
-// same control, and picking a chip needs no cross-referencing.
-function renderFilters(hues, shapes) {
+// Each chip wears what its value is drawn with below -- a model its vendor's
+// mark, a configuration its shape -- so the legend and the filter are the same
+// control. A selected chip goes grey. They are toggles rather than actions, so
+// they are set in Regular 14, not an action's Mono uppercase.
+const CHIP = "border box-border cursor-pointer flex font-normal font-sans gap-2 h-8 items-center leading-snug px-4 rounded-full text-sm tracking-1";
+
+function chipClasses(pressed) {
+    return pressed
+        ? `${CHIP} bg-gray-3 border-gray-5 text-gray-12`
+        : `${CHIP} bg-background border-gray-3 text-gray-11 hover:border-gray-5`;
+}
+
+function renderFilters(shapes) {
     const models = [...new Set(trials.map((t) => t.model))].sort();
     const configs = [...new Set(trials.map((t) => configOf(t.job)))].sort();
-    const chip = (key, value, hue, mark, label) => `<button class="chip"
+    // `mark` is the value's icon and `label` its name, both already markup.
+    const chip = (key, value, mark, label) => `<button
+        class="${chipClasses(state[key].has(value))}"
         data-facet="${key}" data-value="${escapeHtml(value)}"
-        style="--chip:${hueFill(hue)};--chip-text:${hueText(hue)}"
-        aria-pressed="${state[key].has(value)}">${mark}${escapeHtml(label)}</button>`;
+        aria-pressed="${state[key].has(value)}">${mark}${label}</button>`;
     // Turning a filter off means unpressing every chip you pressed. One button
     // per row, because the two rows filter independently and clearing both when
     // only one is in the way is its own annoyance. It appears only with
     // something to clear: beside an untouched row it would be a control that
     // does nothing.
     //
-    // The cross is drawn rather than typed -- `×` sits off its own centre in
-    // most faces, and `✕` is missing from some. It carries a label for anyone
-    // not looking at it, since a bare cross says nothing aloud.
+    // An icon button, so it carries a label for anyone not looking at it.
     const clear = (key) => state[key].size
-        ? `<button class="chip-clear" data-clear="${key}"
+        ? `<button class="bg-transparent border-0 cursor-pointer flex h-8 items-center justify-center ml-1 p-0 rounded-full text-gray-11 w-8 hover:bg-gray-3 hover:text-gray-12"
+            data-clear="${key}"
             title="Clear the ${key === "models" ? "model" : "configuration"} filter"
             aria-label="Clear the ${key === "models" ? "model" : "configuration"} filter"
-            ><svg viewBox="0 0 12 12" aria-hidden="true"><path
-                d="M3.2 3.2l5.6 5.6M8.8 3.2l-5.6 5.6"/></svg></button>`
+            >${lucide("x")}</button>`
         : "";
-    return `<div class="filters">
-        <div class="filter">
-            <span class="key">Model</span>
-            ${models.map((model) => chip("models", model, hues.get(model),
-                `<i class="swatch"></i>`, shortModel(model))).join("")}
+    // Each row is a group of toggle buttons named by its key, so a screen reader
+    // announces "Model, group" before the first chip. A <label> would not do:
+    // it names a single form control, not a group of buttons. On a phone the
+    // name takes a line of its own, above its chips.
+    const key = (id, label, extra = "") => `<span class="flex gap-2 items-center mb-1 shrink-0 w-full md:mb-0 md:w-24"><span
+        class="${EYEBROW} box-edge-cap-alphabetic box-trim-both" id="${id}">${label}</span>${extra}</span>`;
+    return `<div class="flex flex-col gap-2 mb-10">
+        <div class="flex flex-wrap gap-1 items-center" role="group" aria-labelledby="filter-models">
+            ${key("filter-models", "Model")}
+            ${models.map((model) => chip("models", model, modelMark(model, "h-4 shrink-0 w-4"),
+                escapeHtml(modelParts(model).name))).join("")}
             ${clear("models")}
         </div>
-        <div class="filter">
-            <span class="key">Config</span>
-            ${configs.map((config) => chip("configs", config, "neutral",
-                shapeGlyph(shapes.get(config)), config)).join("")}
+        <div class="flex flex-wrap gap-1 items-center" role="group" aria-labelledby="filter-configs">
+            ${key("filter-configs", "Config", renderConfigNotes(configs))}
+            ${configs.map((config) => chip("configs", config,
+                shapeGlyph(shapes.get(config), "h-4 w-4"), escapeHtml(config))).join("")}
             ${clear("configs")}
         </div>
-        ${renderConfigNotes(configs)}
     </div>`;
 }
 
 function renderTabs() {
-    return `<div class="tabs">
-        ${[["leaderboard", "Leaderboard"], ["chart", "Chart"]].map(([id, label]) =>
-            `<button data-tab="${id}" aria-selected="${state.tab === id}">${label}</button>`
-        ).join("")}
-    </div>`;
+    return tabBar([["leaderboard", "Leaderboard"], ["chart", "Chart"]], state.tab);
+}
+
+// The sort as it was before a header click, so the arrows can move from it: the
+// sorted column's arrow turns over when its direction flips, and fades in on a
+// column that has just been picked while the old column's fades out. Cleared
+// once drawn, so redraws for any other reason do not animate. The motion is CSS
+// and off under reduced motion.
+let sortFrom = null;
+
+// One arrow, pointing down; ascending turns it over.
+function sortArrow(dir, motion = "") {
+    const turned = dir === "asc" ? " rotate-180" : "";
+    if (motion === "out") {
+        return lucide("arrow-down", `animate-disappear h-4 opacity-0${turned} shrink-0 w-4 motion-reduce:animate-none`);
+    }
+    const animation = { in: "animate-appear ", up: "animate-turn-up ", down: "animate-turn-down " }[motion] ?? "";
+    return lucide("arrow-down", `${animation}h-4${turned} shrink-0 w-4${animation ? " motion-reduce:animate-none" : ""}`);
 }
 
 function renderHead() {
     const cell = (column) => {
         const active = state.sort === column.key;
         const order = state.dir === "asc" ? "ascending" : "descending";
-        return `<th class="sort${column.num ? " num" : ""}" data-sort="${column.key}"
+        // The arrow alone marks the column being sorted by, and every header
+        // keeps a slot for it, so nothing shifts as the sort moves. Label
+        // and slot are one centred row, so the arrow sits on the label's middle
+        // and every header is the same height. A number column puts the slot
+        // first, keeping its label flush right over the numbers.
+        const base = column.num ? TH_NUM : TH;
+        const was = sortFrom && sortFrom.sort === column.key ? sortFrom : null;
+        let arrow = "";
+        if (active && !sortFrom) arrow = sortArrow(state.dir);
+        else if (active && !was) arrow = sortArrow(state.dir, "in");
+        else if (active) arrow = sortArrow(state.dir, was.dir === state.dir ? "" : state.dir === "asc" ? "up" : "down");
+        else if (was) arrow = sortArrow(was.dir, "out");
+        const slot = `<span class="flex h-4 shrink-0 w-4">${arrow}</span>`;
+        // The cell's trim does not reach into the flex row, so the label carries its own.
+        const label = `<span class="box-edge-cap-alphabetic box-trim-both">${escapeHtml(column.label)}</span>`;
+        return `<th class="${base} ${column.width} cursor-pointer select-none" data-sort="${column.key}"
             aria-sort="${active ? order : "none"}"
-            title="Sort by ${escapeHtml(column.label.toLowerCase())}">${
-            escapeHtml(column.label)}<span class="arrow">${
-            active ? (state.dir === "asc" ? "↑" : "↓") : ""}</span></th>`;
+            title="Sort by ${escapeHtml(column.label.toLowerCase())}"><span
+            class="${column.num ? "flex gap-1 items-center justify-end" : "flex gap-1 items-center"}">${
+            column.num ? slot + label : label + slot}</span></th>`;
     };
     const [model, ...rest] = COLUMNS;
     return `<thead><tr>
-        <th></th>${cell(model)}<th></th>${rest.map(cell).join("")}
+        <th class="${TH} w-14"></th>${cell(model)}<th class="${TH}"></th>${rest.map(cell).join("")}
     </tr></thead>`;
 }
 
-function renderLeaderboard(rows, hues, shapes) {
-    if (!rows.length) return `<p class="empty">Nothing matches this filter.</p>`;
+// The leaderboard's columns are fixed (table-fixed, widths on the header), so
+// filtering, which changes which names and ranks are in the table, cannot move
+// them. The score bar takes what is left, and the minimum width keeps it room
+// on a narrow screen, where the table scrolls instead.
+//
+// A row names its configuration in words, under the model and indented to line
+// up with its name, so it needs no shape: shapes are for the chart, where points
+// have no room for words.
+function renderLeaderboard(rows) {
+    if (!rows.length) return `<p class="${EMPTY}">Nothing matches this filter.</p>`;
     const body = sortRows(rows).map((row, i) => {
         // No fill at all at zero: a minimum width keeps a 1% score visible, but
-        // it would also draw a coloured nub on a row that solved nothing.
+        // it would also draw a coloured nub on a row that solved nothing. The
+        // width is data, so it is the one inline style.
         const fill = row.rate
-            ? `<span class="bar-fill" style="width:${row.rate * 100}%;background:${
-                hueFill(hues.get(row.model))}"></span>`
+            ? `<span class="${vendorBar(row.model)} block h-full min-w-1 rounded-full"
+                style="width:${row.rate * 100}%"></span>`
             : "";
-        return `<tr class="pick" data-model="${escapeHtml(row.model)}"
+        // The model's name is the link, so the row is reachable by keyboard and
+        // announced as one; the rest of the row is a mouse convenience for the
+        // same place, so it takes the hover tint.
+        return `<tr class="cursor-pointer h-18 hover:bg-gray-2" data-model="${escapeHtml(row.model)}"
             data-config="${escapeHtml(row.config)}"
-            data-effort="${escapeHtml(row.effort)}"
-            style="--row:${hueFill(hues.get(row.model))}">
-            <td class="rank">${i + 1}</td>
-            <td class="name"><span class="who"><i class="swatch"></i>${
-                escapeHtml(modelWithEffort(row.model, row.effort))}</span>
-                <span class="sub config-label">${shapeGlyph(shapes.get(row.config))}${
-                    escapeHtml(row.config)}</span></td>
-            <td class="bar"><span class="bar-track">${fill}</span></td>
-            <td class="num">${percent(row.rate)}</td>
-            <td class="num">${row.solved}/${row.graded}</td>
-            <td class="num">${row.tasks.size}</td>
-            <td class="num">${money(row.cost / row.attempts)}</td>
-            <td class="num">${duration(row.duration / row.attempts)}</td>
+            data-effort="${escapeHtml(row.effort)}">
+            <td class="${TD_NUM} text-gray-11">${i + 1}</td>
+            <td class="${TD}"><span class="flex gap-2 items-center">${
+                modelMark(row.model, "h-4 shrink-0 w-4")}<a class="font-normal leading-snug no-underline text-base text-gray-12 tracking-1 hover:underline"
+                href="${escapeHtml(runUrl(row.model, row.config, row.effort))}">${
+                escapeHtml(modelParts(row.model).name)}</a>${effortBadge(row.effort)}</span>
+                <span class="block mt-0.5 pl-6 text-2xs text-gray-11">${escapeHtml(row.config)}</span></td>
+            <td class="${TD}"><span
+                class="bg-gray-3 block h-2 overflow-hidden rounded-full">${fill}</span></td>
+            <td class="${TD_NUM}">${percent(row.rate)}</td>
+            <td class="${TD_NUM}">${row.solved}/${row.graded}</td>
+            <td class="${TD_NUM}">${row.tasks.size}</td>
+            <td class="${TD_NUM}">${money(row.cost / row.attempts)}</td>
+            <td class="${TD_NUM}">${duration(row.duration / row.attempts)}</td>
         </tr>`;
     }).join("");
 
-    return `<div class="wrap"><table>
+    return `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-256 table-fixed w-full">
         ${renderHead()}
-        <tbody>${body}</tbody>
+        <tbody class="${TBODY}">${body}</tbody>
     </table></div>`;
 }
 
 // The chart says what it is plotting and lets that be changed, because the two
-// x axes answer different questions and neither is the obvious default.
+// x axes answer different questions and neither is the obvious default. The
+// switch is a segmented control: one visually hidden radio per option.
 function renderChartHead(metric) {
     const options = [["cost", "Cost"], ["tokens", "Output tokens"]];
-    return `<div class="chart-head">
-        <h2 class="title">Score vs ${escapeHtml(metric.label)}</h2>
-        <div class="seg" role="group" aria-label="X axis">
-            ${options.map(([id, label]) => `<button data-x="${id}"
-                aria-pressed="${state.x === id}">${label}</button>`).join("")}
-        </div>
+    return `<div class="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <h2 class="font-normal leading-snug m-0 text-xl tracking-1">Score vs ${escapeHtml(metric.label)}</h2>
+        <fieldset class="border-0 m-0 p-0">
+            <legend class="sr-only">X axis</legend>
+            <div class="bg-gray-3 box-border flex h-10 p-1 rounded-lg w-fit">
+                ${options.map(([id, label]) => `<label class="cursor-pointer flex font-mono items-center leading-tight px-4 rounded text-gray-11 text-xs tracking-0 uppercase has-checked:bg-white has-checked:text-gray-12 has-focus-visible:outline-2 has-focus-visible:outline-gray-12 dark:has-checked:bg-gray-1"><input
+                    class="sr-only" type="radio" name="x" value="${id}"${
+                    state.x === id ? " checked" : ""}><span class="box-edge-cap-alphabetic box-trim-both">${label}</span></label>`).join("")}
+            </div>
+        </fieldset>
     </div>`;
 }
 
@@ -280,35 +353,65 @@ const QUADRANT = { score: 0.5 };
 function renderQuadrants(metric, xCut, px, py, box) {
     const x = Math.min(px(xCut), box.right), y = py(QUADRANT.score);
     if (!(x > box.left + 1)) return { bands: "", legend: "", note: "" };
-    const band = (kind, x1, y1, x2, y2) => `<rect class="band band-${kind}"
+    // Named for what each band means, not for which corner it sits in: the good
+    // corner is at the left only because cheaper is better on that axis.
+    const BANDS = {
+        good: { fill: "fill-teal-3", swatch: "bg-teal-3" },
+        poor: { fill: "fill-red-3", swatch: "bg-red-3" },
+    };
+    const band = (kind, x1, y1, x2, y2) => `<rect class="${BANDS[kind].fill}"
         x="${x1}" y="${y1}" width="${x2 - x1}" height="${y2 - y1}"/>`;
     // With the line off the right edge, nothing on screen is on the dear side
     // of it: there is no unattractive corner, so neither the band nor its
     // legend entry claims one.
     const poor = x < box.right - 1;
-    const swatch = (kind, label) =>
-        `<span><i class="band-swatch band-${kind}"></i>${label}</span>`;
+    // The wash is faint by design, so its swatch needs an edge of its own.
+    const swatch = (kind, label) => `<span class="flex gap-2 items-center"><span
+        class="${BANDS[kind].swatch} border border-gray-5 box-border h-2.5 rounded-xs w-3.5"></span>${label}</span>`;
     return {
         bands: band("good", box.left, box.top, x, y)
             + (poor ? band("poor", x, y, box.right, box.bottom) : ""),
-        legend: `<div class="legend legend-bands">
+        legend: `<div class="${LEGEND}">
             ${swatch("good", "Most attractive quadrant")}
             ${poor ? swatch("poor", "Least attractive") : ""}
         </div>`,
-        note: `<p class="chart-note">Green: more than ${percent(QUADRANT.score)} of the
+        note: `<p class="${NOTE} mt-3">Teal: more than ${percent(QUADRANT.score)} of the
             graded trials solved, for under ${escapeHtml(metric.format(xCut))} a trial.${
-            poor ? ` Grey: less than that, for more than that. The other two corners
+            poor ? ` Red: less than that, for more than that. The other two corners
             are the trade-off.` : " Nothing left on screen is above that."}</p>`,
     };
 }
 
+const LEGEND = "flex flex-wrap gap-x-4 gap-y-2 mt-4 text-gray-11";
+
+// The card a chart point opens: who (vendor mark, model, effort), in which
+// configuration, and the two numbers the point is plotted from.
+let chartCards = [];
+
+// The configuration's shape sits in the mark's 16px column, so its name lines
+// up under the model's.
+function pointCard(row, metric, shapes) {
+    // Labelled like the KPI cards and the table headings: 13 Mono uppercase.
+    const line = (label, value) => `<div class="flex gap-6 items-baseline justify-between">
+        <dt class="font-mono leading-tight text-gray-11 text-xs tracking-0 uppercase">${label}</dt><dd class="m-0">${value}</dd></div>`;
+    return `<div class="flex gap-2 items-center">${modelMark(row.model, "h-4 shrink-0 w-4")}<span
+            class="font-normal leading-snug text-base tracking-1">${escapeHtml(modelParts(row.model).name)}</span>${
+            effortBadge(row.effort)}</div>
+        <div class="flex gap-2 items-center mt-2 text-gray-11"><span class="flex justify-center shrink-0 w-4">${
+            shapeGlyph(shapes.get(row.config))}</span>${escapeHtml(row.config)}</div>
+        <dl class="border-gray-3 border-t flex flex-col gap-3 m-0 mt-4 pt-4">
+            ${line("Score", `${percent(row.rate)} <span class="text-gray-11">${row.solved}/${row.graded}</span>`)}
+            ${line(metric.short, escapeHtml(metric.format(metric.value(row))))}
+        </dl>`;
+}
+
 // Score against cost: the question a ranking cannot answer, because the cheap
 // row and the accurate row are never next to each other in one.
-function renderChart(rows, hues, shapes, field) {
+function renderChart(rows, shapes, field) {
     const metric = METRICS[state.x] ?? METRICS.cost;
     const head = renderChartHead(metric);
     const points = plottable(rows);
-    if (!points.length) return `${head}<p class="empty">Nothing to plot.</p>`;
+    if (!points.length) return `${head}<p class="${EMPTY}">Nothing to plot.</p>`;
 
     const W = 900, H = 380, L = 52, R = 28, T = 34, B = 44;
     const plotW = W - L - R, plotH = H - T - B;
@@ -324,84 +427,93 @@ function renderChart(rows, hues, shapes, field) {
     const bands = renderQuadrants(metric, xCut, px, py,
         { left: L, right: W - R, top: T, bottom: T + plotH });
 
-    const grid = [0, 25, 50, 75, 100].map((value) => `<line class="gridline"
+    // Ticks and axis titles carry `data-tick`, which makes them obstacles for
+    // layoutChartLabels(): no label settles on top of "100%" or "$2.00".
+    const TICK = "-tracking-4 fill-gray-11 font-mono tabular-nums text-2xs";
+    const grid = [0, 25, 50, 75, 100].map((value) => `<line class="stroke-alpha-10"
         x1="${L}" x2="${W - R}" y1="${py(value / 100)}" y2="${py(value / 100)}"/>
-        <text class="tick" x="${L - 8}" y="${py(value / 100) + 4}"
+        <text class="${TICK}" data-tick x="${L - 8}" y="${py(value / 100) + 4}"
             text-anchor="end">${value}%</text>`).join("");
 
-    const xAxis = xTicks.map((value) => `<text class="tick" x="${px(value)}"
+    const xAxis = xTicks.map((value) => `<text class="${TICK}" data-tick x="${px(value)}"
         y="${T + plotH + 18}" text-anchor="middle">${escapeHtml(metric.tick(value))}</text>`)
         .join("");
 
-    const names = trimCommonPrefix([...new Set(points.map((p) => p.model))]);
+    const modelCount = new Set(points.map((p) => p.model)).size;
+    const efforts = new Map();
+    for (const p of points) efforts.set(p.model, (efforts.get(p.model) ?? new Set()).add(p.effort));
 
-    // Every point keeps its name, coloured to its model. Where they land is
+    // A point says who and how by itself: its colour is the vendor's and its
+    // shape the configuration. So a label is only the model name, with the
+    // effort where that model appears at more than one; with one model in the
+    // plot, whose name the chip above already says, it is effort and
+    // configuration. The rest is in the point's card. Where labels land is
     // settled after the fact by layoutChartLabels(), which can measure the text.
-    // Each marker also gets an invisible disc, so a 6px shape is not a 6px target.
-    const dots = points.map((row) => {
+    // Each marker also gets an invisible disc, so a 6px shape is not a 6px
+    // target, and each point is focusable, so the cards are not mouse-only.
+    const cards = [];
+    const dots = points.map((row, i) => {
         const x = px(metric.value(row)), y = py(row.rate);
-        // With one model in the plot trimCommonPrefix leaves nothing useful of
-        // its name, and the chip above already says which model this is.
-        const name = [names.size > 1 ? names.get(row.model) : "", row.effort, row.config].filter(Boolean).join(" · ");
-        const tip = `${modelWithEffort(row.model, row.effort)} · ${row.config} — ${percent(row.rate)}`
-            + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))}/trial`;
-        return `<g data-tip="${escapeHtml(tip)}">
-            <circle class="hit" cx="${x}" cy="${y}" r="13"/>
-            ${marker(shapes.get(row.config), x, y, `fill:${hueFill(hues.get(row.model))}`)}
-            <text class="dot-label" data-cx="${x}" data-cy="${y}" x="${x + 11}"
-                y="${y + 4}" style="fill:${hueText(hues.get(row.model))}">${escapeHtml(name)}</text>
+        const name = modelCount > 1
+            ? [modelParts(row.model).name, efforts.get(row.model).size > 1 ? row.effort : ""].filter(Boolean).join(" ")
+            : [row.effort, row.config].filter(Boolean).join(" · ");
+        const spoken = `${modelWithEffort(row.model, row.effort)}, ${row.config}: ${percent(row.rate)}`
+            + ` (${row.solved}/${row.graded}), ${metric.format(metric.value(row))} ${metric.label}`;
+        cards.push(pointCard(row, metric, shapes));
+        return `<g class="cursor-pointer" data-tip="${i}" role="img" aria-label="${escapeHtml(spoken)}" tabindex="0">
+            <circle class="fill-transparent" cx="${x}" cy="${y}" r="13"/>
+            ${marker(shapes.get(row.config), x, y, vendorText(row.model))}
+            <text class="fill-gray-11 text-2xs" data-label data-cx="${x}" data-cy="${y}"
+                x="${x + 11}" y="${y + 4}">${escapeHtml(name)}</text>
         </g>`;
     }).join("");
+    chartCards = cards;
 
-    const models = [...hues].filter(([model]) => points.some((p) => p.model === model))
-        .map(([model, hue]) => `<span><i style="background:${hueFill(hue)}"></i>
-            ${escapeHtml(shortModel(model))}</span>`).join("");
-    // Neutral legend markers explain configuration shapes without implying
-    // another colour mapping alongside the model colours.
     const configs = [...shapes].filter(([config]) => points.some((p) => p.config === config))
-        .map(([config, shape]) => `<span>${
+        .map(([config, shape]) => `<span class="flex gap-2 items-center">${
             shapeGlyph(shape)}${escapeHtml(config)}</span>`).join("");
 
-    return `${head}<div class="chart-wrap"><div class="tip" hidden></div>
-    <svg class="chart" viewBox="0 0 ${W} ${H}" role="img"
+    const AXIS_TITLE = "-tracking-4 fill-gray-11 font-mono text-2xs uppercase";
+    return `${head}<div class="bg-gray-1 border border-gray-3 pb-2 pt-4 px-4 relative rounded-lg"><div
+        class="absolute bg-white border border-gray-3 box-border p-4 pointer-events-none rounded-lg shadow-xl tabular-nums text-gray-12 whitespace-nowrap z-10 dark:bg-gray-1"
+        data-tooltip hidden></div>
+    <svg class="block h-auto overflow-visible w-full" data-chart viewBox="0 0 ${W} ${H}" role="group"
         aria-label="Score against cost per trial">
         ${bands.bands}
         ${grid}
-        <line class="axis" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
-        <line class="axis" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
+        <line class="stroke-alpha-10" x1="${L}" x2="${W - R}" y1="${T + plotH}" y2="${T + plotH}"/>
+        <line class="stroke-alpha-10" x1="${L}" x2="${L}" y1="${T}" y2="${T + plotH}"/>
         ${xAxis}
-        <text class="axis-title" x="${L}" y="${T - 12}">Score</text>
-        <text class="axis-title" x="${W - R}" y="${H - 6}"
+        <text class="${AXIS_TITLE}" data-tick x="${L}" y="${T - 12}">Score</text>
+        <text class="${AXIS_TITLE}" data-tick x="${W - R}" y="${H - 6}"
             text-anchor="end">${escapeHtml(metric.axis)}</text>
         ${dots}
     </svg></div>
     ${bands.legend}
-    <p class="chart-note">Color = model · Shape = configuration</p>
-    <div class="legend">${models}</div>
-    <div class="legend config-legend">${configs}</div>
+    <p class="${NOTE} mt-3">Shape = configuration</p>
+    <div class="${LEGEND}">${configs}</div>
     ${bands.note}`;
 }
 
 function render() {
     const rows = summarize(visible());
-    // Both maps are built from every trial, not the filtered set, so a model
-    // keeps its colour and a configuration its shape as chips are toggled.
-    const hues = hueMap(trials.map((trial) => trial.model));
+    // Built from every trial, not the filtered set, so a configuration keeps its
+    // shape as chips are toggled.
     const shapes = shapeMap(trials.map((trial) => configOf(trial.job)));
-    document.getElementById("content").innerHTML = [
+    showContent([
         syntheticBanner(runs.some((run) => run.synthetic)),
         renderTabs(),
-        renderFilters(hues, shapes),
-        state.tab === "chart"
+        renderFilters(shapes),
+        tabPanel(state.tab, state.tab === "chart"
             // The chart is drawn from the filtered rows but shades its quadrants
             // against the whole field, so the same result keeps the same verdict
             // however the chips are set.
-            ? renderChart(rows, hues, shapes, plottable(summarize(trials)))
-            : renderLeaderboard(rows, hues, shapes),
-    ].join("");
+            ? renderChart(rows, shapes, plottable(summarize(trials)))
+            : renderLeaderboard(rows)),
+    ].join(""));
     const content = document.getElementById("content");
-    bindTips(content);
-    const chart = content.querySelector(".chart");
+    bindTips(content, (point) => chartCards[Number(point.dataset.tip)] ?? "");
+    const chart = content.querySelector("[data-chart]");
     layoutChartLabels(chart);
     document.fonts?.ready.then(() => layoutChartLabels(chart));
 }
@@ -426,28 +538,26 @@ function syncUrl() {
 document.getElementById("content").addEventListener("click", (event) => {
     const tab = event.target.closest("[data-tab]");
     if (tab) {
-        state.tab = tab.dataset.tab;
-        syncUrl();
-        render();
-        return;
-    }
-    const axis = event.target.closest("[data-x]");
-    if (axis) {
-        state.x = axis.dataset.x;
-        syncUrl();
-        render();
+        const id = tab.dataset.tab;
+        switchTab(id, () => {
+            state.tab = id;
+            syncUrl();
+            render();
+        });
         return;
     }
     const sort = event.target.closest("[data-sort]");
     if (sort) {
         const column = COLUMNS.find((entry) => entry.key === sort.dataset.sort);
         if (column) {
+            sortFrom = { sort: state.sort, dir: state.dir };
             state.dir = state.sort === column.key
                 ? (state.dir === "asc" ? "desc" : "asc")
                 : column.dir;
             state.sort = column.key;
             syncUrl();
             render();
+            sortFrom = null;
         }
         return;
     }
@@ -467,16 +577,48 @@ document.getElementById("content").addEventListener("click", (event) => {
         render();
         return;
     }
-    const row = event.target.closest("tr.pick");
-    if (row) location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
+    const row = event.target.closest("tr[data-model]");
+    if (row && !event.target.closest("a")) location.href = runUrl(row.dataset.model, row.dataset.config, row.dataset.effort);
+});
+
+// Places the configuration help under the button that opens it, inside the
+// page's 16px gutters, before it opens; and closes it on scroll rather than
+// leaving it behind. The width is set here, not by a class: a popover left to
+// size itself takes all the room to the right of where it is placed, so it
+// could never be pulled back inside the gutter. 24rem, or the viewport less
+// its gutters where that is narrower.
+function placePopover(popover) {
+    const button = document.querySelector(`[popovertarget="${popover.id}"]`);
+    if (!button) return;
+    const at = button.getBoundingClientRect();
+    const gutter = 16;
+    const width = Math.min(384, innerWidth - gutter * 2);
+    popover.style.width = `${width}px`;
+    popover.style.top = `${at.bottom + 8}px`;
+    popover.style.left = `${Math.max(gutter, Math.min(at.left, innerWidth - gutter - width))}px`;
+}
+
+// Toggle events do not bubble, so this listens in the capture phase.
+document.getElementById("content").addEventListener("beforetoggle", (event) => {
+    if (event.newState === "open") placePopover(event.target);
+}, true);
+addEventListener("scroll", () => {
+    document.querySelectorAll(":popover-open").forEach((popover) => popover.hidePopover());
+}, { passive: true });
+
+// The x-axis switch is a radio group, so it reports a change rather than a click.
+document.getElementById("content").addEventListener("change", (event) => {
+    if (event.target.name !== "x") return;
+    state.x = event.target.value;
+    syncUrl();
+    render();
 });
 
 fetchJson(dataUrl("index.json")).then((index) => {
     runs = index.runs ?? [];
     trials = runs.flatMap((run) => run.trials ?? []);
     if (!trials.length) {
-        document.getElementById("content").innerHTML =
-            `<p class="empty">No results published yet.</p>`;
+        showContent(`<p class="${EMPTY}">No results published yet.</p>`);
     } else {
         render();
     }

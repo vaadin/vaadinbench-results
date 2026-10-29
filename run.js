@@ -16,9 +16,7 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `<h2 class="title">${escapeHtml(modelWithEffort(wanted.model, wanted.effort))} ·
-            ${escapeHtml(wanted.config)}</h2>
-        ${metricsTable([
+    return section("Summary", "Across every trial of this configuration. Cost and time are per trial unless marked total.", metricCards([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
             ["Solved", `${solved}/${graded.length}`],
             ["Tasks", tasks.size],
@@ -27,8 +25,7 @@ function renderHeader(rows) {
             ["Cost / trial", money(cost / rows.length)],
             ["Time / trial", duration(time / rows.length)],
             ["Total cost", money(cost)],
-        ])}
-        <h2>Trials</h2>`;
+        ]));
 }
 
 function renderTrials(rows) {
@@ -36,25 +33,33 @@ function renderTrials(rows) {
         .sort((a, b) => a.task.localeCompare(b.task)
             || a.job.localeCompare(b.job)
             || a.attempt - b.attempt)
-        .map((trial) => `<tr class="pick" data-href="${trialUrl(trial.id, trial.job)}">
-            <td class="name"><a href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
-                <span class="sub">${escapeHtml(trial.job)}</span></td>
-            <td class="num">${trial.attempt}</td>
-            <td>${outcome(trial)}</td>
-            <td class="num">${duration(trial.duration_s)}</td>
-            <td class="num">${trial.steps}</td>
-            <td class="num">${tokens(trial.output_tokens)}</td>
-            <td class="num">${money(trial.cost_usd)}</td>
+        // The task link keeps the row's ink until hover: the whole row is the
+        // target, so nothing inside it should look like the one clickable part.
+        // Laid out as the leaderboard is: 72px rows, the name in 16 Regular as the
+        // link, and fixed columns (widths on the header), the task taking what
+        // the others leave and the job id cut to it.
+        .map((trial) => `<tr class="cursor-pointer group h-18 hover:bg-gray-2" data-href="${trialUrl(trial.id, trial.job)}">
+            <td class="${TD}"><a class="block font-normal leading-snug no-underline text-base text-gray-12 tracking-1 truncate group-hover:underline"
+                href="${trialUrl(trial.id, trial.job)}">${escapeHtml(shortTask(trial.task))}</a>
+                <span class="block mt-0.5 text-2xs text-gray-11 truncate"
+                title="${escapeHtml(trial.job)}">${escapeHtml(trial.job)}</span></td>
+            <td class="${TD_NUM}">${trial.attempt}</td>
+            <td class="${TD}">${outcomeIcons(trial)}</td>
+            <td class="${TD_NUM}">${duration(trial.duration_s)}</td>
+            <td class="${TD_NUM}">${trial.steps}</td>
+            <td class="${TD_NUM}">${tokens(trial.output_tokens)}</td>
+            <td class="${TD_NUM}">${money(trial.cost_usd)}</td>
         </tr>`).join("");
 
-    return `<div class="wrap"><table>
+    return section("Trials", "Every attempt, in task order. Open one for its trajectory, changes and verifier output.",
+        `<div class="${TABLE_WRAP}"><table class="border-collapse min-w-256 table-fixed w-full">
         <thead><tr>
-            <th>Task</th><th class="num">Attempt</th><th>Outcome</th>
-            <th class="num">Time</th><th class="num">Steps</th>
-            <th class="num">Out. tokens</th><th class="num">Cost</th>
+            <th class="${TH}">Task</th><th class="${TH_NUM} w-28">Attempt</th><th class="${TH} w-28">Outcome</th>
+            <th class="${TH_NUM} w-28">Time</th><th class="${TH_NUM} w-24">Steps</th>
+            <th class="${TH_NUM} w-38">Out. tokens</th><th class="${TH_NUM} w-28">Cost</th>
         </tr></thead>
-        <tbody>${body}</tbody>
-    </table></div>`;
+        <tbody class="${TBODY}">${body}</tbody>
+    </table></div>`);
 }
 
 const content = document.getElementById("content");
@@ -64,13 +69,13 @@ const content = document.getElementById("content");
 // is what every cell in the row is about.
 content.addEventListener("click", (event) => {
     if (event.target.closest("a")) return;
-    const row = event.target.closest("tr.pick");
+    const row = event.target.closest("tr[data-href]");
     if (row) location.href = row.dataset.href;
 });
 
 if (!wanted.model || !wanted.config) {
-    content.innerHTML =
-        `<p class="empty">No configuration requested. <a href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`;
+    showContent(
+        `<p class="${EMPTY}">No configuration requested. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
 } else {
     fetchJson(dataUrl("index.json")).then((index) => {
         const runs = index.runs ?? [];
@@ -79,12 +84,19 @@ if (!wanted.model || !wanted.config) {
             && (!wanted.effort || effortOf(trial) === wanted.effort));
 
         if (!rows.length) {
-            content.innerHTML = `<p class="empty">No trials for
-                ${escapeHtml(shortModel(wanted.model))} in
-                ${escapeHtml(wanted.config)}. <a href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`;
+            showContent(`<p class="${EMPTY}">No trials for
+                ${escapeHtml(modelText(wanted.model))} in
+                ${escapeHtml(wanted.config)}. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
         } else {
-            content.innerHTML = syntheticBanner(rows.some((t) => t.synthetic))
-                + renderHeader(rows) + renderTrials(rows);
+            // The page is about this one configuration, so it is the page's h1,
+            // under the breadcrumb. Laid out as a leaderboard row
+            // is: the configuration on a line of its own, indented to the name.
+            document.getElementById("title").innerHTML = `<span class="flex gap-3 items-center">${
+                modelMark(wanted.model, "h-10 shrink-0 w-10")}<span>${escapeHtml(modelParts(wanted.model).name)}</span>${
+                effortBadge(wanted.effort)}</span><span
+                class="block font-normal leading-snug mt-1 pl-13 text-gray-11 text-lg tracking-1">${escapeHtml(wanted.config)}</span>`;
+            showContent(syntheticBanner(rows.some((t) => t.synthetic))
+                + renderHeader(rows) + renderTrials(rows));
             document.title =
                 `${modelWithEffort(wanted.model, wanted.effort)} · ${wanted.config} · VaadinBench`;
         }
