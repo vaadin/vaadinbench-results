@@ -23,7 +23,7 @@ const NOTE = "m-0 text-2xs text-gray-11";
 // Tables share one wrapper, which scrolls a wide table sideways and draws no
 // frame, and one set of cells; the header row is set off by an off-blue band.
 // Rows are divided by the body (`divide-y`), so the last row needs no override.
-const TABLE_WRAP = "bg-gray-1 mb-5 overflow-x-auto overscroll-x-contain";
+const TABLE_WRAP = "bg-background mb-5 overflow-x-auto overscroll-x-contain";
 // Header cells are 48px high; their labels are 13 Mono in full-contrast ink,
 // trimmed to cap height so they sit centred in the cell.
 const TH = "bg-off-blue border-b border-gray-3 box-border box-edge-cap-alphabetic box-trim-both font-mono font-normal h-12 leading-tight p-0 px-4 text-gray-12 text-left text-xs tracking-0 uppercase whitespace-nowrap";
@@ -779,7 +779,7 @@ function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
     return `<dl class="gap-4 grid grid-cols-2 m-0 mb-8 md:grid-cols-4">${cells.map(([label, value]) =>
-        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
+        `<div class="bg-background border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
             class="-tracking-4 font-mono leading-tight text-2xs text-gray-11 uppercase">${
             escapeHtml(label)}</dt><dd class="font-bold leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
