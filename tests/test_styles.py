@@ -89,6 +89,14 @@ class StylesheetTests(unittest.TestCase):
                     start = i + 1
         self.assertEqual(offenders, [])
 
+    def test_no_heading_is_bold(self):
+        # Headings are Regular, as on mcp.vaadin.com; Bold is for figures and
+        # names in tables, never a heading.
+        for path in pages() + scripts():
+            with self.subTest(path.name):
+                bold = re.findall(r'<h[1-6]\b[^>]*class="[^"]*\bfont-bold\b', path.read_text())
+                self.assertEqual(bold, [])
+
     def test_static_classes_are_defined(self):
         # `group` is a marker for group-* variants, which name it in selectors.
         for path in pages() + scripts():
