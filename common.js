@@ -405,11 +405,11 @@ function outcome(trial) {
         title="${escapeHtml(trial.error)}">error</span>`;
 }
 
-// The same verdict as icon badges, for a table column: square, as tall as the
-// text badges and coloured as they are, each named by aria-label and, for the
-// pointer, a tooltip. An agent error beside a grade is its own badge, whose
-// tooltip carries the error itself.
-const ICON_BADGE = "box-border flex h-6 items-center justify-center rounded shrink-0 w-6";
+// The same verdict as icon badges, for a table column: as wide as the column,
+// as tall as the text badges and coloured as they are, each named by aria-label
+// and, for the pointer, a tooltip. An agent error beside a grade is its own
+// badge, sharing the width, whose tooltip carries the error itself.
+const ICON_BADGE = "box-border flex flex-1 h-6 items-center justify-center rounded";
 function outcomeIcons(trial) {
     const icon = (name, colours, label, tip = label) => `<span class="${ICON_BADGE} ${colours}" role="img"
         aria-label="${escapeHtml(label)}" title="${escapeHtml(tip)}">${lucide(name)}</span>`;
