@@ -16,7 +16,7 @@ function renderHeader(rows) {
     const tasks = new Set(rows.map((t) => t.task));
     const errored = rows.filter((t) => t.error).length;
 
-    return `${metricsTable([
+    return `${metricCards([
             ["Score", graded.length ? percent(solved / graded.length) : "—"],
             ["Solved", `${solved}/${graded.length}`],
             ["Tasks", tasks.size],
@@ -85,9 +85,12 @@ if (!wanted.model || !wanted.config) {
                 ${escapeHtml(wanted.config)}. <a class="${LINK}" href="${leaderboardUrl()}">Back to the leaderboard.</a></p>`);
         } else {
             // The page is about this one configuration, so it is the page's h1,
-            // in the header beside the way back.
-            document.getElementById("title").innerHTML =
-                `${modelLabel(wanted.model, wanted.effort)} · ${escapeHtml(wanted.config)}`;
+            // in the header beside the way back. Laid out as a leaderboard row
+            // is: the configuration on a line of its own, indented to the name.
+            document.getElementById("title").innerHTML = `<span class="flex gap-3 items-center">${
+                modelMark(wanted.model, "h-8 shrink-0 w-8")}<span>${escapeHtml(modelParts(wanted.model).name)}</span>${
+                effortBadge(wanted.effort)}</span><span
+                class="block font-normal leading-snug mt-1 pl-11 text-gray-11 text-lg tracking-1">${escapeHtml(wanted.config)}</span>`;
             showContent(syntheticBanner(rows.some((t) => t.synthetic))
                 + renderHeader(rows) + renderTrials(rows));
             document.title =

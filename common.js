@@ -744,19 +744,17 @@ function unescapeHtml(value) {
         .replace(/&amp;/g, "&");
 }
 
-// Summary figures as a one-row table rather than a flat run of label/value
-// pairs: it puts them in a frame like every other block of content and lines
-// the numbers up under their names. The values are set larger than the labels,
-// since they are what the row is for.
-function metricsTable(pairs) {
+// Summary figures as KPI cards: one card per figure, its name small above its
+// value, which is set large since it is what the card is for. A description
+// list, so each value is announced with its name.
+function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
-    return `<div class="${TABLE_WRAP}"><table class="border-collapse w-full">
-        <thead><tr>${cells.map(([label]) =>
-            `<th class="${TH}">${escapeHtml(label)}</th>`).join("")}</tr></thead>
-        <tbody><tr>${cells.map(([, value]) =>
-            `<td class="leading-snug px-4 py-3 tabular-nums text-left text-lg tracking-1 whitespace-nowrap">${value}</td>`).join("")}</tr></tbody>
-    </table></div>`;
+    return `<dl class="gap-4 grid grid-cols-2 m-0 mb-5 md:grid-cols-4">${cells.map(([label, value]) =>
+        `<div class="bg-gray-1 border border-gray-3 box-border flex flex-col gap-4 min-w-0 p-5 rounded-lg"><dt
+            class="box-edge-cap-alphabetic box-trim-both font-mono leading-tight text-gray-11 text-xs tracking-0 uppercase">${
+            escapeHtml(label)}</dt><dd class="font-bold leading-tight m-0 tabular-nums text-2xl tracking-0 whitespace-nowrap">${
+            value}</dd></div>`).join("")}</dl>`;
 }
 
 // A warning that has to survive a glance: a red edge on a tile.
