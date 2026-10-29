@@ -773,13 +773,13 @@ function unescapeHtml(value) {
 
 // A section of a page, laid out as mcp.vaadin.com lays its sections out: a
 // rule above, 32px to a heading in 32 Regular and, 6px under it, its one-line
-// description in 18 Regular grey, 24px to the content, and 40px below. `edges` names the rules
+// description in 18 Regular grey, 32px to the content, and 40px below. `edges` names the rules
 // (a top one by default; a section followed by something unruled takes both).
 const SECTION_TITLE = "font-normal leading-tight m-0 text-2xl tracking-0";
 const SECTION_LEAD = "font-normal leading-snug m-0 mt-1.5 text-gray-11 text-lg tracking-1";
 function section(title, lead, body, edges = "border-t") {
     return `<section class="border-gray-3 ${edges} pb-10 pt-8"><h2 class="${SECTION_TITLE}">${title}</h2>
-        <p class="${SECTION_LEAD}">${lead}</p><div class="mt-6">${body}</div></section>`;
+        <p class="${SECTION_LEAD}">${lead}</p><div class="mt-8">${body}</div></section>`;
 }
 
 // Summary figures as KPI cards: one card per figure, its name small above its
@@ -790,7 +790,7 @@ function metricCards(pairs) {
     const cells = pairs.filter(([, value]) => value !== null && value !== undefined);
     if (!cells.length) return "";
     return `<dl class="gap-4 grid grid-cols-2 m-0 md:grid-cols-4">${cells.map(([label, value]) =>
-        `<div class="bg-background border border-gray-3 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
+        `<div class="bg-gray-2 box-border flex flex-col gap-2 min-w-0 p-5 rounded-lg"><dt
             class="-tracking-4 font-mono leading-tight text-2xs text-gray-11 uppercase">${
             escapeHtml(label)}</dt><dd class="font-bold leading-snug m-0 tabular-nums text-xl tracking-1 whitespace-nowrap">${
             value}</dd></div>`).join("")}</dl>`;
@@ -891,41 +891,5 @@ function showError(error) {
         `<p class="${EMPTY}">Could not load the data: ${escapeHtml(error.message)}.${elsewhere}</p>`);
 }
 
-// An animated background: a Unicorn Studio scene (WebGL), whose player and
-// scene data load from outside this site at run time -- the player from
-// jsDelivr, the scene from Unicorn Studio. It sits behind the page in a fixed
-// layer the size of the window, out of the accessibility tree and the way of
-// clicks, and is not loaded at all under reduced motion. Should the player not
-// load, the layer goes and the page is as it was. It is blended so that it only
-// ever tints the page: multiply in light mode, where the scene's white drops out
-// and nothing comes out lighter than the page; screen in dark mode, where its
-// black drops out and only its bright parts show. The scene's field is a light grey
-// (#dfdfdf), not white: in light mode the scene is faded to a fifth, which leaves
-// that grey as a faint tint; in dark mode it is brightened until the field clips
-// to white and then inverted, so the field is black, drops out, and only the dots
-// come through.
-const BACKGROUND_PROJECT = "uQZQm2qUfWbxcybJ0RLZ";
-const BACKGROUND_PLAYER = "https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v2.4.3/dist/unicornStudio.umd.js";
-
-function loadBackground() {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const scene = document.createElement("div");
-    scene.className = "-z-10 fixed inset-0 mix-blend-multiply opacity-20 pointer-events-none dark:brightness-115 dark:invert dark:mix-blend-screen dark:opacity-100";
-    scene.setAttribute("aria-hidden", "true");
-    scene.dataset.usProject = BACKGROUND_PROJECT;
-    document.body.prepend(scene);
-    const start = () => window.UnicornStudio?.init?.();
-    window.UnicornStudio = window.UnicornStudio ?? { isInitialized: false };
-    const player = document.createElement("script");
-    player.src = BACKGROUND_PLAYER;
-    player.onload = () => {
-        if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start);
-        else start();
-    };
-    player.onerror = () => scene.remove();
-    document.head.appendChild(player);
-}
-
 localiseHomeLinks();
 renderBenchmarkBar();
-loadBackground();
