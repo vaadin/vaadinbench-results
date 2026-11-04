@@ -111,8 +111,8 @@ jobs are medium effort and the `luna-xhigh-*` job is xhigh. Configurations are
 named `vanilla` and `vaadin-skills`; reasoning effort is shown beside
 the model and remains part of the aggregation and drill-down key. Configuration
 markers use a uniform neutral color and distinct symbols.
-`publish.py` writes configuration data to JSON; `index.js`, `common.js` and
-`app.css` render it. All generated reports use the same fixed neutral styling
+`publish.py` writes configuration data to JSON; `index.js` and `common.js`
+render it, styled by `utilities.css`. All generated reports use the same fixed neutral styling
 for configuration labels and glyphs, with no per-configuration color map.
 The Astra suite is complete: its six passing Orders trials and 42 remaining-task
 trials now cover all eight tasks with three attempts each per configuration.
@@ -272,11 +272,16 @@ configuration. It is what a run was testing, which skills and tools the agent
 had, so `(model, configuration)` is the pair the leaderboard ranks and repeated
 runs of one configuration collapse into a single row.
 
-The colours are Vaadin's Aura theme. Aura computes nearly everything at runtime
-from `--aura-background-color`, using relative-colour syntax that needs Aura's
-own stylesheet, so `app.css` carries its formulas evaluated at Aura's defaults
-and written out as literal `oklch()`. The header comment names the source files
-to diff against when Aura moves.
+The styling follows Vaadin's brand guidelines, as on the Vaadin MCP landing page.
+Elements are styled only with utility classes named after Tailwind's, which
+`utilities.css` hand-writes without a Tailwind install: one property per class,
+grouped by property, and only the classes the pages use. Colours are 12-step
+scales written as `light-dark()` on `html`; type is Regular and Mono, with Medium
+only for configuration names in the config help, nothing in Bold, and no font
+files are shipped. Most markup is built in the page scripts, so that is where most
+classes live. `tests/test_styles.py` fails on an unused utility, a class with
+no definition, any rule that is not a utility, or a page that loads another
+stylesheet.
 
 They live at the repository root because that is where Pages serves this branch
 from; `.nojekyll` turns off the Jekyll pass, since there is nothing to render.
