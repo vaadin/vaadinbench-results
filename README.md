@@ -34,40 +34,50 @@ Everything on a card is counted from the benchmark's own index, so the list
 cannot disagree with the page it links to — the one thing a scan cannot infer is
 the name, which is why each folder carries a `benchmark.json`.
 
-### Current default: October 21, 2026 release
+### Current default: October 2026 release (expanded October 22)
 
-`release-20261021` contains 648 accepted trials: nine Flow tasks, three attempts
-for each model/effort/configuration pairing, and three configurations (`vanilla`,
-`vaadin-skills`, `vaadin-mcp`). The eight model/effort settings are Astra medium,
-Luna medium/xhigh and Sol medium on Codex, plus Haiku 5.5 medium/xhigh,
-Sonnet 5.5 medium and Opus 5.5 medium on Claude Code.
+`release-20261021` contains 1,440 accepted trials: nine Flow tasks, five attempts
+for each model/effort/configuration pairing, and four configurations (`vanilla`,
+`vaadin-skills`, `vaadin-mcp`, `vaadin-skills-mcp`). The eight model/effort settings
+are Astra medium, Luna medium/xhigh and Sol medium on Codex, plus Haiku 5.5
+medium/xhigh, Sonnet 5.5 medium and Opus 5.5 medium on Claude Code.
+The combined configuration enables both Vaadin skills and the Vaadin MCP server.
+Configurations use short labels and neutral symbols throughout the site.
 
-The exact selection is frozen in `releases/2026-10-21/selection.json`, copied
-from the completed suite's accepted-results list. The adjacent `manifest.json`
-records the planned slot, source result hash and reward for every trial.
-It contains one accepted source result per planned slot. Thirty-two externally
-interrupted attempts were excluded and replaced under the suite's quality policy;
-ordinary task, compiler and test failures remain included. The publisher rejects
-duplicate, incomplete, ungraded or errored selected results before writing data.
+The expanded suite retains all 648 accepted baseline trials and adds 792 trials:
+two further attempts per existing combination, plus five attempts per combination
+for skills with MCP. All 1,440 trials appear on the same default leaderboard,
+in 32 model/effort/configuration rows of 45 trials each. Reasoning effort remains
+part of the grouping and drill-down key.
 
-Rebuild the release with:
+The exact selection is frozen in `releases/2026-10-22/selection.json`. The adjacent
+`manifest.json` records each accepted slot, result path, source hash, reward and
+runtime provenance. `completion-validation.json` preserves the execution audit;
+`validation.json` records independent checks of the published report. The original
+648-trial selection and provenance remain in `releases/2026-10-21/`.
+Thirty-two baseline and fourteen supplemental externally interrupted attempts
+were excluded and replaced under the suite's quality policy; ordinary task,
+compiler and test failures remain included. The publisher rejects duplicate,
+incomplete, ungraded or errored selected results before writing data.
+
+Rebuild the full release with:
 
 ```bash
-python3 publish.py --selection releases/2026-10-21/selection.json
+python3 publish.py --selection releases/2026-10-22/selection.json
 ```
 
 The manifest points to source jobs in
 `/home/orca/code/vaadinbench/vaadinbench/jobs/`. Only those selected trials are
 imported, even when a source job also contains excluded attempts. Original
-within-job attempt numbers are retained so trial links remain stable.
-All 648 trials carry captured `verifier/agent.patch` files, which are published
-without baseline reconstruction. The benchmark metadata records selection hashes,
-quality policy and agent versions: 190 reused Codex trials on 0.162.1, 134 on
-0.163.0, and 324 Claude Code trials on 2.1.303. Original costs and timings are kept.
+within-job attempt numbers are retained so trial links remain stable. Publishing
+does not rerun the benchmark or grading. Recorded agent versions and original
+costs/timings are preserved: 190 Codex trials on 0.162.1, 530 on 0.163.0, and
+720 Claude Code trials on 2.1.303. Captured patches are used where available;
+no baseline reconstruction is used for this release.
 
 The original August results (`default`), September results (`all` and
 `vaadin-mcp-vs-java-mcp`) and the earlier October Codex set (`codex-202610`)
-remain on the benchmarks page. The root URL now opens `release-20261021`.
+remain on the benchmarks page. The root URL still opens `release-20261021`.
 
 ### October 15, 2026 snapshot (retained)
 
@@ -101,8 +111,8 @@ jobs are medium effort and the `luna-xhigh-*` job is xhigh. Configurations are
 named `vanilla` and `vaadin-skills`; reasoning effort is shown beside
 the model and remains part of the aggregation and drill-down key. Configuration
 markers use a uniform neutral color and distinct symbols.
-`publish.py` writes configuration data to JSON; `index.js`, `common.js` and
-`app.css` render it. All generated reports use the same fixed neutral styling
+`publish.py` writes configuration data to JSON; `index.js` and `common.js`
+render it, styled by `utilities.css`. All generated reports use the same fixed neutral styling
 for configuration labels and glyphs, with no per-configuration color map.
 The Astra suite is complete: its six passing Orders trials and 42 remaining-task
 trials now cover all eight tasks with three attempts each per configuration.
@@ -262,11 +272,16 @@ configuration. It is what a run was testing, which skills and tools the agent
 had, so `(model, configuration)` is the pair the leaderboard ranks and repeated
 runs of one configuration collapse into a single row.
 
-The colours are Vaadin's Aura theme. Aura computes nearly everything at runtime
-from `--aura-background-color`, using relative-colour syntax that needs Aura's
-own stylesheet, so `app.css` carries its formulas evaluated at Aura's defaults
-and written out as literal `oklch()`. The header comment names the source files
-to diff against when Aura moves.
+The styling follows Vaadin's brand guidelines, as on the Vaadin MCP landing page.
+Elements are styled only with utility classes named after Tailwind's, which
+`utilities.css` hand-writes without a Tailwind install: one property per class,
+grouped by property, and only the classes the pages use. Colours are 12-step
+scales written as `light-dark()` on `html`; type is Regular and Mono, with Medium
+only for configuration names in the config help, nothing in Bold, and no font
+files are shipped. Most markup is built in the page scripts, so that is where most
+classes live. `tests/test_styles.py` fails on an unused utility, a class with
+no definition, any rule that is not a utility, or a page that loads another
+stylesheet.
 
 They live at the repository root because that is where Pages serves this branch
 from; `.nojekyll` turns off the Jekyll pass, since there is nothing to render.

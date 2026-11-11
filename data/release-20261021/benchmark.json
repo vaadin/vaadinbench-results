@@ -1,14 +1,14 @@
 {
   "name": "Codex and Claude Code — October 2026",
-  "description": "648 accepted trials: nine Flow tasks, three attempts per task, vanilla / vaadin-skills / vaadin-mcp. Astra, Luna and Sol on Codex; Haiku 5.5, Sonnet 5.5 and Opus 5.5 on Claude Code. Luna and Haiku include medium and xhigh effort; other models use medium.",
+  "description": "1,440 accepted trials: nine Flow tasks, five attempts per task, vanilla / vaadin-skills / vaadin-mcp / vaadin-skills-mcp. Astra, Luna and Sol on Codex; Haiku 5.5, Sonnet 5.5 and Opus 5.5 on Claude Code. Luna and Haiku include medium and xhigh effort; other models use medium.",
   "release": {
-    "selection": "releases/2026-10-21/selection.json",
-    "selection_sha256": "91d0390d08afac974a741924f1175564c12fb7c426ec5d1a8a823b3f91ba9638",
+    "selection": "releases/2026-10-22/selection.json",
+    "selection_sha256": "4d838821da1298507b7d83137a955aae5835be1f572625a7c2b9cb34683dc2b3",
     "plan_sha256": "e8d291825744c14d3178dea252358f03c5de97fb9ad8454c0ea6b01d582e2732",
-    "selected_trials": 648,
+    "selected_trials": 1440,
     "model_effort_settings": 8,
-    "attempts_per_task": 3,
-    "excluded_attempts": 32,
+    "attempts_per_task": 5,
+    "excluded_attempts": 46,
     "quality_policy": {
       "exclude": [
         "framework exceptions",
@@ -39,18 +39,29 @@
     "agent_versions": {
       "codex": {
         "0.162.1": 190,
-        "0.163.0": 134
+        "0.163.0": 530
       },
       "claude-code": {
-        "2.1.303": 324
+        "2.1.303": 720
       }
     },
     "notes": [
-      "Selection follows the completed suite manifest, retaining task failures and excluding externally interrupted attempts.",
-      "Earlier accepted Codex results are reused; recorded agent versions and original costs/timings are preserved.",
-      "All Changes tabs use captured verifier patches; no baseline reconstruction is used."
+      "The 648 accepted baseline trials are retained; the supplement adds 792 accepted trials, with five attempts per combination across four configurations.",
+      "Thirty-two baseline and fourteen supplemental externally interrupted attempts were excluded and replaced; ordinary task failures remain included.",
+      "Original agent versions, source costs and timings are preserved.",
+      "Captured patches are used where available; no baseline reconstruction is used."
     ],
-    "manifest": "releases/2026-10-21/manifest.json",
-    "manifest_sha256": "b7fe435abcdc90bd88c1924137f21dfe48ecfb4669808ca3fe0bba8e47c04381"
+    "manifest": "releases/2026-10-22/manifest.json",
+    "manifest_sha256": "4a68a282fbdbdaa9837feabaefa508b9a79e6a53a994eea060e81110398155bd",
+    "configurations": [
+      "vanilla",
+      "vaadin-skills",
+      "vaadin-mcp",
+      "vaadin-skills-mcp"
+    ],
+    "baseline_excluded_attempts": 32,
+    "additional_excluded_attempts": 14,
+    "baseline_manifest": "releases/2026-10-21/manifest.json",
+    "baseline_manifest_sha256": "b7fe435abcdc90bd88c1924137f21dfe48ecfb4669808ca3fe0bba8e47c04381"
   }
 }

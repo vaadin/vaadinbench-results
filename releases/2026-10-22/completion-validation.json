@@ -1,0 +1,22 @@
+{
+  "verified_at": "2026-10-22T16:29:46.316564+00:00",
+  "status": "passed",
+  "manifest": "/home/orca/code/vaadinbench-results/plans/supplement-20261021/suite-manifest.json",
+  "manifest_sha256": "4a68a282fbdbdaa9837feabaefa508b9a79e6a53a994eea060e81110398155bd",
+  "accepted_trials": 1440,
+  "baseline_preserved": 648,
+  "additional_codex": 396,
+  "additional_claude": 396,
+  "excluded_attempts": 14,
+  "all_excluded_slots_replaced": true,
+  "unique_cells": 288,
+  "accepted_attempts_per_cell": 5,
+  "result_hashes_verified": 1440,
+  "provider_quality_audits_passed": 1440,
+  "baseline_manifest_unchanged": true,
+  "last_additional_trial_completed_at": "2026-10-22T16:23:40.098538+00:00",
+  "accepted_rewards": {
+    "1.0": 889,
+    "0.0": 551
+  }
+}
